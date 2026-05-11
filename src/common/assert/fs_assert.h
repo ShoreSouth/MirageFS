@@ -1,6 +1,6 @@
 #pragma once
 
-#include "log/fs_log.h"
+#include "common/log/fs_log.h"
 
 #include <assert.h>
 

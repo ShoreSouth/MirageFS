@@ -91,5 +91,4 @@
  *  类型安全检查（调试用，可选）
  * ============================================================ */
 
-#define FS_TYPE_CHECK(a, b) \
-    ((void)sizeof((typeof(a) *)1 == (typeof(b) *)1))
+#define FS_TYPE_CHECK(a, b) ((void)sizeof((typeof(a) *)1 == (typeof(b) *)1))

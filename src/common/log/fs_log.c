@@ -11,7 +11,7 @@
  * 全局配置
  * ========================= */
 
-static char g_log_base_dir[256] = "./log";
+static char g_log_base_dir[256] = "./output/log";
 static fs_log_level_t g_log_level = FS_LOG_DEBUG;
 
 /* =========================
@@ -51,6 +51,9 @@ static FILE* fs_log_get_fp(void)
     fs_path_join_safe(dir_path, sizeof(dir_path),
                       g_log_base_dir, proc);
 
+    /* makir -p */
+    fs_path_mkdir_recursive(dir_path, 0777);
+
     /* base/proc/thread.log */
     char file_name[512];
     snprintf(file_name, sizeof(file_name), "%s.log", thread);
@@ -58,7 +61,7 @@ static FILE* fs_log_get_fp(void)
     fs_path_join_safe(file_path, sizeof(file_path),
                       dir_path, file_name);
 
-    tls_fp = fopen(file_path, "a"); // 追加写
+    tls_fp = fopen(file_path, "a"); /* 追加写 */ 
 
     if (!tls_fp)
         tls_fp = stderr;

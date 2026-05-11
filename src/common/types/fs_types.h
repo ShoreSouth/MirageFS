@@ -8,12 +8,13 @@
  *  基础语义类型
  * ============================================================ */
 
-typedef uint64_t fsid_t;       // 文件系统ID
-typedef uint64_t inodeid_t;    // 对象ID（类似 inode）
+typedef uint64_t Fsid_t;
+typedef uint64_t ObjectId_t;
+typedef uint32_t GenId_t;
 
-typedef uint32_t qtreeid_t;
-typedef uint32_t snapid_t;
-
+typedef uint32_t QtreeId_t;
+typedef uint32_t SnapId_t;
+typedef uint32_t ShardId_t;
 
 /* ============================================================
  *  文件类型
@@ -32,13 +33,11 @@ typedef enum {
 
 } fs_type_t;
 
-
 /* ============================================================
  *  mode 抽象（兼容 Linux）
  * ============================================================ */
 
 typedef mode_t fs_mode_t;
-
 
 /* ---------- 文件类型判断（封装 S_ISxxx） ---------- */
 
@@ -50,18 +49,15 @@ typedef mode_t fs_mode_t;
 #define FS_IS_BLK(m)   S_ISBLK(m)
 #define FS_IS_CHR(m)   S_ISCHR(m)
 
-
 /* ---------- 提取类型位 ---------- */
 
 #define FS_MODE_TYPE(m)   ((m) & S_IFMT)
-
 
 /* ---------- 权限位 ---------- */
 
 #define FS_PERM_MASK   07777
 
 #define FS_PERM(m)     ((m) & FS_PERM_MASK)
-
 
 /* 用户权限 */
 #define FS_IRUSR S_IRUSR
@@ -101,22 +97,6 @@ static inline fs_type_t fs_type_from_mode(fs_mode_t mode)
     return FS_TYPE_UNKNOWN;
 }
 
-
-static inline fs_mode_t fs_mode_from_type(fs_type_t type)
-{
-    switch (type) {
-        case FS_TYPE_REG:  return S_IFREG;
-        case FS_TYPE_DIR:  return S_IFDIR;
-        case FS_TYPE_LNK:  return S_IFLNK;
-        case FS_TYPE_FIFO: return S_IFIFO;
-        case FS_TYPE_SOCK: return S_IFSOCK;
-        case FS_TYPE_BLK:  return S_IFBLK;
-        case FS_TYPE_CHR:  return S_IFCHR;
-        default:           return 0;
-    }
-}
-
-
 /* ============================================================
  *  常用组合
  * ============================================================ */
@@ -126,7 +106,6 @@ static inline fs_mode_t fs_mode_from_type(fs_type_t type)
 
 /* 默认目录权限 */
 #define FS_MODE_DIR_DEFAULT   (S_IFDIR | 0755)
-
 
 /* ============================================================
  *  Debug / 打印辅助

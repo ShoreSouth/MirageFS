@@ -13,7 +13,6 @@ typedef enum {
     FS_LOG_ERROR,
 } fs_log_level_t;
 
-
 /* =========================
  * 初始化
  * ========================= */
@@ -23,7 +22,6 @@ typedef enum {
  * level   : 最低日志级别
  */
 void fs_log_init(const char *base_dir, fs_log_level_t level);
-
 
 /* =========================
  * 核心输出接口
@@ -38,19 +36,18 @@ void fs_log_write(
     ...
 );
 
-
 /* =========================
  * 宏封装（推荐使用）
  * ========================= */
 
-#define FS_LOG_DEBUG(fmt, ...) \
+#define FS_LOG_DUMP_DEBUG(fmt, ...) \
     fs_log_write(FS_LOG_DEBUG, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
 
-#define FS_LOG_INFO(fmt, ...) \
+#define FS_LOG_DUMP_INFO(fmt, ...) \
     fs_log_write(FS_LOG_INFO, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
 
-#define FS_LOG_WARN(fmt, ...) \
+#define FS_LOG_DUMP_WARN(fmt, ...) \
     fs_log_write(FS_LOG_WARN, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)
 
-#define FS_LOG_ERROR(fmt, ...) \
+#define FS_LOG_DUMP_ERROR(fmt, ...) \
     fs_log_write(FS_LOG_ERROR, __FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)

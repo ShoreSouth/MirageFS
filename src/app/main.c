@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 
+#include "common/fs_common.h"
 #include "config/fs_config.h"
 
 int main(void)
@@ -15,6 +16,11 @@ int main(void)
      * 初始化全局配置
      */
     fs_config_init();
+
+    /*
+     * 初始化日志打印
+     */
+    fs_log_init(NULL, FS_LOG_INFO);
 
     /*
      * 打印配置

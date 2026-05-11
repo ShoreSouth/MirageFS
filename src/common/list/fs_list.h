@@ -1,6 +1,6 @@
 #pragma once
 
-#include "macros/fs_macros.h"
+#include "common/macros/fs_macros.h"
 
 #include <stddef.h>
 #include <stdbool.h>
