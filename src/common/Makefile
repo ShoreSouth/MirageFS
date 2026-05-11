@@ -1,5 +1,5 @@
 MODULE := common
-LIB    := lib$(MODULE).a
+LIB     = $(LIB_DIR)/lib$(MODULE).a
 
 # ============================================================
 #  源文件
