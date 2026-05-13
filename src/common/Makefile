@@ -8,5 +8,6 @@ LIB     = $(LIB_DIR)/lib$(MODULE).a
 SRC := log/fs_log.c
 SRC += os/fs_os.c
 SRC += path/fs_path.c
+SRC += trace/fs_trace.c
 
 include ../../build/build.mk

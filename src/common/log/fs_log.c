@@ -103,11 +103,11 @@ void fs_log_write(
 
     FILE *fp = fs_log_get_fp();
 
-    fs_trace_ctx_t *ctx = fs_trace_get();
+    fs_trace_ctx_t *ctx = FS_TRACE_GET();
 
     /* header */
     fprintf(fp,
-        "[%s][%s][trace=%lu span=%lu][%s:%d %s] ",
+        "[%s][%s][trace=0x%lu span=0x%lu][%s:%d %s] ",
         fs_log_level_str(level),
         fs_time_str(),
         ctx->trace_id,

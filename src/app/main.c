@@ -18,6 +18,12 @@ int main(void)
     fs_config_init();
 
     /*
+     * 初始化trace
+     */
+    fs_trace_ctx_t trace_ctx;
+    FS_TRACE_BEGIN(&trace_ctx);
+    
+    /*
      * 初始化日志打印
      */
     fs_log_init(NULL, FS_LOG_INFO);
@@ -26,6 +32,11 @@ int main(void)
      * 打印配置
      */
     fs_config_dump();
+
+    /*
+     * 清除trace
+     */
+    FS_TRACE_END();
 
     printf("MirageFS Exit.\n");
 

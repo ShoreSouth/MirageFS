@@ -23,7 +23,7 @@ typedef struct fs_trace_ctx {
  * TLS 存储（Thread Local Storage）
  * ========================= */
 
-static __thread fs_trace_ctx_t g_fs_trace_tls = {0};
+extern __thread fs_trace_ctx_t g_fs_trace_tls;
 
 /* 获取当前 trace */
 static inline fs_trace_ctx_t* fs_trace_get(void)
@@ -70,7 +70,7 @@ static inline uint64_t fs_trace_gen_id(void)
  * trace 初始化
  * ========================= */
 
-/* 创建新 trace（入口调用） */
+/* 创建新 trace */
 static inline void fs_trace_init(fs_trace_ctx_t *ctx)
 {
     if (!ctx) return;
@@ -80,14 +80,16 @@ static inline void fs_trace_init(fs_trace_ctx_t *ctx)
     ctx->parent_id = 0;
 }
 
-/* 进入 trace（写入 TLS） */
-static inline void fs_trace_enter(fs_trace_ctx_t *ctx)
+/* 初始化生成trace并写入 TLS */
+static inline void fs_trace_begin(fs_trace_ctx_t *ctx)
 {
+    fs_trace_init(ctx);
+
     fs_trace_set(ctx);
 }
 
 /* 离开 trace */
-static inline void fs_trace_leave(void)
+static inline void fs_trace_end(void)
 {
     fs_trace_clear();
 }
@@ -153,24 +155,17 @@ fs_trace_span_auto_end(fs_trace_span_guard_t **guard)
     }
 }
 
-/* 打点日志 */
-#define FS_TRACE_LOG(fmt, ...) \
-    do { \
-        fs_trace_ctx_t *ctx = fs_trace_get(); \
-        fprintf(stderr, \
-            "[TRACE] trace=%lu span=%lu " fmt "\n", \
-            ctx->trace_id, ctx->span_id, ##__VA_ARGS__); \
-    } while (0)
-
 /* =========================
  * 对外接口辅助
  * ========================= */
 
 /* API入口模板 */
-#define FS_TRACE_API_ENTER(ctx) \
-    fs_trace_enter(ctx); \
-    FS_TRACE_LOG("API ENTER")
 
-#define FS_TRACE_API_LEAVE() \
-    FS_TRACE_LOG("API LEAVE"); \
-    fs_trace_leave()
+#define FS_TRACE_BEGIN(ctx) \
+    fs_trace_begin(ctx)
+
+#define FS_TRACE_END() \
+    fs_trace_end()
+
+#define FS_TRACE_GET() \
+fs_trace_get()
