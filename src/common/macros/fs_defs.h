@@ -69,10 +69,9 @@
 
 /*
  * 默认内存池大小:
- * 64MB
+ * 128MB
  */
-#define FS_DEFAULT_MEMPOOL_SIZE    (64UL * FS_MB)
-
+#define FS_DEFAULT_MEMPOOL_SIZE    (128UL * FS_MB)
 
 /*
  * 默认工作线程数量:
