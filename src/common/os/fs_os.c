@@ -143,3 +143,23 @@ uint64_t fs_get_monotonic_ns(void)
 
     return (uint64_t)(ts.tv_nsec);
 }
+
+const char* fs_time_str(void)
+{
+    static char buf[80];
+    uint64_t ts = fs_get_time_ms();
+
+    time_t sec  = (time_t)(ts / 1000);
+    int    ms   = (int)(ts % 1000);
+
+    struct tm tm_info;
+    localtime_r(&sec, &tm_info); // 线程安全的转换
+
+    /* 格式化日期时间部分 */ 
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_info);
+
+    /* 追加毫秒部分 (.xxx) */ 
+    snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ".%03d", ms);
+
+    return buf;
+}

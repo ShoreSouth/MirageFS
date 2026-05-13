@@ -42,3 +42,6 @@ uint64_t fs_get_monotonic_us(void);
 
 /* 获取单调时间（纳秒） */
 uint64_t fs_get_monotonic_ns(void);
+
+/* 获取当前时间的格式化字符串，格式: YYYY-MM-DD HH:MM:SS.mmm */
+const char* fs_time_str(void);
