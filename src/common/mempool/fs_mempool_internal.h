@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/mempool/fs_mempool_api.h"
+#include "common/mempool/fs_mempool.h"
 
 #include <pthread.h>
 
