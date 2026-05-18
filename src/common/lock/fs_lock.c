@@ -1,4 +1,5 @@
-#include "fs_lock.h"
+#include "common/lock/fs_lock.h"
+#include "common/assert/fs_assert.h"
 
 #include <string.h>
 #include <assert.h>
@@ -50,7 +51,7 @@ void fs_mutex_destroy(fs_mutex_t *lock)
         return;
     }
 
-    assert(lock->magic == FS_MUTEX_MAGIC);
+    FS_ASSERT(lock->magic == FS_MUTEX_MAGIC);
 
     pthread_mutex_destroy(&lock->mutex);
 
@@ -59,8 +60,8 @@ void fs_mutex_destroy(fs_mutex_t *lock)
 
 void fs_mutex_lock(fs_mutex_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_MUTEX_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_MUTEX_MAGIC);
 
     pthread_mutex_lock(&lock->mutex);
 
@@ -71,8 +72,8 @@ bool fs_mutex_trylock(fs_mutex_t *lock)
 {
     int ret;
 
-    assert(lock);
-    assert(lock->magic == FS_MUTEX_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_MUTEX_MAGIC);
 
     ret = pthread_mutex_trylock(&lock->mutex);
 
@@ -88,8 +89,8 @@ bool fs_mutex_trylock(fs_mutex_t *lock)
 
 void fs_mutex_unlock(fs_mutex_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_MUTEX_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_MUTEX_MAGIC);
 
     lock->owner = 0;
 
@@ -134,8 +135,8 @@ int fs_rwlock_init(fs_rwlock_t *lock,
 
 void fs_rwlock_destroy(fs_rwlock_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_RWLOCK_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_RWLOCK_MAGIC);
 
     pthread_rwlock_destroy(&lock->rwlock);
 
@@ -144,40 +145,40 @@ void fs_rwlock_destroy(fs_rwlock_t *lock)
 
 void fs_rwlock_rdlock(fs_rwlock_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_RWLOCK_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_RWLOCK_MAGIC);
 
     pthread_rwlock_rdlock(&lock->rwlock);
 }
 
 void fs_rwlock_wrlock(fs_rwlock_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_RWLOCK_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_RWLOCK_MAGIC);
 
     pthread_rwlock_wrlock(&lock->rwlock);
 }
 
 bool fs_rwlock_tryrdlock(fs_rwlock_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_RWLOCK_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_RWLOCK_MAGIC);
 
     return pthread_rwlock_tryrdlock(&lock->rwlock) == 0;
 }
 
 bool fs_rwlock_trywrlock(fs_rwlock_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_RWLOCK_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_RWLOCK_MAGIC);
 
     return pthread_rwlock_trywrlock(&lock->rwlock) == 0;
 }
 
 void fs_rwlock_unlock(fs_rwlock_t *lock)
 {
-    assert(lock);
-    assert(lock->magic == FS_RWLOCK_MAGIC);
+    FS_ASSERT(lock);
+    FS_ASSERT(lock->magic == FS_RWLOCK_MAGIC);
 
     pthread_rwlock_unlock(&lock->rwlock);
 }

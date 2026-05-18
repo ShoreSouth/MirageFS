@@ -2,6 +2,7 @@
 
 #include "common/log/fs_log.h"
 
+#include <stdlib.h>
 #include <assert.h>
 
 /* ============================================================
@@ -30,8 +31,8 @@
 #define FS_ASSERT(cond) \
     do { \
         if (!(cond)) { \
-            FS_LOG_ERROR("ASSERT FAIL: (%s)", #cond); \
-            assert(cond); \
+            FS_LOG_DUMP_ERROR("ASSERT FAIL: (%s)", #cond); \
+            abort(); \
         } \
     } while (0)
 
@@ -40,7 +41,7 @@
 #define FS_ASSERT(cond) \
     do { \
         if (!(cond)) { \
-            FS_LOG_ERROR("ASSERT FAIL (ignored): (%s)", #cond); \
+            FS_LOG_DUMP_ERROR("ASSERT FAIL (ignored): (%s)", #cond); \
         } \
     } while (0)
 
@@ -53,7 +54,7 @@
 #define FS_ASSERT_MSG(cond, fmt, ...) \
     do { \
         if (!(cond)) { \
-            FS_LOG_ERROR("ASSERT FAIL: (%s) " fmt, #cond, ##__VA_ARGS__); \
+            FS_LOG_DUMP_ERROR("ASSERT FAIL: (%s) " fmt, #cond, ##__VA_ARGS__); \
             FS_ASSERT(cond); \
         } \
     } while (0)
@@ -65,7 +66,8 @@
 #define FS_ASSERT_RET(cond, ret) \
     do { \
         if (!(cond)) { \
-            FS_LOG_ERROR("ASSERT FAIL: (%s), return %d", #cond, (int)(ret)); \
+            FS_LOG_DUMP_ERROR("ASSERT FAIL: (%s), return %d", \
+                #cond, (int)(ret)); \
             return (ret); \
         } \
     } while (0)
@@ -73,7 +75,7 @@
 #define FS_ASSERT_RET_VOID(cond) \
     do { \
         if (!(cond)) { \
-            FS_LOG_ERROR("ASSERT FAIL: (%s)", #cond); \
+            FS_LOG_DUMP_ERROR("ASSERT FAIL: (%s)", #cond); \
             return; \
         } \
     } while (0)
@@ -85,7 +87,7 @@
 #define FS_ASSERT_GOTO(cond, label) \
     do { \
         if (!(cond)) { \
-            FS_LOG_ERROR("ASSERT FAIL: (%s), goto %s", #cond, #label); \
+            FS_LOG_DUMP_ERROR("ASSERT FAIL: (%s), goto %s", #cond, #label); \
             goto label; \
         } \
     } while (0)
@@ -101,6 +103,7 @@
 #define FS_ASSERT_UNLIKELY(cond) \
     do { \
         if (FS_UNLIKELY(!(cond))) { \
+            FS_LOG_DUMP_ERROR("ASSERT FAIL: (%s)", #cond); \
             FS_ASSERT(cond); \
         } \
     } while (0)
