@@ -65,19 +65,14 @@ typedef struct fs_slab_cache fs_slab_cache_t;
  * 用户不可见
  */
 typedef struct fs_mp_hdr {
+
     uint32_t magic;
 
-    /*
-     * buddy order
-     */
-    uint16_t order;
+    uint16_t order; /* buddy order */
 
     uint16_t flags;
 
-    /*
-     * 用户申请大小
-     */
-    uint64_t req_size;
+    uint64_t req_size; /* 用户申请大小 */
 
 } fs_mp_hdr_t;
 
