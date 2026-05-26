@@ -10,6 +10,7 @@ include build/build.mk
 
 MODULES := common
 MODULES += config
+MODULES += meta
 
 # ============================================================
 #  最终程序
@@ -31,6 +32,7 @@ APP_OBJ := $(OBJ_DIR)/main.o
 
 LIBS := $(LIB_DIR)/libcommon.a
 LIBS += $(LIB_DIR)/libconfig.a
+LIBS += $(LIB_DIR)/libmeta.a
 
 # ============================================================
 #  默认目标
