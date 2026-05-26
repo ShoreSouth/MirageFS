@@ -6,7 +6,7 @@
 #include "common/fs_common.h"
 
 /* ============================================================
- * 基础类型定义
+ * 基础类型
  * ============================================================ */
 
 typedef int fuid_ret_t;
@@ -20,66 +20,171 @@ typedef uint32_t SnapId_t;
 typedef uint32_t ShardId_t;
 
 /* ============================================================
- * 文件类型（统一抽象）
+ * 文件类型
  * ============================================================ */
 
 typedef enum {
+
     FUID_TYPE_INVALID = 0,
 
     FUID_TYPE_FILE,
     FUID_TYPE_DIR,
     FUID_TYPE_SYMLINK,
+
     FUID_TYPE_FIFO,
     FUID_TYPE_SOCK,
+
     FUID_TYPE_BLK,
     FUID_TYPE_CHR,
+
 } fuid_type_t;
 
 /* ============================================================
- * File Unique Identity（MirageFS核心结构）
+ * FUID flags
+ * ============================================================ */
+
+#define FUID_FLAG_NONE        ((uint16_t)0x0000)
+
+#define FUID_FLAG_COMPRESSED  ((uint16_t)0x0001)
+#define FUID_FLAG_ENCRYPTED   ((uint16_t)0x0002)
+#define FUID_FLAG_CLONED      ((uint16_t)0x0004)
+
+/* ============================================================
+ * 常量定义
+ * ============================================================ */
+
+#define FUID_CURRENT_VERSION  1
+
+#define FUID_INVALID_FSID      ((Fsid_t)0)
+#define FUID_INVALID_OBJECTID  ((ObjectId_t)0)
+
+/* ============================================================
+ * File Unique Identity
+ *
+ * MirageFS 核心对象标识:
+ *
+ * Identity:
+ *     (fsid, objectid, gen)
+ *
+ * View:
+ *     (qtreeid, snapid, shardid)
+ *
+ * 特点:
+ *     - 文件系统范围内唯一
+ *     - 固定长度
+ *     - 可序列化
+ *     - 支持 stale 检测
  * ============================================================ */
 
 typedef struct Fuid_t {
-    Fsid_t           fsid; /* 文件系统ID */
 
-    ObjectId_t   objectid; /* MirageFS 内部对象唯一标识 */
-    GenId_t           gen; /* generation, 用于检测 stale handle */
+    /* ---------- identity ---------- */
 
-    QtreeId_t     qtreeid; /* 用于目录树级别的配额/隔离管理, 当前阶段固定为0 */
-    SnapId_t       snapid; /* 快照ID, 当前阶段固定为0 */
-    ShardId_t     shardid; /* 分片ID, 用于未来大目录/大文件分片, 当前阶段固定为0 */
+    Fsid_t         fsid;      /* 文件系统ID */
 
-    uint16_t         type; /* 对象类型, fuid_type_t */
-    uint16_t        flags; /* 标志位, compressed/encrypted/clone... */
+    ObjectId_t objectid;      /* 对象唯一ID */
+    GenId_t         gen;      /* generation */
 
-    uint8_t       version; /* FUID 结构版本, 用于未来结构扩展兼容 */
-    uint8_t reserved0[11]; /* 保留字段 */
-    uint64_t reserved1[2]; /* 保留字段 */
+    /* ---------- view ---------- */
+
+    QtreeId_t   qtreeid;      /* qtree / tenant */
+    SnapId_t     snapid;      /* snapshot */
+    ShardId_t   shardid;      /* shard */
+
+    /* ---------- attributes ---------- */
+
+    uint8_t         type;     /* fuid_type_t */
+    uint8_t      version;     /* 结构版本 */
+
+    uint16_t       flags;     /* FUID_FLAG_* */
+
+    /* ---------- reserved ---------- */
+
+    uint8_t  reserved0[12];
+    uint64_t reserved1[2];
+
 } Fuid_t;
 
-/* version */
-#define FUID_CURRENT_VERSION 1
+/* ============================================================
+ * 编译期检查
+ * ============================================================ */
 
-/* invalid */
-#define FUID_INVALID_OBJECTID ((ObjectId)0)
+#define FUID_SIZE 64
 
-/* flags */
-#define FUID_FLAG_NONE        0x00000000
-#define FUID_FLAG_COMPRESSED  0x00000001
-#define FUID_FLAG_ENCRYPTED   0x00000002
-#define FUID_FLAG_CLONED      0x00000004
+_Static_assert(sizeof(Fuid_t) == FUID_SIZE,
+    "Fuid_t size invalid");
 
+/* ============================================================
+ * 基础接口
+ * ============================================================ */
+
+/* 是否有效 */
 bool fuid_is_valid(const Fuid_t *fuid);
 
+/* 设置为 invalid */
 void fuid_set_invalid(Fuid_t *fuid);
 
-bool fuid_equal(const Fuid_t *a, const Fuid_t *b);
-
-uint64_t fuid_hash(const Fuid_t *fuid);
-
+/* 初始化 */
 void fuid_init(Fuid_t *fuid);
 
-Fuid_t fuid_build(Fsid_t fsid, ObjectId_t objectid,
-    GenId_t gen, fuid_type_t type);
+/* identity 比较 */
+bool fuid_equal(const Fuid_t *a, const Fuid_t *b);
 
-const char * fuid_type_str(fuid_type_t type);
+/* hash */
+uint64_t fuid_hash(const Fuid_t *fuid);
+
+/* 构造 */
+Fuid_t fuid_build(Fsid_t fsid,
+    ObjectId_t objectid,
+    GenId_t gen,
+    fuid_type_t type);
+
+/* 类型字符串 */
+const char *fuid_type_str(fuid_type_t type);
+
+/* ============================================================
+ * type
+ * ============================================================ */
+
+bool fuid_type_valid(fuid_type_t type);
+
+fuid_type_t fuid_get_type(const Fuid_t *fuid);
+
+/* ============================================================
+ * type helper
+ * ============================================================ */
+
+bool fuid_is_file(const Fuid_t *fuid);
+
+bool fuid_is_dir(const Fuid_t *fuid);
+
+bool fuid_is_symlink(const Fuid_t *fuid);
+
+bool fuid_is_fifo(const Fuid_t *fuid);
+
+bool fuid_is_sock(const Fuid_t *fuid);
+
+bool fuid_is_blk(const Fuid_t *fuid);
+
+bool fuid_is_chr(const Fuid_t *fuid);
+
+/* ============================================================
+ * flags helper
+ * ============================================================ */
+
+bool fuid_flag_test(const Fuid_t *fuid, uint16_t flag);
+
+void fuid_flag_set(Fuid_t *fuid, uint16_t flag);
+
+void fuid_flag_clear(Fuid_t *fuid, uint16_t flag);
+
+/* ============================================================
+ * debug
+ * ============================================================ */
+
+/*
+ * 输出格式:
+ *
+ * fs=1,obj=100,gen=1,type=file
+ */
+const char *fuid_to_str(const Fuid_t *fuid);
