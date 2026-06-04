@@ -6,7 +6,9 @@
 
 #include "common/assert/fs_assert.h"
 #include "common/error/fs_error.h"
+#include "common/hash/fs_hash.h"
 #include "common/list/fs_list.h"
+#include "common/lock/fs_lock.h"
 #include "common/log/fs_log.h"
 #include "common/macros/fs_macros.h"
 #include "common/macros/fs_defs.h"

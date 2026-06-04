@@ -6,6 +6,8 @@ LIB     = $(LIB_DIR)/lib$(MODULE).a
 # ============================================================
 
 SRC := log/fs_log.c
+SRC += hash/fs_hash.c
+SRC += lock/fs_lock.c
 SRC += os/fs_os.c
 SRC += path/fs_path.c
 SRC += trace/fs_trace.c

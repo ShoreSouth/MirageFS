@@ -1,0 +1,142 @@
+#include "common/hash/fs_hash.h"
+#include "common/list/fs_list.h"
+#include "common/log/fs_log.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+/* ============================================================
+ * 内部函数
+ * ============================================================ */
+
+static uint32_t fs_hash_index(const fs_hash_t *hash,
+                              uint64_t key)
+{
+    return (uint32_t)(key % hash->bucket_nr);
+}
+
+/* ============================================================
+ * 生命周期
+ * ============================================================ */
+
+int fs_hash_init(fs_hash_t *hash,
+                 uint32_t bucket_nr,
+                 fs_hash_key_fn key_fn,
+                 fs_hash_match_fn match_fn)
+{
+    uint32_t i;
+
+    if (hash == NULL) {
+        FS_LOG_DUMP_ERROR("hash is NULL");
+        return -1;
+    }
+
+    if (bucket_nr == 0) {
+        FS_LOG_DUMP_ERROR("invalid bucket_nr");
+        return -1;
+    }
+
+    if (key_fn == NULL) {
+        FS_LOG_DUMP_ERROR("key_fn is NULL");
+        return -1;
+    }
+
+    if (match_fn == NULL) {
+        FS_LOG_DUMP_ERROR("match_fn is NULL");
+        return -1;
+    }
+
+    memset(hash, 0, sizeof(fs_hash_t));
+
+    hash->buckets = calloc(bucket_nr,
+                           sizeof(fs_list_head_t));
+    if (hash->buckets == NULL) {
+        FS_LOG_DUMP_ERROR("calloc buckets failed");
+        return -1;
+    }
+
+    for (i = 0; i < bucket_nr; i++) {
+        fs_list_init(&hash->buckets[i]);
+    }
+
+    hash->bucket_nr = bucket_nr;
+    hash->key_fn = key_fn;
+    hash->match_fn = match_fn;
+
+    return 0;
+}
+
+void fs_hash_destroy(fs_hash_t *hash)
+{
+    if (hash == NULL) {
+        return;
+    }
+
+    free(hash->buckets);
+
+    memset(hash, 0, sizeof(fs_hash_t));
+}
+
+/* ============================================================
+ * 基础操作
+ * ============================================================ */
+
+int fs_hash_insert(fs_hash_t *hash,
+                   fs_list_head_t *node)
+{
+    uint64_t key;
+    uint32_t index;
+
+    if ((hash == NULL) || (node == NULL)) {
+        return -1;
+    }
+
+    key = hash->key_fn(node);
+
+    index = fs_hash_index(hash, key);
+
+    fs_list_add_tail(node,
+                     &hash->buckets[index]);
+
+    hash->entry_nr++;
+
+    return 0;
+}
+
+void fs_hash_remove(fs_hash_t *hash,
+                    fs_list_head_t *node)
+{
+    if ((hash == NULL) || (node == NULL)) {
+        return;
+    }
+
+    fs_list_del(node);
+
+    if (hash->entry_nr > 0) {
+        hash->entry_nr--;
+    }
+}
+
+fs_list_head_t *fs_hash_lookup(fs_hash_t *hash,
+                               uint64_t key)
+{
+    uint32_t index;
+
+    fs_list_head_t *pos;
+
+    if (hash == NULL) {
+        return NULL;
+    }
+
+    index = fs_hash_index(hash, key);
+
+    FS_LIST_FOR_EACH(pos,
+                     &hash->buckets[index]) {
+
+        if (hash->match_fn(pos, key)) {
+            return pos;
+        }
+    }
+
+    return NULL;
+}
