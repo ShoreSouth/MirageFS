@@ -27,7 +27,7 @@ typedef uint64_t (*fs_hash_key_fn)(const fs_list_head_t *node);
 /*
  * key 比较函数。
  */
-typedef int (*fs_hash_match_fn)(const fs_list_head_t *node,
+typedef bool (*fs_hash_match_fn)(const fs_list_head_t *node,
                                 uint64_t key);
 
 /* ============================================================

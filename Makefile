@@ -12,6 +12,7 @@ MODULES := common
 MODULES += config
 MODULES += fuid
 MODULES += meta
+MODULES += object
 
 # ============================================================
 #  最终程序
@@ -35,6 +36,7 @@ LIBS := $(LIB_DIR)/libcommon.a
 LIBS += $(LIB_DIR)/libconfig.a
 LIBS += $(LIB_DIR)/libfuid.a
 LIBS += $(LIB_DIR)/libmeta.a
+LIBS += $(LIB_DIR)/libobject.a
 
 # ============================================================
 #  默认目标
