@@ -9,9 +9,10 @@ SRC := log/fs_log.c
 SRC += error/fs_errno.c
 SRC += hash/fs_hash.c
 SRC += lock/fs_lock.c
+SRC += mempool/fs_mempool.c
+SRC += module/fs_module.c
 SRC += os/fs_os.c
 SRC += path/fs_path.c
 SRC += trace/fs_trace.c
-SRC += mempool/fs_mempool.c
 
 include ../../build/build.mk

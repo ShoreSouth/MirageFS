@@ -11,6 +11,8 @@
 #include "common/lock/fs_lock.h"
 #include "common/log/fs_log.h"
 #include "common/macros/fs_macros.h"
+#include "common/mempool/fs_mempool.h"
+#include "common/module/fs_module.h"
 #include "common/macros/fs_defs.h"
 #include "common/os/fs_os.h"
 #include "common/path/fs_path.h"

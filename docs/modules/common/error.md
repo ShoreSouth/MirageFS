@@ -1,440 +1,251 @@
-# Error Module
+# Error Subsystem Design
 
-## Overview
+## 1. Overview
 
-Error 模块是 MirageFS 的统一错误码系统。
+MirageFS 使用统一的 32bit 错误码体系。
 
-用于解决传统 Linux errno 的几个问题：
+设计目标：
 
-```text
-errno 信息量不足
+* 全工程统一返回值类型
+* 支持模块级错误定位
+* 支持 Linux errno 兼容
+* 支持日志与 Trace 系统集成
+* 支持后续分布式扩展
+* 保持零动态内存开销
+* 保持 O(1) 错误解析
 
-无法区分来源模块
+所有模块返回：
 
-无法区分严重程度
-
-难以定位具体错误
+```c
+typedef fs_error_t xxx_ret_t;
 ```
 
-因此 MirageFS 引入：
+例如：
 
-```text
-32bit Structured Error Code
+```c
+typedef fs_error_t lsa_ret_t;
+typedef fs_error_t vfs_ret_t;
+typedef fs_error_t objmgr_ret_t;
 ```
 
-统一描述：
-
-```text
-错误级别
-
-来源模块
-
-子错误码
-
-Linux errno
-```
-
----
-
-## Design Goals
-
-### Unified Error System
-
-所有模块统一返回：
+统一使用：
 
 ```c
 fs_error_t
 ```
 
-而不是：
-
-```c
-int
-```
-
-避免：
-
-```text
--1
-
--EINVAL
-
--ENOMEM
-
--EIO
-```
-
-混杂使用。
+作为返回值类型。
 
 ---
 
-### Preserve Linux Compatibility
+## 2. Error Layout
 
-内部：
-
-```c
-fs_error_t
-```
-
-外部：
-
-```c
-errno
-```
-
-通过：
-
-```c
-fs_err_to_errno()
-```
-
-转换。
-
-保证：
+错误码固定为 32bit：
 
 ```text
-内部拥有丰富语义
+ 31 30 | 29 -------- 20 | 19 -------- 8 | 7 -------- 0
+-------------------------------------------------------
+severity|   module id   |   sub error   |    errno
+```
 
-外部兼容 Linux
+字段定义：
+
+| Field     | Bits | Description |
+| --------- | ---- | ----------- |
+| severity  | 2    | 错误严重等级      |
+| module    | 10   | 模块 ID       |
+| sub error | 12   | 模块内部错误      |
+| errno     | 8    | Linux errno |
+
+总计：
+
+```text
+2 + 10 + 12 + 8 = 32 bit
 ```
 
 ---
 
-### Easy Debugging
+## 3. Severity
 
-错误码携带：
-
-```text
-Level
-
-Module
-
-Sub Error
-
-Errno
-```
-
-方便：
-
-```text
-日志分析
-
-故障定位
-
-统计监控
-```
-
----
-
-## Error Code Layout
-
-错误码长度：
-
-```text
-32 bit
-```
-
-布局：
-
-```text
-+---------+------------+------------+----------+
-| Level   | Module ID  | Sub Error  | errno    |
-+---------+------------+------------+----------+
-
-31      30 29       20 19        8 7        0
-```
-
----
-
-## Bit Field Definition
-
-### Level
-
-占用：
-
-```text
-2 bit
-```
-
-范围：
-
-```text
-0 ~ 3
-```
-
-位置：
+定义：
 
 ```c
-31~30
+typedef enum fs_err_severity {
+
+    FS_SEV_INFO = 0,
+
+    FS_SEV_WARN,
+
+    FS_SEV_ERROR,
+
+    FS_SEV_FATAL,
+
+} fs_err_severity_t;
 ```
 
----
+说明：
 
-### Module ID
+| Severity | Description |
+| -------- | ----------- |
+| INFO     | 信息          |
+| WARN     | 警告          |
+| ERROR    | 普通错误        |
+| FATAL    | 严重错误        |
 
-占用：
-
-```text
-10 bit
-```
-
-范围：
-
-```text
-0 ~ 1023
-```
-
-位置：
-
-```c
-29~20
-```
-
----
-
-### Sub Error
-
-占用：
-
-```text
-12 bit
-```
-
-范围：
-
-```text
-0 ~ 4095
-```
-
-位置：
-
-```c
-19~8
-```
-
----
-
-### Errno
-
-占用：
-
-```text
-8 bit
-```
-
-范围：
-
-```text
-0 ~ 255
-```
-
-位置：
-
-```c
-7~0
-```
-
-保存：
-
-```text
-Linux errno
-```
-
-值。
-
----
-
-# Error Level
-
-## FS_ERR_LEVEL_OK
-
-```c
-FS_ERR_LEVEL_OK
-```
-
-表示：
-
-```text
-成功
-```
-
-对应：
+成功返回统一使用：
 
 ```c
 FS_OK
 ```
 
+而不是使用 Severity 表示成功。
+
 ---
 
-## FS_ERR_LEVEL_INFO
+## 4. Module ID
 
-```c
-FS_ERR_LEVEL_INFO
-```
-
-表示：
-
-```text
-提示信息
-
-非错误状态
-```
+每个 MirageFS 模块拥有全局唯一 Module ID。
 
 例如：
 
 ```text
-对象已存在
-
-无需执行
+COMMON
+OBJMETA
+OBJTABLE
+OBJMGR
+FSMGR
+VFS
+LSA
+CACHE
+SERVER
+CLI
 ```
 
----
-
-## FS_ERR_LEVEL_ERROR
-
-```c
-FS_ERR_LEVEL_ERROR
-```
-
-表示：
+Module 定义位于：
 
 ```text
-可恢复错误
+common/module/
 ```
 
-例如：
+目录。
+
+### 文件结构
 
 ```text
-参数错误
+common/module/
 
-资源不足
-
-对象不存在
+    fs_module.h
+    fs_module.c
+    fs_module_table.h
 ```
 
----
-
-## FS_ERR_LEVEL_FATAL
-
-```c
-FS_ERR_LEVEL_FATAL
-```
-
-表示：
-
-```text
-不可恢复错误
-```
-
-例如：
-
-```text
-元数据损坏
-
-存储层异常
-
-关键资源丢失
-```
-
----
-
-# Module ID
-
-每个模块拥有唯一编号。
-
-## Common
+使用 X-Macro 自动生成：
 
 ```c
 FS_MODULE_COMMON
+FS_MODULE_OBJMETA
+FS_MODULE_OBJTABLE
+...
 ```
 
-基础公共模块。
-
----
-
-## VFS
+以及：
 
 ```c
-FS_MODULE_VFS
-```
+fs_module_name()
 
-虚拟文件系统层。
+fs_module_valid()
+```
 
 ---
 
-## FS
+## 5. Linux errno
+
+MirageFS 完全复用 Linux errno 数值。
+
+例如：
 
 ```c
-FS_MODULE_FS
+FS_ERRNO_ENOENT = ENOENT
+FS_ERRNO_EEXIST = EEXIST
+FS_ERRNO_ENOMEM = ENOMEM
 ```
 
-MirageFS 核心逻辑层。
+不重新定义 errno 编号。
 
----
-
-## LSA
+保证：
 
 ```c
-FS_MODULE_LSA
+FS_ERRNO_ENOENT == ENOENT
 ```
 
-Local Storage Adapter。
+成立。
 
----
+### Alias errno
 
-## Cache
+Linux 中部分 errno 为别名：
 
 ```c
-FS_MODULE_CACHE
+EWOULDBLOCK == EAGAIN
+
+EDEADLOCK == EDEADLK
 ```
 
-缓存管理模块。
-
----
-
-## Meta
+MirageFS 仅保留主名称：
 
 ```c
-FS_MODULE_META
+EAGAIN
+EDEADLK
 ```
 
-元数据模块。
+避免 switch duplicate case 问题。
 
 ---
 
-## Storage
+## 6. Sub Error
+
+Sub Error 用于描述模块内部具体错误。
+
+例如：
 
 ```c
-FS_MODULE_STORAGE
+typedef enum objtable_sub_error {
+
+    OBJTABLE_ERR_LOOKUP = 1,
+
+    OBJTABLE_ERR_INSERT,
+
+    OBJTABLE_ERR_REMOVE,
+
+} objtable_sub_error_t;
 ```
 
-底层存储模块。
+原则：
 
----
+* 每个模块独立维护
+* 从 1 开始编号
+* 0 保留
 
-## Reserved
-
-最大支持：
-
-```text
-1023 个模块
-```
-
-定义：
+统一定义：
 
 ```c
-FS_MODULE_MAX
+#define FS_SUB_NONE 0U
+```
+
+用于：
+
+```c
+FS_ERR(..., FS_SUB_NONE, ...)
 ```
 
 ---
 
-# Error Construction
+## 7. Error Construction
 
 统一构造宏：
 
 ```c
 FS_ERR(
-    level,
+    severity,
     module,
     sub,
     errno
@@ -444,581 +255,172 @@ FS_ERR(
 示例：
 
 ```c
-FS_ERR(
-    FS_ERR_LEVEL_ERROR,
-    FS_MODULE_CACHE,
-    10,
-    ENOMEM
-);
-```
-
-生成：
-
-```text
-Level   = ERROR
-
-Module  = CACHE
-
-Sub     = 10
-
-Errno   = ENOMEM
+return FS_ERR(
+            FS_SEV_ERROR,
+            FS_MODULE_OBJTABLE,
+            OBJTABLE_ERR_LOOKUP,
+            FS_ERRNO_ENOENT);
 ```
 
 ---
 
-# Common Helper Macros
+## 8. Error Parsing
 
-## Success
+支持快速解析：
+
+```c
+fs_err_severity()
+
+fs_err_module()
+
+fs_err_sub()
+
+fs_err_errno()
+```
+
+示例：
+
+```c
+fs_module_t module;
+
+module = fs_err_module(ret);
+```
+
+---
+
+## 9. Standard Values
+
+成功返回：
 
 ```c
 FS_OK
 ```
 
-等价：
+定义：
 
 ```c
-0
+#define FS_OK ((fs_error_t)0)
+```
+
+保留值：
+
+```c
+#define FS_SUB_NONE 0U
 ```
 
 ---
 
-## Common Error
+## 10. Logging
 
-```c
-FS_ERR_COMMON(sub, err)
-```
+日志系统应尽量输出完整错误信息。
 
-示例：
-
-```c
-return FS_ERR_COMMON(
-    FS_ERR_SUB_INVALID_ARG,
-    EINVAL
-);
-```
-
----
-
-## Fatal Error
-
-```c
-FS_ERR_FATAL(
-    module,
-    sub,
-    err
-)
-```
-
-示例：
-
-```c
-return FS_ERR_FATAL(
-    FS_MODULE_META,
-    100,
-    EIO
-);
-```
-
----
-
-## From errno
-
-```c
-FS_ERR_FROM_ERRNO(
-    module,
-    errno
-)
-```
-
-示例：
-
-```c
-return FS_ERR_FROM_ERRNO(
-    FS_MODULE_STORAGE,
-    ENOSPC
-);
-```
-
----
-
-# Error Decode
-
-## Get Level
-
-```c
-FS_ERR_GET_LEVEL(err)
-```
-
-返回：
+推荐格式：
 
 ```text
-OK
-INFO
-ERROR
-FATAL
+severity=ERROR
+module=OBJTABLE
+sub=LOOKUP
+errno=ENOENT
 ```
 
----
-
-## Get Module
-
-```c
-FS_ERR_GET_MODULE(err)
-```
-
-返回模块编号。
-
----
-
-## Get Sub Error
-
-```c
-FS_ERR_GET_SUB(err)
-```
-
-返回：
+而不是仅输出：
 
 ```text
-模块内部错误码
-```
-
----
-
-## Get errno
-
-```c
-FS_ERR_GET_ERRNO(err)
-```
-
-返回：
-
-```text
-Linux errno
-```
-
-值。
-
----
-
-# Error Check Helpers
-
-## Success Check
-
-```c
-FS_IS_OK(err)
-```
-
-示例：
-
-```c
-if (FS_IS_OK(err)) {
-    ...
-}
-```
-
----
-
-## Error Check
-
-```c
-FS_IS_ERROR(err)
-```
-
-判断：
-
-```text
-是否为可恢复错误
-```
-
----
-
-## Fatal Check
-
-```c
-FS_IS_FATAL(err)
-```
-
-判断：
-
-```text
-是否为不可恢复错误
-```
-
----
-
-## Retryable Check
-
-```c
-FS_IS_RETRYABLE(err)
-```
-
-当前实现：
-
-```text
-ERROR
-```
-
-级别均视为可重试。
-
-未来可进一步细分。
-
----
-
-## Module Check
-
-```c
-FS_IS_MODULE(err, module)
-```
-
-示例：
-
-```c
-if (FS_IS_MODULE(err,
-                 FS_MODULE_CACHE))
-{
-    ...
-}
-```
-
----
-
-# Linux errno Compatibility
-
-内部：
-
-```c
-fs_error_t
-```
-
-外部：
-
-```c
-Linux errno
-```
-
-转换：
-
-```c
-int ret = fs_err_to_errno(err);
-```
-
-示例：
-
-```c
-FS_ENOENT
-    ↓
 ENOENT
+```
+
+因为：
+
+```text
+ENOENT
+```
+
+无法定位具体业务场景。
+
+---
+
+## 11. Module Error Definition
+
+业务模块不应直接返回 Linux errno。
+
+不推荐：
+
+```c
+return FS_ERR(
+            FS_SEV_ERROR,
+            FS_MODULE_OBJTABLE,
+            FS_SUB_NONE,
+            FS_ERRNO_ENOENT);
+```
+
+推荐：
+
+```c
+return FS_ERR(
+            FS_SEV_ERROR,
+            FS_MODULE_OBJTABLE,
+            OBJTABLE_ERR_LOOKUP,
+            FS_ERRNO_ENOENT);
+```
+
+这样可以同时获得：
+
+```text
+模块信息
+业务错误
+系统错误
+```
+
+三层上下文。
+
+---
+
+## 12. Directory Layout
+
+```text
+common/
+
+├── module/
+│   ├── fs_module.h
+│   ├── fs_module.c
+│   └── fs_module_table.h
+│
+├── error/
+│   ├── fs_error.h
+│   ├── fs_error.c
+│   ├── fs_errno.h
+│   ├── fs_errno.c
+│   └── fs_errno_table.h
+```
+
+职责划分：
+
+```text
+module
     ↓
--ENOENT
+error
+
+module
+    ↓
+log
+
+module
+    ↓
+trace
 ```
 
-适用于：
+其中：
 
 ```text
-CLI
-
-POSIX Interface
-
-FUSE Interface
-
-Kernel Compatible API
+module
 ```
 
----
-
-# Common Error Definitions
-
-Common 模块预定义：
-
-```c
-FS_ERR_SUB_UNKNOWN
-```
-
-未知错误。
-
----
-
-```c
-FS_ERR_SUB_INVALID_ARG
-```
-
-非法参数。
-
----
-
-```c
-FS_ERR_SUB_NO_MEMORY
-```
-
-内存不足。
-
----
-
-```c
-FS_ERR_SUB_NOT_FOUND
-```
-
-对象不存在。
-
----
-
-```c
-FS_ERR_SUB_EXIST
-```
-
-对象已存在。
-
----
-
-```c
-FS_ERR_SUB_PERMISSION
-```
-
-权限不足。
-
----
-
-# Common Shortcuts
-
-## FS_EINVAL
-
-等价：
-
-```c
-FS_ERR_COMMON(
-    FS_ERR_SUB_INVALID_ARG,
-    EINVAL
-)
-```
-
----
-
-## FS_ENOMEM
-
-等价：
-
-```c
-FS_ERR_COMMON(
-    FS_ERR_SUB_NO_MEMORY,
-    ENOMEM
-)
-```
-
----
-
-## FS_ENOENT
-
-等价：
-
-```c
-FS_ERR_COMMON(
-    FS_ERR_SUB_NOT_FOUND,
-    ENOENT
-)
-```
-
----
-
-## FS_EEXIST
-
-等价：
-
-```c
-FS_ERR_COMMON(
-    FS_ERR_SUB_EXIST,
-    EEXIST
-)
-```
-
----
-
-## FS_EPERM
-
-等价：
-
-```c
-FS_ERR_COMMON(
-    FS_ERR_SUB_PERMISSION,
-    EPERM
-)
-```
-
----
-
-# Debug Helpers
-
-## Error Level String
-
-```c
-fs_err_level_str(err)
-```
-
-返回：
-
-```text
-OK
-
-INFO
-
-ERROR
-
-FATAL
-```
-
-适用于：
-
-```text
-日志输出
-
-错误分析
-```
-
----
-
-## Module Name String
-
-```c
-fs_module_str(module)
-```
-
-返回：
-
-```text
-COMMON
-
-VFS
-
-FS
-
-LSA
-
-CACHE
-
-META
-
-STORAGE
-```
-
-用于：
-
-```text
-日志
-
-调试
-
-监控平台
-```
-
----
-
-# Example
-
-创建错误：
-
-```c
-fs_error_t err;
-
-err = FS_ERR(
-    FS_ERR_LEVEL_ERROR,
-    FS_MODULE_CACHE,
-    100,
-    ENOMEM
-);
-```
-
-解析：
-
-```c
-printf("level=%s\n",
-       fs_err_level_str(err));
-
-printf("module=%s\n",
-       fs_module_str(
-           FS_ERR_GET_MODULE(err)));
-
-printf("errno=%u\n",
-       FS_ERR_GET_ERRNO(err));
-```
-
----
-
-# Typical Workflow
-
-```text
-Module Error
-      |
-      v
-
-FS_ERR()
-
-      |
-      v
-
-Return fs_error_t
-
-      |
-      v
-
-Caller Decode
-
-      |
-      v
-
-fs_err_to_errno()
-
-      |
-      v
-
-Linux Return Code
-```
-
----
-
-# Dependency Relationship
-
-依赖：
-
-```text
-stdint.h
-
-errno.h
-```
-
-关系：
+作为 MirageFS 全局模块注册中心。
 
 ```text
 error
-│
-├── stdint
-└── errno
 ```
 
-属于 MirageFS Common 基础模块。
+作为统一错误码封装层。
 
----
-
-# Future Roadmap
-
-计划扩展：
-
-```text
-Error Registry
-
-Sub Error Dictionary
-
-Stack Trace Integration
-
-Distributed Error Code
-
-Error Statistics
-
-Error Monitoring
-```
-
-最终形成：
-
-```text
-MirageFS Unified Error Framework
-```
-
-统一管理整个文件系统错误处理体系。
+两者相互独立。
