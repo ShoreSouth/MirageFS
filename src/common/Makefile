@@ -11,6 +11,7 @@ SRC += hash/fs_hash.c
 SRC += lock/fs_lock.c
 SRC += mempool/fs_mempool.c
 SRC += module/fs_module.c
+SRC += op/fs_op.c
 SRC += os/fs_os.c
 SRC += path/fs_path.c
 SRC += trace/fs_trace.c
