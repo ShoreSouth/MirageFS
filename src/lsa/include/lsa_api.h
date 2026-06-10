@@ -1,227 +1,357 @@
-#ifndef MIRAGEFS_LSA_API_H
-#define MIRAGEFS_LSA_API_H
+#pragma once
 
-#define _GNU_SOURCE
+#include <stdbool.h>
 #include <stdint.h>
+
+#include <dirent.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
+#include <sys/types.h>
+
+#include "common/fs_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ============================================================
- * 基础类型定义
- * ============================================================ */
+/*
+ * ============================================================
+ * Basic Types
+ * ============================================================
+ */
 
-typedef int lsa_ret_t;
+typedef fs_error_t lsa_ret_t;
 
-/* 通用返回码 */
-#define LSA_OK              0
-#define LSA_ERR_GENERIC    -1
+/*
+ * ============================================================
+ * Directory Cookie
+ * ============================================================
+ */
 
-/* ============================================================
- * 文件类型（统一抽象）
- * ============================================================ */
+typedef struct lsa_dir_cookie {
 
-typedef enum {
-    LSA_TYPE_REG = 0,
-    LSA_TYPE_DIR,
-    LSA_TYPE_SYMLINK,
-    LSA_TYPE_CHR,
-    LSA_TYPE_BLK,
-    LSA_TYPE_FIFO,
-    LSA_TYPE_SOCKET,
-    LSA_TYPE_UNKNOWN
-} lsa_file_type_t;
+    uint64_t value;
 
-/* ============================================================
- * 文件句柄结构
- * ============================================================ */
+} lsa_dir_cookie_t;
 
-#define LSA_MAX_FH_SIZE 128
+/*
+ * ============================================================
+ * Directory Entry
+ * ============================================================
+ */
 
-typedef struct {
-    uint32_t handle_bytes;
-    int32_t  handle_type;
-    uint8_t  data[LSA_MAX_FH_SIZE];
-} lsa_file_handle_t;
+typedef struct lsa_dirent {
 
-/* ============================================================
- * 目录项结构
- * ============================================================ */
+    char name[NAME_MAX + 1];
 
-#define LSA_NAME_MAX 256
+    uint64_t ino;
 
-typedef struct {
-    char name[LSA_NAME_MAX];
-    lsa_file_type_t type;
+    fs_type_t type;
+
 } lsa_dirent_t;
 
-/* ============================================================
- * 文件IO操作
- * ============================================================ */
+/*
+ * ============================================================
+ * Directory Entry Plus
+ * ============================================================
+ */
 
-lsa_ret_t lsa_open(const char *path, int flags, mode_t mode, int *out_fd);
+typedef struct lsa_dirent_plus {
 
-lsa_ret_t lsa_open_at(int dirfd, const char *path, int flags,
-    mode_t mode, int *out_fd);
+    lsa_dirent_t entry;
 
-lsa_ret_t lsa_open_by_handle_at(int mount_fd, struct file_handle *handle, 
-    int flags, int *out_fd);
+    struct stat st;
 
-lsa_ret_t lsa_name_to_handle_at(int dirfd, const char *path, 
-    struct file_handle *handle, int *mount_id, int flags);
+} lsa_dirent_plus_t;
 
-lsa_ret_t lsa_close(int fd);
+/*
+ * ============================================================
+ * Directory Iterator
+ * ============================================================
+ */
 
-lsa_ret_t lsa_read(int fd, void *buf, size_t len, ssize_t *out_size);
+typedef struct lsa_dir_iter {
 
-lsa_ret_t lsa_write(int fd, const void *buf, size_t len, ssize_t *out_size);
+    int dirfd;
 
-lsa_ret_t lsa_pread(int fd, void *buf, size_t len, 
-    off_t offset, ssize_t *out_size);
+    lsa_dir_cookie_t cookie;
 
-lsa_ret_t lsa_pwrite(int fd, const void *buf, size_t len, 
-    off_t offset, ssize_t *out_size);
+    bool eof;
 
-lsa_ret_t lsa_fsync(int fd);
+    void *private_data;
 
-/* ============================================================
- * 目录操作
- * ============================================================ */
+} lsa_dir_iter_t;
 
-lsa_ret_t lsa_mkdir(const char *path, mode_t mode);
+/*
+ * ============================================================
+ * Handle Operations
+ * ============================================================
+ *
+ * pathname
+ *      ↓
+ * file_handle
+ *
+ * file_handle
+ *      ↓
+ * fd
+ */
 
-lsa_ret_t lsa_rmdir(const char *path);
+lsa_ret_t lsa_name_to_handle_at(
+                int dirfd,
+                const char *path,
+                struct file_handle *handle,
+                int *mount_id,
+                int flags);
 
-lsa_ret_t lsa_readdir(const char *path,
-                      lsa_dirent_t *out_list,
-                      int max_entries,
-                      int *out_count);
+lsa_ret_t lsa_open_by_handle_at(
+                int mount_fd,
+                struct file_handle *handle,
+                int flags,
+                int *out_fd);
 
-lsa_ret_t lsa_readdirplus(const char *path,
-                          lsa_dirent_t *entries,
-                          struct stat *stats,
-                          int max_entries,
-                          int *out_count);
+/*
+ * ============================================================
+ * Namespace Operations
+ * ============================================================
+ */
 
-/* ============================================================
- * 文件创建（含特殊类型）
- * ============================================================ */
+lsa_ret_t lsa_openat(
+                int dirfd,
+                const char *path,
+                int flags,
+                mode_t mode,
+                int *out_fd);
 
-lsa_ret_t lsa_create(const char *path, mode_t mode);
+lsa_ret_t lsa_createat(
+                int dirfd,
+                const char *path,
+                mode_t mode,
+                int *out_fd);
 
-lsa_ret_t lsa_create_at(int dirfd, const char *path, mode_t mode);
+lsa_ret_t lsa_mkdirat(
+                int dirfd,
+                const char *path,
+                mode_t mode);
 
-/* 通用 mknod */
-lsa_ret_t lsa_mknod(const char *path, mode_t mode, dev_t dev);
+lsa_ret_t lsa_mknodat(
+                int dirfd,
+                const char *path,
+                mode_t mode,
+                dev_t dev);
 
-/* 语义封装 */
-lsa_ret_t lsa_mkfifo(const char *path, mode_t mode);
+lsa_ret_t lsa_mkfifoat(
+                int dirfd,
+                const char *path,
+                mode_t mode);
 
-lsa_ret_t lsa_mkchr(const char *path, mode_t mode, dev_t dev);
+lsa_ret_t lsa_mkchrat(
+                int dirfd,
+                const char *path,
+                mode_t mode,
+                dev_t dev);
 
-lsa_ret_t lsa_mkblk(const char *path, mode_t mode, dev_t dev);
+lsa_ret_t lsa_mkblkat(
+                int dirfd,
+                const char *path,
+                mode_t mode,
+                dev_t dev);
 
-lsa_ret_t lsa_mksocket(const char *path, mode_t mode);
+lsa_ret_t lsa_symlinkat(
+                const char *target,
+                int newdirfd,
+                const char *linkpath);
 
-/* ============================================================
- * 路径关系操作
- * ============================================================ */
+lsa_ret_t lsa_linkat(
+                int olddirfd,
+                const char *oldpath,
+                int newdirfd,
+                const char *newpath,
+                int flags);
 
-lsa_ret_t lsa_unlink(const char *path);
+lsa_ret_t lsa_renameat(
+                int olddirfd,
+                const char *oldpath,
+                int newdirfd,
+                const char *newpath);
 
-lsa_ret_t lsa_rename(const char *oldpath, const char *newpath);
+lsa_ret_t lsa_unlinkat(
+                int dirfd,
+                const char *path,
+                int flags);
 
-lsa_ret_t lsa_link(const char *oldpath, const char *newpath);
+/*
+ * ============================================================
+ * File Operations
+ * ============================================================
+ */
 
-lsa_ret_t lsa_symlink(const char *target, const char *linkpath);
+lsa_ret_t lsa_close(
+                int fd);
 
-lsa_ret_t lsa_readlink(const char *path, char *buf, size_t buf_size);
+lsa_ret_t lsa_read(
+                int fd,
+                void *buf,
+                size_t len,
+                ssize_t *actual);
 
-/* fd → path（非标准能力） */
-lsa_ret_t lsa_getpath(int fd, char *buf, size_t buf_size);
+lsa_ret_t lsa_write(
+                int fd,
+                const void *buf,
+                size_t len,
+                ssize_t *actual);
 
-/* ============================================================
- * 元数据操作
- * ============================================================ */
+lsa_ret_t lsa_pread(
+                int fd,
+                void *buf,
+                size_t len,
+                off_t offset,
+                ssize_t *actual);
 
-lsa_ret_t lsa_stat(const char *path, struct stat *st);
+lsa_ret_t lsa_pwrite(
+                int fd,
+                const void *buf,
+                size_t len,
+                off_t offset,
+                ssize_t *actual);
 
-lsa_ret_t lsa_lstat(const char *path, struct stat *st);
+lsa_ret_t lsa_lseek(
+                int fd,
+                off_t offset,
+                int whence,
+                off_t *new_offset);
 
-lsa_ret_t lsa_fstat(int fd, struct stat *st);
+lsa_ret_t lsa_fsync(
+                int fd);
 
-/* setattr（拆分接口） */
-lsa_ret_t lsa_chmod(const char *path, mode_t mode);
+lsa_ret_t lsa_ftruncate(
+                int fd,
+                off_t length);
 
-lsa_ret_t lsa_chown(const char *path, uid_t uid, gid_t gid);
+/*
+ * ============================================================
+ * Metadata Operations
+ * ============================================================
+ */
 
-lsa_ret_t lsa_truncate(const char *path, off_t length);
+lsa_ret_t lsa_fstat(
+                int fd,
+                struct stat *st);
 
-lsa_ret_t lsa_ftruncate(int fd, off_t length);
+lsa_ret_t lsa_fstatat(
+                int dirfd,
+                const char *path,
+                struct stat *st,
+                int flags);
 
-/* ============================================================
- * 扩展属性（xattr）
- * ============================================================ */
+lsa_ret_t lsa_fchmod(
+                int fd,
+                mode_t mode);
 
-lsa_ret_t lsa_setxattr(const char *path,
-                       const char *name,
-                       const void *value,
-                       size_t size,
-                       int flags);
+lsa_ret_t lsa_fchown(
+                int fd,
+                uid_t uid,
+                gid_t gid);
 
-lsa_ret_t lsa_getxattr(const char *path,
-                       const char *name,
-                       void *value,
-                       size_t size,
-                       ssize_t *out_size);
+/*
+ * ============================================================
+ * Directory Iterator API
+ * ============================================================
+ */
 
-lsa_ret_t lsa_listxattr(const char *path,
-                        char *list,
-                        size_t size,
-                        ssize_t *out_size);
+lsa_ret_t lsa_dir_iter_open(
+                int dirfd,
+                lsa_dir_iter_t *iter);
 
-lsa_ret_t lsa_removexattr(const char *path,
-                          const char *name);
+lsa_ret_t lsa_dir_iter_close(
+                lsa_dir_iter_t *iter);
 
-/* ============================================================
- * 文件系统级操作
- * ============================================================ */
+lsa_ret_t lsa_dir_iter_next(
+                lsa_dir_iter_t *iter,
+                lsa_dirent_t *entries,
+                uint32_t max_entries,
+                uint32_t *actual);
 
-lsa_ret_t lsa_statfs(const char *path, struct statfs *fsinfo);
+lsa_ret_t lsa_dir_iter_next_plus(
+                lsa_dir_iter_t *iter,
+                lsa_dirent_plus_t *entries,
+                uint32_t max_entries,
+                uint32_t *actual);
 
-/* ============================================================
- * 空间管理 / 高级IO
- * ============================================================ */
+lsa_ret_t lsa_dir_iter_get_cookie(
+                lsa_dir_iter_t *iter,
+                lsa_dir_cookie_t *cookie);
 
-/* 预分配 */
-lsa_ret_t lsa_fallocate(int fd, int mode, off_t offset, off_t len);
+lsa_ret_t lsa_dir_iter_seek(
+                lsa_dir_iter_t *iter,
+                const lsa_dir_cookie_t *cookie);
 
-/* 打洞（unmap） */
-lsa_ret_t lsa_unmap(int fd, off_t offset, off_t len);
+/*
+ * ============================================================
+ * Extended Attribute Operations
+ * ============================================================
+ */
 
-/* ============================================================
- * 其他辅助
- * ============================================================ */
+lsa_ret_t lsa_fsetxattr(
+                int fd,
+                const char *name,
+                const void *value,
+                size_t size,
+                int flags);
 
-lsa_ret_t lsa_access(const char *path, int mode);
+lsa_ret_t lsa_fgetxattr(
+                int fd,
+                const char *name,
+                void *value,
+                size_t size,
+                ssize_t *actual);
 
-lsa_ret_t lsa_dup(int fd, int *out_fd);
+lsa_ret_t lsa_flistxattr(
+                int fd,
+                char *list,
+                size_t size,
+                ssize_t *actual);
 
-lsa_ret_t lsa_lseek(int fd, off_t offset, int whence, off_t *out_offset);
+lsa_ret_t lsa_fremovexattr(
+                int fd,
+                const char *name);
 
-/* ============================================================
- * 错误处理（内部实现）
- * ============================================================ */
+/*
+ * ============================================================
+ * Filesystem Operations
+ * ============================================================
+ */
 
-lsa_ret_t lsa_errno_map(int err);
+lsa_ret_t lsa_statfs(
+                int fd,
+                struct statfs *buf);
+
+/*
+ * ============================================================
+ * Space Management
+ * ============================================================
+ */
+
+lsa_ret_t lsa_fallocate(
+                int fd,
+                int mode,
+                off_t offset,
+                off_t len);
+
+lsa_ret_t lsa_unmap(
+                int fd,
+                off_t offset,
+                off_t len);
+
+/*
+ * ============================================================
+ * Error Helper
+ * ============================================================
+ */
+
+fs_error_t lsa_errno_map(
+                int err);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* MIRAGEFS_LSA_API_H */
