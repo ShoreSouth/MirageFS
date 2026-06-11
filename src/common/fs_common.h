@@ -7,6 +7,7 @@
 #include "common/assert/fs_assert.h"
 #include "common/error/fs_errno.h"
 #include "common/error/fs_error.h"
+#include "common/flag/fs_flag.h"
 #include "common/hash/fs_hash.h"
 #include "common/list/fs_list.h"
 #include "common/lock/fs_lock.h"
