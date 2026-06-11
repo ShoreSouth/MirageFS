@@ -6,5 +6,6 @@ LIB     = $(LIB_DIR)/lib$(MODULE).a
 # ============================================================
 
 SRC := internal/lsa_error.c
+SRC += ops/lsa_handle.c
 
 include ../../build/build.mk

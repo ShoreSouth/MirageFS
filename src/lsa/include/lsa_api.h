@@ -10,6 +10,7 @@
 #include <sys/types.h>
 
 #include "common/fs_common.h"
+#include "lsa/internal/lsa_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -97,18 +98,28 @@ typedef struct lsa_dir_iter {
  * fd
  */
 
+typedef struct lsa_file_handle {
+
+    uint32_t handle_bytes;
+
+    int32_t handle_type;
+
+    uint8_t data[LSA_HANDLE_MAX_SIZE];
+
+} lsa_file_handle_t;
+
 lsa_ret_t lsa_name_to_handle_at(
                 int dirfd,
                 const char *path,
-                struct file_handle *handle,
-                int *mount_id,
+                lsa_file_handle_t *handle,
+                int32_t *mount_id,
                 int flags);
 
 lsa_ret_t lsa_open_by_handle_at(
                 int mount_fd,
-                struct file_handle *handle,
+                const lsa_file_handle_t *handle,
                 int flags,
-                int *out_fd);
+                int *fd);
 
 /*
  * ============================================================
