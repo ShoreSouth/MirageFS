@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/sysmacros.h>
 
 #include "common/fs_common.h"
 #include "lsa/internal/lsa_internal.h"
@@ -21,6 +22,10 @@ lsa_ret_t lsa_lookup(
 
     if (name == NULL ||
         fd == NULL) {
+
+        FS_LOG_DUMP_ERROR(
+                "lookup invalid argument");
+
         return lsa_error(
                     FS_OP_LOOKUP,
                     EINVAL);
@@ -38,6 +43,15 @@ lsa_ret_t lsa_lookup(
                     open_flags);
 
     if (newfd < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "lookup failed: "
+                "name=%s "
+                "errno=%d(%s)",
+                name,
+                errno,
+                strerror(errno));
+
         return lsa_error(
                     FS_OP_LOOKUP,
                     errno);
@@ -65,6 +79,10 @@ lsa_ret_t lsa_create(
 
     if (name == NULL ||
         fd == NULL) {
+
+        FS_LOG_DUMP_ERROR(
+                "create invalid argument");
+
         return lsa_error(
                     FS_OP_CREATE,
                     EINVAL);
@@ -85,6 +103,15 @@ lsa_ret_t lsa_create(
                     mode);
 
     if (newfd < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "create failed: "
+                "name=%s "
+                "errno=%d(%s)",
+                name,
+                errno,
+                strerror(errno));
+
         return lsa_error(
                     FS_OP_CREATE,
                     errno);
@@ -109,15 +136,28 @@ lsa_ret_t lsa_mkdir(
     (void)flags;
 
     if (name == NULL) {
+
+        FS_LOG_DUMP_ERROR(
+                "mkdir invalid argument");
+
         return lsa_error(
-                    FS_OP_MKDIR,
-                    EINVAL);
+            FS_OP_MKDIR,
+            EINVAL);
     }
 
     if (mkdirat(
                 dirfd,
                 name,
                 mode) < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "mkdir failed: "
+                "name=%s "
+                "errno=%d(%s)",
+                name,
+                errno,
+                strerror(errno));
+
         return lsa_error(
                     FS_OP_MKDIR,
                     errno);
@@ -139,7 +179,11 @@ lsa_ret_t lsa_unlink(
     (void)flags;
 
     if (name == NULL) {
-        return lsa_error(
+
+        FS_LOG_DUMP_ERROR(
+                "unlink invalid argument");
+
+                return lsa_error(
                     FS_OP_UNLINK,
                     EINVAL);
     }
@@ -148,6 +192,15 @@ lsa_ret_t lsa_unlink(
                 dirfd,
                 name,
                 0) < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "unlink failed: "
+                "name=%s "
+                "errno=%d(%s)",
+                name,
+                errno,
+                strerror(errno));
+
         return lsa_error(
                     FS_OP_UNLINK,
                     errno);
@@ -169,15 +222,28 @@ lsa_ret_t lsa_rmdir(
     (void)flags;
 
     if (name == NULL) {
+
+        FS_LOG_DUMP_ERROR(
+                "rmdir invalid argument");
+
         return lsa_error(
-                    FS_OP_RMDIR,
-                    EINVAL);
+            FS_OP_RMDIR,
+            EINVAL);
     }
 
     if (unlinkat(
                 dirfd,
                 name,
                 AT_REMOVEDIR) < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "rmdir failed: "
+                "name=%s "
+                "errno=%d(%s)",
+                name,
+                errno,
+                strerror(errno));
+
         return lsa_error(
                     FS_OP_RMDIR,
                     errno);
@@ -202,9 +268,13 @@ lsa_ret_t lsa_rename(
 
     if (old_name == NULL ||
         new_name == NULL) {
+
+        FS_LOG_DUMP_ERROR(
+            "rename invalid argument");
+
         return lsa_error(
-                    FS_OP_RENAME,
-                    EINVAL);
+                FS_OP_RENAME,
+                EINVAL);
     }
 
     if (renameat(
@@ -212,6 +282,17 @@ lsa_ret_t lsa_rename(
                 old_name,
                 new_dirfd,
                 new_name) < 0) {
+
+        FS_LOG_DUMP_ERROR(
+            "rename failed: "
+            "old_name=%s "
+            "new_name=%s "
+            "errno=%d(%s)",
+            old_name,
+            new_name,
+            errno,
+            strerror(errno));
+
         return lsa_error(
                     FS_OP_RENAME,
                     errno);
@@ -236,6 +317,10 @@ lsa_ret_t lsa_link(
 
     if (old_name == NULL ||
         new_name == NULL) {
+ 
+        FS_LOG_DUMP_ERROR(
+            "link invalid argument");
+
         return lsa_error(
                     FS_OP_LINK,
                     EINVAL);
@@ -247,6 +332,17 @@ lsa_ret_t lsa_link(
                 new_dirfd,
                 new_name,
                 0) < 0) {
+
+        FS_LOG_DUMP_ERROR(
+            "link failed: "
+            "old_name=%s "
+            "new_name=%s "
+            "errno=%d(%s)",
+            old_name,
+            new_name,
+            errno,
+            strerror(errno));
+
         return lsa_error(
                     FS_OP_LINK,
                     errno);
@@ -270,6 +366,10 @@ lsa_ret_t lsa_symlink(
 
     if (target == NULL ||
         name == NULL) {
+
+        FS_LOG_DUMP_ERROR(
+            "symlink invalid argument");
+
         return lsa_error(
                     FS_OP_SYMLINK,
                     EINVAL);
@@ -279,8 +379,153 @@ lsa_ret_t lsa_symlink(
                 target,
                 dirfd,
                 name) < 0) {
+
+        FS_LOG_DUMP_ERROR(
+            "symlink failed: "
+            "target=%s "
+            "name=%s "
+            "errno=%d(%s)",
+            target,
+            name,
+            errno,
+            strerror(errno));
+
         return lsa_error(
                     FS_OP_SYMLINK,
+                    errno);
+    }
+
+    return FS_OK;
+}
+
+/* ============================================================
+ * mknod
+ * ============================================================
+ */
+
+static int lsa_mknod_mode(
+                fs_type_t type,
+                mode_t perm,
+                mode_t *mode)
+{
+    switch (type) {
+
+    case FS_TYPE_FIFO:
+
+        *mode = S_IFIFO | perm;
+        return 0;
+
+    case FS_TYPE_BLK:
+
+        *mode = S_IFBLK | perm;
+        return 0;
+
+    case FS_TYPE_CHR:
+
+        *mode = S_IFCHR | perm;
+        return 0;
+
+    default:
+
+        return -1;
+    }
+}
+
+/* ============================================================
+ * mknod
+ * ============================================================
+ */
+
+lsa_ret_t lsa_mknod(
+                int dirfd,
+                const char *name,
+                fs_type_t type,
+                mode_t perm,
+                const lsa_device_t *device)
+{
+    mode_t mode;
+    dev_t dev;
+
+    if (name == NULL) {
+
+        FS_LOG_DUMP_ERROR(
+                "mknod invalid argument");
+
+        return lsa_error(
+                    FS_OP_MKNOD,
+                    EINVAL);
+    }
+
+    if (lsa_mknod_mode(
+                type,
+                perm,
+                &mode) != 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "mknod invalid type=%u",
+                (uint32_t)type);
+
+        return lsa_error(
+                    FS_OP_MKNOD,
+                    EINVAL);
+    }
+
+    dev = 0;
+
+    switch (type) {
+
+    case FS_TYPE_BLK:
+    case FS_TYPE_CHR:
+
+        if (device == NULL) {
+
+            FS_LOG_DUMP_ERROR(
+                    "mknod device required");
+
+            return lsa_error(
+                        FS_OP_MKNOD,
+                        EINVAL);
+        }
+
+        dev = makedev(
+                    device->major_id,
+                    device->minor_id);
+
+        break;
+
+    case FS_TYPE_FIFO:
+
+        break;
+
+    default:
+
+        FS_LOG_DUMP_ERROR(
+                "mknod invalid type=%u",
+                (uint32_t)type);
+
+        return lsa_error(
+                    FS_OP_MKNOD,
+                    EINVAL);
+    }
+
+    if (mknodat(
+                dirfd,
+                name,
+                mode,
+                dev) < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "mknod failed: "
+                "name=%s "
+                "type=%u "
+                "errno=%d(%s)",
+                name,
+                (uint32_t)type,
+                errno,
+                strerror(errno));
+
+        return lsa_error(
+                    FS_OP_MKNOD,
                     errno);
     }
 

@@ -86,6 +86,26 @@ typedef struct lsa_dir_iter {
 
 /*
  * ============================================================
+ * device identifier
+ *
+ * used by:
+ *      lsa_mknod()
+ *
+ * valid for:
+ *      FS_TYPE_BLK
+ *      FS_TYPE_CHR
+ * ============================================================
+ */
+typedef struct lsa_device {
+
+    uint32_t major_id;
+
+    uint32_t minor_id;
+
+} lsa_device_t;
+
+/*
+ * ============================================================
  * Handle Operations
  * ============================================================
  *
@@ -127,69 +147,61 @@ lsa_ret_t lsa_open_by_handle_at(
  * ============================================================
  */
 
-lsa_ret_t lsa_openat(
+lsa_ret_t lsa_lookup(
                 int dirfd,
-                const char *path,
-                int flags,
-                mode_t mode,
-                int *out_fd);
+                const char *name,
+                fs_flags_t flags,
+                int *fd);
 
-lsa_ret_t lsa_createat(
+lsa_ret_t lsa_create(
                 int dirfd,
-                const char *path,
+                const char *name,
+                fs_flags_t flags,
                 mode_t mode,
-                int *out_fd);
+                int *fd);
 
-lsa_ret_t lsa_mkdirat(
+lsa_ret_t lsa_mkdir(
                 int dirfd,
-                const char *path,
+                const char *name,
+                fs_flags_t flags,
                 mode_t mode);
 
-lsa_ret_t lsa_mknodat(
+lsa_ret_t lsa_unlink(
                 int dirfd,
-                const char *path,
-                mode_t mode,
-                dev_t dev);
+                const char *name,
+                fs_flags_t flags);
 
-lsa_ret_t lsa_mkfifoat(
+lsa_ret_t lsa_rmdir(
                 int dirfd,
-                const char *path,
-                mode_t mode);
+                const char *name,
+                fs_flags_t flags);
 
-lsa_ret_t lsa_mkchrat(
-                int dirfd,
-                const char *path,
-                mode_t mode,
-                dev_t dev);
+lsa_ret_t lsa_rename(
+                int old_dirfd,
+                const char *old_name,
+                int new_dirfd,
+                const char *new_name,
+                fs_flags_t flags);                
 
-lsa_ret_t lsa_mkblkat(
-                int dirfd,
-                const char *path,
-                mode_t mode,
-                dev_t dev);
+lsa_ret_t lsa_link(
+                int old_dirfd,
+                const char *old_name,
+                int new_dirfd,
+                const char *new_name,
+                fs_flags_t flags);                
 
-lsa_ret_t lsa_symlinkat(
+lsa_ret_t lsa_symlink(
                 const char *target,
-                int newdirfd,
-                const char *linkpath);
-
-lsa_ret_t lsa_linkat(
-                int olddirfd,
-                const char *oldpath,
-                int newdirfd,
-                const char *newpath,
-                int flags);
-
-lsa_ret_t lsa_renameat(
-                int olddirfd,
-                const char *oldpath,
-                int newdirfd,
-                const char *newpath);
-
-lsa_ret_t lsa_unlinkat(
                 int dirfd,
-                const char *path,
-                int flags);
+                const char *name,
+                fs_flags_t flags);
+
+lsa_ret_t lsa_mknod(
+                int dirfd,
+                const char *name,
+                fs_type_t type,
+                mode_t mode,
+                const lsa_device_t *device);
 
 /*
  * ============================================================
@@ -203,28 +215,28 @@ lsa_ret_t lsa_close(
 lsa_ret_t lsa_read(
                 int fd,
                 void *buf,
-                size_t len,
-                ssize_t *actual);
+                size_t size,
+                size_t *actual);
 
 lsa_ret_t lsa_write(
                 int fd,
                 const void *buf,
-                size_t len,
-                ssize_t *actual);
+                size_t size,
+                size_t *actual);
 
 lsa_ret_t lsa_pread(
                 int fd,
                 void *buf,
-                size_t len,
+                size_t size,
                 off_t offset,
-                ssize_t *actual);
+                size_t *actual);
 
 lsa_ret_t lsa_pwrite(
                 int fd,
                 const void *buf,
-                size_t len,
+                size_t size,
                 off_t offset,
-                ssize_t *actual);
+                size_t *actual);
 
 lsa_ret_t lsa_lseek(
                 int fd,
@@ -252,8 +264,8 @@ lsa_ret_t lsa_fstat(
 lsa_ret_t lsa_fstatat(
                 int dirfd,
                 const char *path,
-                struct stat *st,
-                int flags);
+                fs_flags_t flags,
+                struct stat *st);
 
 lsa_ret_t lsa_fchmod(
                 int fd,

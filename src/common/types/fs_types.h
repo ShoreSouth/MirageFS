@@ -27,7 +27,7 @@ typedef enum {
     FS_TYPE_DIR,
     FS_TYPE_LNK,
     FS_TYPE_FIFO,
-    FS_TYPE_SOCK,
+    FS_TYPE_SOCK, /* lookup/stat only, not supported by lsa_mknod() */
     FS_TYPE_BLK,
     FS_TYPE_CHR,
 

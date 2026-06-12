@@ -33,7 +33,11 @@ lsa_ret_t lsa_name_to_handle_at(
     if (path == NULL ||
         handle == NULL ||
         mount_id == NULL) {
-        return lsa_error(FS_OP_LOOKUP, EINVAL);
+        
+        FS_LOG_DUMP_ERROR(
+                "name_to_handle_at invalid argument");
+
+        return lsa_error(FS_OP_GETHANDLE, EINVAL);
     }
 
     memset(&fh, 0, sizeof(fh));
@@ -48,8 +52,17 @@ lsa_ret_t lsa_name_to_handle_at(
                     flags);
 
     if (ret < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "name_to_handle_at failed: "
+                "path=%s "
+                "errno=%d(%s)",
+                path,
+                errno,
+                strerror(errno));
+
         return lsa_error(
-                    FS_OP_LOOKUP,
+                    FS_OP_GETHANDLE,
                     errno);
     }
 
@@ -82,7 +95,11 @@ lsa_ret_t lsa_open_by_handle_at(
 
     if (handle == NULL ||
         fd == NULL) {
-        return lsa_error(FS_OP_LOOKUP, EINVAL);
+
+        FS_LOG_DUMP_ERROR(
+                "open_by_handle_at invalid argument");
+
+        return lsa_error(FS_OP_OPENHANDLE, EINVAL);
     }
 
     memset(&fh, 0, sizeof(fh));
@@ -104,8 +121,15 @@ lsa_ret_t lsa_open_by_handle_at(
                     flags);
 
     if (newfd < 0) {
+
+        FS_LOG_DUMP_ERROR(
+                "open_by_handle_at failed: "
+                "errno=%d(%s)",
+                errno,
+                strerror(errno));
+
         return lsa_error(
-                    FS_OP_LOOKUP,
+                    FS_OP_OPENHANDLE,
                     errno);
     }
 
