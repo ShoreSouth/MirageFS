@@ -68,21 +68,11 @@ typedef struct lsa_dirent_plus {
 
 /*
  * ============================================================
- * Directory Iterator
+ * Directory Iterator (opaque handle)
  * ============================================================
  */
 
-typedef struct lsa_dir_iter {
-
-    int dirfd;
-
-    lsa_dir_cookie_t cookie;
-
-    bool eof;
-
-    void *private_data;
-
-} lsa_dir_iter_t;
+typedef struct lsa_dir_iter lsa_dir_iter_t;
 
 /*
  * ============================================================
@@ -284,30 +274,26 @@ lsa_ret_t lsa_fchown(
 
 lsa_ret_t lsa_dir_iter_open(
                 int dirfd,
-                lsa_dir_iter_t *iter);
+                uint32_t buffer_size,
+                lsa_dir_iter_t **iter_out);
 
 lsa_ret_t lsa_dir_iter_close(
                 lsa_dir_iter_t *iter);
 
 lsa_ret_t lsa_dir_iter_next(
                 lsa_dir_iter_t *iter,
-                lsa_dirent_t *entries,
-                uint32_t max_entries,
-                uint32_t *actual);
+                lsa_dirent_t *entry);
 
 lsa_ret_t lsa_dir_iter_next_plus(
                 lsa_dir_iter_t *iter,
-                lsa_dirent_plus_t *entries,
-                uint32_t max_entries,
-                uint32_t *actual);
+                lsa_dirent_plus_t *entry);
 
-lsa_ret_t lsa_dir_iter_get_cookie(
-                lsa_dir_iter_t *iter,
-                lsa_dir_cookie_t *cookie);
+lsa_dir_cookie_t lsa_dir_iter_get_cookie(
+                const lsa_dir_iter_t *iter);
 
 lsa_ret_t lsa_dir_iter_seek(
                 lsa_dir_iter_t *iter,
-                const lsa_dir_cookie_t *cookie);
+                lsa_dir_cookie_t cookie);
 
 /*
  * ============================================================

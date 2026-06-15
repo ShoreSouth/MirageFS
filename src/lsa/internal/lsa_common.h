@@ -18,6 +18,10 @@
 
 #define LSA_DIR_BATCH_DEFAULT     128U
 
+#define LSA_DIR_BUFFER_SIZE_DEFAULT  (8U * 1024U)
+
+#define LSA_DIR_BUFFER_SIZE_MIN      (4U * 1024U)
+
 /*
  * ============================================================
  * XAttr
