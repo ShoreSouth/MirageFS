@@ -1,17 +1,18 @@
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "common/fs_common.h"
 #include "meta/objmeta.h"
+#include "object/objkey.h"
 
 /* ============================================================
  * Object Table Entry
  * ============================================================ */
 
 /*
- * objectid -> ObjMeta
+ * (objectid, gen) -> ObjMeta
  */
 typedef struct objtable_entry {
 
@@ -30,7 +31,9 @@ typedef struct objtable_entry {
  *
  * 维护：
  *
- *      objectid -> ObjMeta
+ *      (objectid, gen)
+ *              ↓
+ *           ObjMeta
  *
  * 映射关系。
  */
@@ -47,13 +50,15 @@ typedef struct objtable {
 /*
  * 初始化对象表。
  */
-int objtable_init(objtable_t *table,
-                  uint32_t bucket_nr);
+int objtable_init(
+            objtable_t *table,
+            uint32_t bucket_nr);
 
 /*
  * 销毁对象表。
  */
-void objtable_destroy(objtable_t *table);
+void objtable_destroy(
+            objtable_t *table);
 
 /* ============================================================
  * 基础操作
@@ -62,16 +67,18 @@ void objtable_destroy(objtable_t *table);
 /*
  * 插入对象。
  *
- * 若objectid已存在返回失败。
+ * 若(objid, gen)已存在返回失败。
  */
-int objtable_insert(objtable_t *table,
-                    const ObjMeta_t *meta);
+int objtable_insert(
+            objtable_t *table,
+            const ObjMeta_t *meta);
 
 /*
  * 删除对象。
  */
-int objtable_remove(objtable_t *table,
-                    uint64_t objectid);
+int objtable_remove(
+            objtable_t *table,
+            const objkey_t *key);
 
 /*
  * 查找对象。
@@ -80,14 +87,16 @@ int objtable_remove(objtable_t *table,
  *      NULL    未找到
  *      meta    找到
  */
-ObjMeta_t *objtable_lookup(objtable_t *table,
-                           uint64_t objectid);
+ObjMeta_t *objtable_lookup(
+                objtable_t *table,
+                const objkey_t *key);
 
 /*
  * 判断对象是否存在。
  */
-bool objtable_exists(objtable_t *table,
-                     uint64_t objectid);
+bool objtable_exists(
+            objtable_t *table,
+            const objkey_t *key);
 
 /* ============================================================
  * 统计

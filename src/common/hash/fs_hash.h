@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "common/list/fs_list.h"
@@ -15,20 +16,29 @@
  * ============================================================ */
 
 /*
- * 获取节点 key。
+ * 节点哈希函数。
  *
- * 用户数据结构中必须嵌入 fs_list_head_t。
- *
- * hash 模块不关心具体对象类型，
- * 仅通过回调获取 key。
+ * 插入节点时使用。
  */
-typedef uint64_t (*fs_hash_key_fn)(const fs_list_head_t *node);
+typedef uint64_t (*fs_hash_node_hash_fn)(
+                    const fs_list_head_t *node);
 
 /*
- * key 比较函数。
+ * Key哈希函数。
+ *
+ * 查找节点时使用。
  */
-typedef bool (*fs_hash_match_fn)(const fs_list_head_t *node,
-                                uint64_t key);
+typedef uint64_t (*fs_hash_key_hash_fn)(
+                    const void *key);
+
+/*
+ * 节点匹配函数。
+ *
+ * key 为业务自定义查询条件。
+ */
+typedef bool (*fs_hash_match_fn)(
+                    const fs_list_head_t *node,
+                    const void *key);
 
 /* ============================================================
  * HashTable
@@ -40,11 +50,13 @@ typedef struct fs_hash {
 
     uint64_t entry_nr; /* 当前节点数量 */
 
-    fs_list_head_t *buckets; /* bucket数组，每个bucket是一个链表头 */
+    fs_list_head_t *buckets; /* bucket数组 */
 
-    fs_hash_key_fn key_fn; /* 从节点获取key */
+    fs_hash_node_hash_fn node_hash_fn; /* 节点哈希函数 */
 
-    fs_hash_match_fn match_fn; /* 判断节点是否匹配指定key */
+    fs_hash_key_hash_fn key_hash_fn; /* Key哈希函数 */
+
+    fs_hash_match_fn match_fn; /* 节点匹配函数 */
 
 } fs_hash_t;
 
@@ -57,7 +69,8 @@ typedef struct fs_hash {
  */
 int fs_hash_init(fs_hash_t *hash,
                  uint32_t bucket_nr,
-                 fs_hash_key_fn key_fn,
+                 fs_hash_node_hash_fn hash_fn,
+                 fs_hash_key_hash_fn key_hash_fn,
                  fs_hash_match_fn match_fn);
 
 /*
@@ -86,12 +99,15 @@ void fs_hash_remove(fs_hash_t *hash,
 /*
  * 查找节点。
  *
+ * key 为业务自定义查询条件。
+ *
  * 返回：
  *      NULL    未找到
  *      node    找到
  */
-fs_list_head_t *fs_hash_lookup(fs_hash_t *hash,
-                         uint64_t key);
+fs_list_head_t *fs_hash_lookup(
+                    fs_hash_t *hash,
+                    const void *key);
 
 /* ============================================================
  * 统计

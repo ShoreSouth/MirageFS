@@ -1,28 +1,31 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "common/hash/fs_hash.h"
 #include "common/list/fs_list.h"
 #include "common/log/fs_log.h"
-
-#include <stdlib.h>
-#include <string.h>
 
 /* ============================================================
  * 内部函数
  * ============================================================ */
 
-static uint32_t fs_hash_index(const fs_hash_t *hash,
-                              uint64_t key)
+static uint32_t fs_hash_index(
+                    const fs_hash_t *hash,
+                    uint64_t hash_value)
 {
-    return (uint32_t)(key % hash->bucket_nr);
+    return (uint32_t)(hash_value % hash->bucket_nr);
 }
 
 /* ============================================================
  * 生命周期
  * ============================================================ */
 
-int fs_hash_init(fs_hash_t *hash,
-                 uint32_t bucket_nr,
-                 fs_hash_key_fn key_fn,
-                 fs_hash_match_fn match_fn)
+int fs_hash_init(
+            fs_hash_t *hash,
+            uint32_t bucket_nr,
+            fs_hash_node_hash_fn node_hash_fn,
+            fs_hash_key_hash_fn key_hash_fn,
+            fs_hash_match_fn match_fn)
 {
     uint32_t i;
 
@@ -36,8 +39,13 @@ int fs_hash_init(fs_hash_t *hash,
         return -1;
     }
 
-    if (key_fn == NULL) {
-        FS_LOG_DUMP_ERROR("key_fn is NULL");
+    if (node_hash_fn == NULL) {
+        FS_LOG_DUMP_ERROR("node_hash_fn is NULL");
+        return -1;
+    }
+
+    if (key_hash_fn == NULL) {
+        FS_LOG_DUMP_ERROR("key_hash_fn is NULL");
         return -1;
     }
 
@@ -60,7 +68,9 @@ int fs_hash_init(fs_hash_t *hash,
     }
 
     hash->bucket_nr = bucket_nr;
-    hash->key_fn = key_fn;
+
+    hash->node_hash_fn = node_hash_fn;
+    hash->key_hash_fn = key_hash_fn;
     hash->match_fn = match_fn;
 
     return 0;
@@ -81,19 +91,22 @@ void fs_hash_destroy(fs_hash_t *hash)
  * 基础操作
  * ============================================================ */
 
-int fs_hash_insert(fs_hash_t *hash,
-                   fs_list_head_t *node)
+int fs_hash_insert(
+            fs_hash_t *hash,
+            fs_list_head_t *node)
 {
-    uint64_t key;
+    uint64_t hash_value;
     uint32_t index;
 
-    if ((hash == NULL) || (node == NULL)) {
+    if ((hash == NULL) ||
+        (node == NULL)) {
         return -1;
     }
 
-    key = hash->key_fn(node);
+    hash_value = hash->node_hash_fn(node);
 
-    index = fs_hash_index(hash, key);
+    index = fs_hash_index(hash,
+                          hash_value);
 
     fs_list_add_tail(node,
                      &hash->buckets[index]);
@@ -103,10 +116,12 @@ int fs_hash_insert(fs_hash_t *hash,
     return 0;
 }
 
-void fs_hash_remove(fs_hash_t *hash,
-                    fs_list_head_t *node)
+void fs_hash_remove(
+            fs_hash_t *hash,
+            fs_list_head_t *node)
 {
-    if ((hash == NULL) || (node == NULL)) {
+    if ((hash == NULL) ||
+        (node == NULL)) {
         return;
     }
 
@@ -117,23 +132,30 @@ void fs_hash_remove(fs_hash_t *hash,
     }
 }
 
-fs_list_head_t *fs_hash_lookup(fs_hash_t *hash,
-                               uint64_t key)
+fs_list_head_t *fs_hash_lookup(
+                    fs_hash_t *hash,
+                    const void *key)
 {
+    uint64_t hash_value;
     uint32_t index;
 
     fs_list_head_t *pos;
 
-    if (hash == NULL) {
+    if ((hash == NULL) ||
+        (key == NULL)) {
         return NULL;
     }
 
-    index = fs_hash_index(hash, key);
+    hash_value = hash->key_hash_fn(key);
+
+    index = fs_hash_index(hash,
+                          hash_value);
 
     FS_LIST_FOR_EACH(pos,
                      &hash->buckets[index]) {
 
-        if (hash->match_fn(pos, key)) {
+        if (hash->match_fn(pos,
+                           key)) {
             return pos;
         }
     }
