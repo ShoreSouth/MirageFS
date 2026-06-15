@@ -315,27 +315,27 @@ lsa_ret_t lsa_dir_iter_seek(
  * ============================================================
  */
 
-lsa_ret_t lsa_fsetxattr(
+lsa_ret_t lsa_setxattr(
                 int fd,
                 const char *name,
                 const void *value,
                 size_t size,
-                int flags);
+                fs_flags_t flags);
 
-lsa_ret_t lsa_fgetxattr(
+lsa_ret_t lsa_getxattr(
                 int fd,
                 const char *name,
                 void *value,
                 size_t size,
-                ssize_t *actual);
+                size_t *actual);
 
-lsa_ret_t lsa_flistxattr(
+lsa_ret_t lsa_listxattr(
                 int fd,
                 char *list,
                 size_t size,
-                ssize_t *actual);
+                size_t *actual);
 
-lsa_ret_t lsa_fremovexattr(
+lsa_ret_t lsa_removexattr(
                 int fd,
                 const char *name);
 
@@ -347,7 +347,10 @@ lsa_ret_t lsa_fremovexattr(
 
 lsa_ret_t lsa_statfs(
                 int fd,
-                struct statfs *buf);
+                struct statfs *st);
+
+lsa_ret_t lsa_syncfs(
+                int fd);
 
 /*
  * ============================================================

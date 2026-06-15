@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 /*
  * ============================================================
@@ -21,21 +21,18 @@ typedef uint32_t fs_flags_t;
 
 /*
  * ============================================================
- * Namespace
+ * Constraint
  * ============================================================
  */
 
-/* replace existing entry */
+/* replace existing object */
 #define FS_FLAG_REPLACE        (1U << 0)
 
-/* recursive operation */
-#define FS_FLAG_RECURSIVE      (1U << 1)
+/* object must not exist */
+#define FS_FLAG_EXCLUSIVE      (1U << 1)
 
 /* do not follow symlink */
 #define FS_FLAG_NOFOLLOW       (1U << 2)
-
-/* create parent automatically */
-#define FS_FLAG_PARENTS        (1U << 3)
 
 /*
  * ============================================================
@@ -44,10 +41,10 @@ typedef uint32_t fs_flags_t;
  */
 
 /* sync write */
-#define FS_FLAG_SYNC           (1U << 4)
+#define FS_FLAG_SYNC           (1U << 3)
 
 /* direct io */
-#define FS_FLAG_DIRECT         (1U << 5)
+#define FS_FLAG_DIRECT         (1U << 4)
 
 /*
  * ============================================================

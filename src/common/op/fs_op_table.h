@@ -44,4 +44,6 @@
     _(GETXATTR,     "GETXATTR")        \
     _(SETXATTR,     "SETXATTR")        \
     _(LISTXATTR,    "LISTXATTR")       \
-    _(REMOVEXATTR,  "REMOVEXATTR")
+    _(REMOVEXATTR,  "REMOVEXATTR")     \
+    _(STATFS,       "STATFS")           \
+    _(SYNCFS,       "SYNCFS")
