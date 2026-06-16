@@ -7,7 +7,7 @@ ObjMeta（Object Metadata）用于维护 MirageFS 对象与 Linux 后端对象�
 核心职责：
 
 ```text
-objectid
+(objectid, gen)
     ↓
 ObjMeta
     ↓
@@ -88,7 +88,7 @@ parent
 ObjMeta 设计为固定长度结构：
 
 ```c
-sizeof(ObjMeta_t) == 32
+sizeof(ObjMeta_t) == 40
 ```
 
 优势：
@@ -108,6 +108,7 @@ sizeof(ObjMeta_t) == 32
 
 ```text
 objectid
+gen
 mount_id
 file_handle
 ```
@@ -129,6 +130,7 @@ file_handle
 ObjMeta 负责：
 
 - objectid 映射
+- gen 映射
 - backend locator 保存
 - backend locator 比较
 - backend locator 校验
@@ -237,14 +239,14 @@ open_by_handle_at()
 ```c
 typedef struct ObjMeta {
 
-    uint64_t objectid;
+    objkey_t key;
 
     int32_t mount_id;
 
     uint16_t handle_type;
     uint16_t handle_bytes;
 
-    uint8_t file_handle[16];
+    uint8_t file_handle[OBJMETA_MAX_HANDLE_SIZE];
 
 } ObjMeta_t;
 ```
@@ -252,22 +254,22 @@ typedef struct ObjMeta {
 逻辑结构：
 
 ```text
-+-----------+
-| objectid  |
-+-----------+
++---------------+
+| objkey_t key  |
++---------------+
 
-+-----------+
-| mount_id  |
-+-----------+
++---------------+
+| mount_id      |
++---------------+
 
-+-----------+
-| type      |
-| length    |
-+-----------+
++---------------+
+| type          |
+| length        |
++---------------+
 
-+-----------+
-| handle    |
-+-----------+
++---------------+
+| handle        |
++---------------+
 ```
 
 
@@ -278,13 +280,14 @@ typedef struct ObjMeta {
 ```text
 Offset  Size    Field
 ------  ----    ----------------
-0       8       objectid
-8       4       mount_id
-12      2       handle_type
-14      2       handle_bytes
-16      16      file_handle
+0       12      key (objkey_t)
+12      4       mount_id
+16      2       handle_type
+18      2       handle_bytes
+20      16      file_handle
+24      4       (padding)
 
-Total = 32 Bytes
+Total = 40 Bytes
 ```
 
 
@@ -296,7 +299,7 @@ Total = 32 Bytes
 
 ```c
 _Static_assert(
-    sizeof(ObjMeta_t) == 32,
+    sizeof(ObjMeta_t) == 40,
     "ObjMeta_t size invalid");
 ```
 
@@ -382,7 +385,7 @@ objmeta_init()
 通过：
 
 ```text
-objectid
+(objectid, gen)
 ```
 
 查找：
@@ -416,7 +419,7 @@ file_handle
 实现：
 
 ```text
-objectid
+(objectid, gen)
     ↓
 ObjMeta
     ↓
@@ -449,6 +452,7 @@ ObjMeta 相同需满足：
 
 ```text
 objectid
+gen
 mount_id
 handle_type
 handle_bytes
@@ -470,10 +474,11 @@ objmeta_equal()
 
 合法 ObjMeta 必须满足：
 
-### objectid 有效
+### objkey 有效
 
 ```text
 objectid != 0
+gen      != 0
 ```
 
 ### handle 长度合法
@@ -506,7 +511,7 @@ ObjMeta 表示对象定位信息。
 ```text
 ObjMeta
     ↓
-(mount_id, file_handle)
+(objectid, gen) → (mount_id, file_handle)
 ```
 
 两者职责不同。
@@ -516,7 +521,7 @@ ObjMeta
            | FUID |
            +------+
                |
-               | objectid
+               | (objectid, gen)
                v
 
          +-----------+
@@ -549,6 +554,7 @@ objmeta_dump()
 ```text
 ========== ObjMeta ==========
 objectid     : 100
+gen          : 1
 mount_id     : 23
 handle_type  : 1
 handle_bytes : 8
@@ -594,7 +600,7 @@ ObjMeta 是 MirageFS 元数据层中最底层的对象定位模块。
 其职责仅是：
 
 ```text
-objectid
+(objectid, gen)
       →
 backend object locator
 ```

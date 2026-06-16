@@ -7,7 +7,7 @@ Object 模块负责管理 MirageFS 全局对象信息。
 当前版本主要提供：
 
 ```text
-objectid -> ObjMeta
+(objectid, gen) -> ObjMeta
 ```
 
 映射关系维护。
@@ -17,7 +17,7 @@ Object 模块是 MirageFS 元数据体系中的核心组件之一。
 其职责是：
 
 ```text
-Object Identity
+Object Identity (objectid, gen)
         ↓
      Object Table
         ↓
@@ -39,7 +39,7 @@ Object 模块负责解决以下问题：
 已知：
 
 ```text
-objectid
+objkey_t (objectid, gen)
 ```
 
 快速获取：
@@ -59,7 +59,7 @@ ObjMeta
 ```text
 create
     ↓
-生成 objectid
+生成 (objectid, gen)
     ↓
 生成 ObjMeta
     ↓
@@ -95,7 +95,7 @@ remove
 
                │
 
-    objectid -> ObjMeta
+    (objectid, gen) -> ObjMeta
 
                │
 
@@ -122,6 +122,7 @@ ObjMeta 描述单个对象。
 
 ```text
 objectid
+gen
 mount_id
 file_handle
 ```
@@ -143,7 +144,7 @@ Value
 ObjTable 维护：
 
 ```text
-objectid -> ObjMeta
+(objectid, gen) -> ObjMeta
 ```
 
 映射关系。
@@ -306,7 +307,7 @@ objtable_insert()
 建立：
 
 ```text
-objectid -> ObjMeta
+(objectid, gen) -> ObjMeta
 ```
 
 映射。
@@ -322,7 +323,7 @@ objtable_lookup()
 根据：
 
 ```text
-objectid
+objkey_t (objectid, gen)
 ```
 
 获取：
@@ -500,7 +501,7 @@ ObjTable
 支持：
 
 ```text
-objectid -> ObjMeta
+(objectid, gen) -> ObjMeta
 ```
 
 落盘保存。
@@ -535,7 +536,7 @@ MirageFS V1 中：
 Object 模块仅负责：
 
 ```text
-objectid -> ObjMeta
+(objectid, gen) -> ObjMeta
 ```
 
 映射管理。

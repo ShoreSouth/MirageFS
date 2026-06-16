@@ -145,7 +145,9 @@ typedef struct fs_hash {
 
     fs_list_head_t *buckets;
 
-    fs_hash_key_fn key_fn;
+    fs_hash_node_hash_fn node_hash_fn;
+
+    fs_hash_key_hash_fn key_hash_fn;
 
     fs_hash_match_fn match_fn;
 
@@ -154,52 +156,95 @@ typedef struct fs_hash {
 
 字段说明：
 
-| 字段        | 说明       |
-| --------- | -------- |
-| bucket_nr | bucket数量 |
-| entry_nr  | 当前节点数量   |
-| buckets   | bucket数组 |
-| key_fn    | 获取节点key  |
-| match_fn  | key匹配函数  |
+| 字段           | 说明          |
+| ------------- | ------------ |
+| bucket_nr     | bucket数量    |
+| entry_nr      | 当前节点数量    |
+| buckets       | bucket数组    |
+| node_hash_fn  | 节点哈希函数    |
+| key_hash_fn   | Key哈希函数    |
+| match_fn      | 节点匹配函数    |
 
 ---
 
 ## 6. 回调机制
 
-### 获取 Key
+Hash 模块通过三组回调函数实现通用 Key 支持。
+
+业务模块在 `fs_hash_init()` 时注册回调，
+Hash 模块在不同操作阶段调用对应回调。
+
+---
+
+### 6.1 节点哈希 (node_hash_fn)
+
+用于 Hash 插入阶段，
+从链表节点计算哈希值。
 
 ```c
-typedef uint64_t (*fs_hash_key_fn)(
+typedef uint64_t (*fs_hash_node_hash_fn)(
     const fs_list_head_t *node);
 ```
-
-Hash 模块通过该回调获取节点对应的 Key。
 
 示例：
 
 ```c
-static uint64_t objtable_key(
+static uint64_t objtable_node_hash(
     const fs_list_head_t *node)
 {
-    const ObjTableEntry_t *entry;
+    const objtable_entry_t *entry;
 
     entry = FS_CONTAINER_OF(
         node,
-        ObjTableEntry_t,
+        objtable_entry_t,
         node);
 
-    return entry->objectid;
+    return ((uint64_t)entry->meta.key.objectid) ^
+           ((uint64_t)entry->meta.key.gen);
 }
 ```
 
 ---
 
-### Key 匹配
+### 6.2 Key 哈希 (key_hash_fn)
+
+用于 Hash 查找阶段，
+从外部 Key 计算哈希值。
+
+Key 类型为 `const void *`，
+支持任意业务自定义 Key。
+
+```c
+typedef uint64_t (*fs_hash_key_hash_fn)(
+    const void *key);
+```
+
+示例：
+
+```c
+static uint64_t objtable_key_hash(
+    const void *key)
+{
+    const objkey_t *objkey;
+
+    objkey = key;
+
+    return ((uint64_t)objkey->objectid) ^
+           ((uint64_t)objkey->gen);
+}
+```
+
+---
+
+### 6.3 节点匹配 (match_fn)
+
+用于 Hash 查找阶段，
+判断链表节点是否匹配给定 Key。
 
 ```c
 typedef bool (*fs_hash_match_fn)(
     const fs_list_head_t *node,
-    uint64_t key);
+    const void *key);
 ```
 
 示例：
@@ -207,16 +252,23 @@ typedef bool (*fs_hash_match_fn)(
 ```c
 static bool objtable_match(
     const fs_list_head_t *node,
-    uint64_t key)
+    const void *key)
 {
-    const ObjTableEntry_t *entry;
+    const objtable_entry_t *entry;
+    const objkey_t *objkey;
 
     entry = FS_CONTAINER_OF(
         node,
-        ObjTableEntry_t,
+        objtable_entry_t,
         node);
 
-    return entry->objectid == key;
+    objkey = key;
+
+    return (entry->meta.key.objectid ==
+            objkey->objectid) &&
+
+           (entry->meta.key.gen ==
+            objkey->gen);
 }
 ```
 
@@ -230,7 +282,8 @@ static bool objtable_match(
 int fs_hash_init(
     fs_hash_t *hash,
     uint32_t bucket_nr,
-    fs_hash_key_fn key_fn,
+    fs_hash_node_hash_fn node_hash_fn,
+    fs_hash_key_hash_fn key_hash_fn,
     fs_hash_match_fn match_fn);
 ```
 
@@ -303,7 +356,7 @@ void fs_hash_remove(
 ```c
 fs_list_head_t *fs_hash_lookup(
     fs_hash_t *hash,
-    uint64_t key);
+    const void *key);
 ```
 
 返回：
@@ -340,15 +393,13 @@ n = Bucket链表长度
 业务对象：
 
 ```c
-typedef struct ObjTableEntry {
-
-    uint64_t objectid;
+typedef struct objtable_entry {
 
     ObjMeta_t meta;
 
     fs_list_head_t node;
 
-} ObjTableEntry_t;
+} objtable_entry_t;
 ```
 
 初始化：
@@ -357,7 +408,8 @@ typedef struct ObjTableEntry {
 fs_hash_init(
     &table,
     1024,
-    objtable_key,
+    objtable_node_hash,
+    objtable_key_hash,
     objtable_match);
 ```
 
@@ -372,9 +424,11 @@ fs_hash_insert(
 查找：
 
 ```c
+objkey_t key = objkey_make(objectid, gen);
+
 node = fs_hash_lookup(
     &table,
-    objectid);
+    &key);
 ```
 
 ---
@@ -383,7 +437,6 @@ node = fs_hash_lookup(
 
 当前版本：
 
-* Key 类型固定为 uint64_t
 * Bucket 数量固定
 * 不支持动态扩容
 * 不支持线程安全
