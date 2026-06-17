@@ -5,6 +5,7 @@
  * ============================================================ */
 
 #include "common/assert/fs_assert.h"
+#include "common/atomic/fs_atomic.h"
 #include "common/error/fs_errno.h"
 #include "common/error/fs_error.h"
 #include "common/flag/fs_flag.h"
