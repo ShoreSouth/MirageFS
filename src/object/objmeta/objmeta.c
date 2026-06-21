@@ -7,18 +7,18 @@
  * 内部函数
  * ============================================================ */
 
-static int32_t objmeta_handle_valid(
+static bool objmeta_handle_valid(
                     uint16_t handle_bytes)
 {
     if (handle_bytes == 0) {
-        return 0;
+        return false;
     }
 
     if (handle_bytes > OBJMETA_MAX_HANDLE_SIZE) {
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
 /* ============================================================
@@ -94,65 +94,65 @@ void objmeta_reset(
            sizeof(obj_meta_t));
 }
 
-int32_t objmeta_is_valid(
+bool objmeta_is_valid(
                 const obj_meta_t *meta)
 {
     if (meta == NULL) {
-        return 0;
+        return false;
     }
 
     if (!objkey_valid(
             &meta->key)) {
 
-        return 0;
+        return false;
     }
 
     if (!objmeta_handle_valid(
             meta->handle.len)) {
 
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
-int32_t objmeta_equal(
+bool objmeta_equal(
                 const obj_meta_t *lhs,
                 const obj_meta_t *rhs)
 {
     if ((lhs == NULL) ||
         (rhs == NULL)) {
 
-        return 0;
+        return false;
     }
 
     if (!objkey_equal(
             &lhs->key,
             &rhs->key)) {
 
-        return 0;
+        return false;
     }
 
     if (lhs->handle.mount_id != rhs->handle.mount_id) {
-        return 0;
+        return false;
     }
 
     if (lhs->handle.type != rhs->handle.type) {
-        return 0;
+        return false;
     }
 
     if (lhs->handle.len != rhs->handle.len) {
-        return 0;
+        return false;
     }
 
     if (memcmp(lhs->handle.data,
                rhs->handle.data,
                lhs->handle.len) != 0) {
 
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
 void objmeta_dump(
@@ -197,31 +197,31 @@ void objmeta_dump(
 
     FS_LOG_DUMP_INFO(
             "objectid     : %lu",
-            meta->key.objectid);
+            (unsigned long)meta->key.objectid);
 
     FS_LOG_DUMP_INFO(
             "gen          : %u",
-            meta->key.gen);
+            (unsigned int)meta->key.gen);
 
     FS_LOG_DUMP_INFO(
             "refcnt       : %d",
-            meta->refcnt);
+            (int)meta->refcnt);
 
     FS_LOG_DUMP_INFO(
             "state        : %u",
-            meta->state);
+            (unsigned int)meta->state);
 
     FS_LOG_DUMP_INFO(
             "mount_id     : %d",
-            meta->handle.mount_id);
+            (int)meta->handle.mount_id);
 
     FS_LOG_DUMP_INFO(
             "handle_type  : %u",
-            meta->handle.type);
+            (unsigned int)meta->handle.type);
 
     FS_LOG_DUMP_INFO(
             "handle_bytes : %u",
-            meta->handle.len);
+            (unsigned int)meta->handle.len);
 
     FS_LOG_DUMP_INFO(
             "file_handle  : %s",

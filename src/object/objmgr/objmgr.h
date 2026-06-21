@@ -3,117 +3,221 @@
 #include <stdbool.h>
 
 #include "common/fs_common.h"
+#include "object/fuid/fuid.h"
 #include "object/objmeta/objmeta.h"
 
 /*
  * ============================================================
- * objmgr
+ * objmgr — 对象生命周期管理器
  *
- * object lifecycle manager
+ * objmgr 是 ObjTable 的上层服务，负责：
+ *
+ *   1. 对象生命周期管理
+ *          create / delete / lookup
+ *
+ *   2. 引用计数管理
+ *          get（获取引用）/ put（释放引用）
+ *
+ *   3. 状态迁移
+ *          驱动 ObjMeta 的 state 状态机
+ *          (INIT → ACTIVE → DELETING → DELETED)
+ *
+ * objmgr 内部持有全局 obj_table_t 实例，
+ * 所有对象操作均通过 objmgr 统一管理。
  * ============================================================
  */
 
 /*
  * ============================================================
- * init
+ * 初始化
  * ============================================================
  */
 
 /*
- * initialize object manager
+ * 初始化对象管理器。
+ *
+ * 创建内部 obj_table_t 实例。
+ *
+ * 返回：
+ *      0       : 成功
+ *      <0      : 失败
  */
 int32_t objmgr_init(void);
 
 /*
- * cleanup object manager
+ * 销毁对象管理器。
+ *
+ * 释放内部 obj_table_t 及所有已注册对象。
  */
 void objmgr_deinit(void);
 
 /*
  * ============================================================
- * object lifecycle
+ * 对象生命周期
  * ============================================================
  */
 
 /*
- * create object
+ * 创建对象。
+ *
+ * 将 ObjMeta 注册到内部对象表，
+ * 并激活其生命周期状态。
+ *
+ * 参数：
+ *      meta    : 完整的对象元数据
+ *
+ * 返回：
+ *      0       : 成功
+ *      <0      : 失败
  */
 int32_t objmgr_create(
-                const obj_meta_t *meta);
+                obj_meta_t *meta);
 
 /*
- * delete object
+ * 删除对象。
+ *
+ * 驱动状态迁移 DELETING → DELETED，
+ * 最终从对象表中移除。
+ *
+ * 参数：
+ *      fuid    : 待删除对象的 FUID
+ *
+ * 返回：
+ *      0       : 成功
+ *      <0      : 失败
  */
 int32_t objmgr_delete(
                 fuid_t fuid);
 
 /*
  * ============================================================
- * object lookup
+ * 对象查找
  * ============================================================
  */
 
 /*
- * lookup object
+ * lookup 仅返回对象指针。
+ * 不会增加引用计数。
+ * 如果需要长期持有对象，
+ * 应调用 objmgr_get()。
  *
- * return:
- *      object metadata pointer
+ * 参数：
+ *      fuid    : 对象 FUID 标识
  *
- * note:
- *      returned pointer is managed by objmgr
+ * 返回：
+ *      NULL        : 未找到
+ *      非 NULL     : 对象元数据指针（由 objmgr 管理生命周期，调用者不应释放）
  */
 obj_meta_t *objmgr_lookup(
                 fuid_t fuid);
 
 /*
- * check object exists
+ * 判断对象是否存在。
  */
 bool objmgr_exists(
                 fuid_t fuid);
 
 /*
  * ============================================================
- * reference count
+ * 对象访问
  * ============================================================
  */
 
 /*
- * acquire reference
+ * 获取对象并增加引用。
  *
- * return:
- *      FS_OK
- *      FS_ERR_NOT_FOUND
- *      FS_ERR_BUSY
+ * 本接口等价于：
+ *
+ *      lookup()
+ *          +
+ *      get()
+ *
+ * 如果对象不存在或当前状态不允许获取引用（例如
+ * DELETING / DELETED），返回 NULL。
+ *
+ * 返回：
+ *      NULL        : 获取失败
+ *      非 NULL     : 已获取引用的对象元数据
+ *
+ * 注意：
+ *      调用成功后，必须对应调用 objmgr_release()
+ *      释放引用。
+ */
+obj_meta_t *objmgr_acquire(
+                fuid_t fuid);
+
+/*
+ * 释放对象引用。
+ *
+ * 本接口等价于：
+ *
+ *      put()
+ *
+ * 当引用计数减至 0 时，
+ * objmgr 将根据对象状态决定是否释放对象。
+ *
+ * 参数：
+ *      meta    : acquire() 返回的对象元数据
+ */
+void objmgr_release(
+                obj_meta_t *meta);
+
+/*
+ * ============================================================
+ * 引用计数
+ * ============================================================
+ */
+
+/*
+ * 获取引用（refcnt++）。
+ *
+ * 返回：
+ *      FS_OK               : 成功
+ *      FS_ERR_NOT_FOUND    : 对象不存在
+ *      FS_ERR_BUSY         : 对象状态不允许获取引用（如 DELETING）
  */
 int32_t objmgr_get(
                 fuid_t fuid);
 
 /*
- * release reference
+ * 释放引用（refcnt--）。
  */
 int32_t objmgr_put(
                 fuid_t fuid);
 
 /*
- * get current reference count
+ * 获取当前引用计数。
  */
 int32_t objmgr_refcnt(
                 fuid_t fuid);
 
 /*
  * ============================================================
- * object state
+ * 对象状态
  * ============================================================
  */
 
 /*
- * get object state
+ * 获取对象生命周期状态。
+ *
+ * 返回 obj_state_t 枚举值。
  */
-uint32_t objmgr_state(
+obj_state_t objmgr_state(
                 fuid_t fuid);
 
 /*
- * set object state
+ * 设置对象生命周期状态。
+ *
+ * 由 objmgr 内部驱动状态迁移，
+ * 外部模块不应直接调用。
+ *
+ * 参数：
+ *      fuid    : 对象 FUID
+ *      state   : 目标状态（obj_state_t）
+ *
+ * 返回：
+ *      0       : 成功
+ *      <0      : 失败
  */
 int32_t objmgr_set_state(
                 fuid_t fuid,
@@ -121,11 +225,11 @@ int32_t objmgr_set_state(
 
 /*
  * ============================================================
- * statistics
+ * 统计
  * ============================================================
  */
 
 /*
- * current object count
+ * 当前注册对象数量。
  */
 uint32_t objmgr_count(void);

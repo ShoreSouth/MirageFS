@@ -1,29 +1,40 @@
-# Object Module
+# ObjTable 模块设计文档
 
 ## 1. 模块概述
 
-Object 模块负责管理 MirageFS 全局对象信息。
+ObjTable（对象表）是 object 模块的子模块，负责维护 MirageFS 全局对象映射关系。
 
-当前版本主要提供：
+当前版本提供：
 
 ```text
 (objectid, gen) -> ObjMeta
 ```
 
-映射关系维护。
+映射的注册与查找。
 
-Object 模块是 MirageFS 元数据体系中的核心组件之一。
-
-其职责是：
+ObjTable 在 object 模块中的位置：
 
 ```text
-Object Identity (objectid, gen)
+object/
+├── fuid/          # 对象身份标识
+├── objmeta/       # 对象元数据
+├── objtable/      # 对象表（本模块）
+│   ├── objkey.h   # 对象 key 定义
+│   ├── objtable.h
+│   └── objtable.c
+└── objmgr/        # 对象生命周期管理器
+```
+
+ObjTable 的职责是：
+
+```text
+obj_key_t (objectid, gen)
         ↓
-     Object Table
+     ObjTable
         ↓
-      ObjMeta
+     ObjMeta
         ↓
- Linux Backend Object
+Linux Backend Object
 ```
 
 建立 MirageFS 对象与 Linux 后端对象之间的关联。
@@ -31,8 +42,6 @@ Object Identity (objectid, gen)
 ---
 
 ## 2. 设计目标
-
-Object 模块负责解决以下问题：
 
 ### 对象定位
 
@@ -123,11 +132,13 @@ ObjMeta 描述单个对象。
 ```text
 objectid
 gen
+refcnt
+state
 mount_id
 file_handle
 ```
 
-等后端定位信息。
+等后端定位信息及生命周期字段。
 
 其本质属于：
 
@@ -170,13 +181,37 @@ ObjMeta
 即：
 
 ```text
-一个ObjTable
-管理多个ObjMeta
+一个 ObjTable
+管理多个 ObjMeta
 ```
 
 ---
 
 ## 5. 数据结构
+
+### obj_key_t
+
+对象 key，定义在 `objkey.h`。
+
+```c
+typedef struct objkey {
+
+    ObjectId_t objectid;
+
+    GenId_t gen;
+
+} obj_key_t;
+```
+
+提供 inline helper：
+
+```c
+objkey_make()    /* 构造 key           */
+objkey_valid()   /* 校验 key 有效性    */
+objkey_equal()   /* 比较两个 key       */
+```
+
+---
 
 ### objtable_entry_t
 
@@ -204,7 +239,7 @@ typedef struct objtable_entry {
 对象表主体。
 
 ```c
-typedef struct objtable {
+typedef struct obj_table {
 
     fs_hash_t table;
 
@@ -259,6 +294,8 @@ ObjTable
  ObjTableEntry
 ```
 
+Hash 函数基于 `(objectid ^ gen)` 计算，回调通过 `objtable_node_hash` / `objtable_key_hash` / `objtable_match` 实现。
+
 ---
 
 ## 7. 生命周期
@@ -310,7 +347,7 @@ objtable_insert()
 (objectid, gen) -> ObjMeta
 ```
 
-映射。
+映射。若 key 已存在则返回失败。
 
 ---
 
@@ -422,21 +459,37 @@ Single Thread
 
 ### FUID
 
-提供对象身份标识。
+提供对象身份标识类型定义（`ObjectId_t`、`GenId_t`）。
 
 ```text
 FUID
     ↓
-Object
+obj_key_t → ObjTable
 ```
 
 ---
 
 ### ObjMeta
 
-提供对象定位信息。
+提供对象元数据（key + refcnt + state + handle）。
 
 ```text
+ObjTable
+    ↓
+ObjMeta
+```
+
+---
+
+### ObjMgr
+
+作为 ObjTable 的上层服务，负责对象生命周期管理、引用计数和状态迁移。
+
+```text
+VFS
+    ↓
+ObjMgr
+    ↓
 ObjTable
     ↓
 ObjMeta
@@ -458,10 +511,12 @@ fs_hash
 
 ### VFS
 
-通过 ObjTable 完成对象查找。
+通过 ObjMgr → ObjTable 完成对象查找。
 
 ```text
 VFS
+    ↓
+ObjMgr
     ↓
 ObjTable
     ↓
@@ -472,30 +527,6 @@ ObjMeta
 
 ## 11. 未来规划
 
-未来版本可能增加：
-
-### ObjMgr
-
-对象管理服务层。
-
-```text
-VFS
-    ↓
-ObjMgr
-    ↓
-ObjTable
-```
-
-负责：
-
-* Cache
-* Persistence
-* Recovery
-
-等高级功能。
-
----
-
 ### 持久化
 
 支持：
@@ -504,9 +535,7 @@ ObjTable
 (objectid, gen) -> ObjMeta
 ```
 
-落盘保存。
-
-系统重启后自动恢复。
+落盘保存，系统重启后自动恢复。
 
 ---
 
@@ -533,7 +562,7 @@ ARC
 
 MirageFS V1 中：
 
-Object 模块仅负责：
+ObjTable 模块仅负责：
 
 ```text
 (objectid, gen) -> ObjMeta
@@ -552,5 +581,3 @@ Dedup
 Compression
 Encryption
 ```
-
-等高级功能。

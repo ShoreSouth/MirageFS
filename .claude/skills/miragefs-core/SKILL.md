@@ -580,8 +580,8 @@ Example:
 
 ```c
 _Static_assert(
-    sizeof(objmeta_t) == FS_OBJMETA_SIZE,
-    "objmeta_t size invalid");
+    sizeof(obj_meta_t) == OBJMETA_SIZE,
+    "obj_meta_t size invalid");
 ```
 
 ---

@@ -355,7 +355,7 @@ Total = 48 Bytes
 保证结构尺寸固定：
 
 ```c
-_Static_assert(sizeof(obj_meta_t) == FS_OBJMETA_SIZE,
+_Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
                "obj_meta_t size invalid");
 ```
 

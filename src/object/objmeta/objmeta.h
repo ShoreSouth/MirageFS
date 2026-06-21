@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * MirageFS Object Metadata Layer
+ * MirageFS 对象元数据层
  *
  * ObjMeta 负责：
  *
@@ -25,6 +25,7 @@
  * 实现稳定定位。
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "common/fs_common.h"
@@ -60,7 +61,7 @@
  * - mempool 管理
  * - KV 持久化
  */
-#define FS_OBJMETA_SIZE 48
+#define OBJMETA_SIZE 48
 
 /*
  * ============================================================
@@ -142,7 +143,7 @@ typedef struct obj_meta {
  * 编译期检查
  * ============================================================ */
 
-_Static_assert(sizeof(obj_meta_t) == FS_OBJMETA_SIZE,
+_Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
                "obj_meta_t size invalid");
 
 /* ============================================================
@@ -186,22 +187,14 @@ void objmeta_reset(
 
 /*
  * 判断 ObjMeta 是否有效。
- *
- * 返回：
- *      1 : valid
- *      0 : invalid
  */
-int32_t objmeta_is_valid(
+bool objmeta_is_valid(
                 const obj_meta_t *meta);
 
 /*
  * 比较两个 ObjMeta 是否相同。
- *
- * 返回：
- *      1 : equal
- *      0 : not equal
  */
-int32_t objmeta_equal(
+bool objmeta_equal(
                 const obj_meta_t *lhs,
                 const obj_meta_t *rhs);
 

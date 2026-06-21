@@ -8,6 +8,14 @@
  * 核心结构
  * ============================================================ */
 
+/*
+ * obj_key_t
+ *
+ * MirageFS 对象唯一标识。
+ *
+ * (objectid, gen) 共同构成对象 identity，
+ * 用于 ObjTable 的 key 查找和对象生命周期追踪。
+ */
 typedef struct objkey {
 
     ObjectId_t objectid;
@@ -20,6 +28,9 @@ typedef struct objkey {
  * helper
  * ============================================================ */
 
+/*
+ * 构造 obj_key_t。
+ */
 static inline obj_key_t objkey_make(
                         ObjectId_t objectid,
                         GenId_t gen)
@@ -32,6 +43,11 @@ static inline obj_key_t objkey_make(
     return key;
 }
 
+/*
+ * 判断 key 是否有效。
+ *
+ * objectid 和 gen 均不能为 0。
+ */
 static inline bool objkey_valid(
                         const obj_key_t *key)
 {
@@ -50,6 +66,11 @@ static inline bool objkey_valid(
     return true;
 }
 
+/*
+ * 比较两个 key 是否相同。
+ *
+ * 仅比较 (objectid, gen)。
+ */
 static inline bool objkey_equal(
                         const obj_key_t *lhs,
                         const obj_key_t *rhs)
