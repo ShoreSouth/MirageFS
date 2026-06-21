@@ -1,4 +1,4 @@
-#include "fuid/fuid.h"
+#include "object/fuid/fuid.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -7,7 +7,7 @@
  * 基础接口
  * ============================================================ */
 
-bool fuid_is_valid(const Fuid_t *fuid)
+bool fuid_is_valid(const fuid_t *fuid)
 {
     if (fuid == NULL) {
         return false;
@@ -28,27 +28,27 @@ bool fuid_is_valid(const Fuid_t *fuid)
     return true;
 }
 
-void fuid_set_invalid(Fuid_t *fuid)
+void fuid_set_invalid(fuid_t *fuid)
 {
     if (fuid == NULL) {
         return;
     }
 
-    memset(fuid, 0, sizeof(Fuid_t));
+    memset(fuid, 0, sizeof(fuid_t));
 }
 
-void fuid_init(Fuid_t *fuid)
+void fuid_init(fuid_t *fuid)
 {
     if (fuid == NULL) {
         return;
     }
 
-    memset(fuid, 0, sizeof(Fuid_t));
+    memset(fuid, 0, sizeof(fuid_t));
 
     fuid->version = FUID_CURRENT_VERSION;
 }
 
-bool fuid_equal(const Fuid_t *a, const Fuid_t *b)
+bool fuid_equal(const fuid_t *a, const fuid_t *b)
 {
     if (a == NULL || b == NULL) {
         return false;
@@ -61,7 +61,7 @@ bool fuid_equal(const Fuid_t *a, const Fuid_t *b)
     );
 }
 
-uint64_t fuid_hash(const Fuid_t *fuid)
+uint64_t fuid_hash(const fuid_t *fuid)
 {
     uint64_t h;
 
@@ -80,14 +80,14 @@ uint64_t fuid_hash(const Fuid_t *fuid)
     return h;
 }
 
-Fuid_t fuid_build(Fsid_t fsid,
+fuid_t fuid_build(Fsid_t fsid,
                 ObjectId_t objectid,
                 GenId_t gen,
                 fuid_type_t type)
 {
-    Fuid_t fuid;
+    fuid_t fuid;
 
-    memset(&fuid, 0, sizeof(Fuid_t));
+    memset(&fuid, 0, sizeof(fuid_t));
 
     fuid.fsid     = fsid;
     fuid.objectid = objectid;
@@ -121,7 +121,7 @@ bool fuid_type_valid(fuid_type_t type)
     }
 }
 
-fuid_type_t fuid_get_type(const Fuid_t *fuid)
+fuid_type_t fuid_get_type(const fuid_t *fuid)
 {
     if (fuid == NULL) {
         return FUID_TYPE_INVALID;
@@ -164,49 +164,49 @@ const char *fuid_type_str(fuid_type_t type)
  * type helper
  * ============================================================ */
 
-bool fuid_is_file(const Fuid_t *fuid)
+bool fuid_is_file(const fuid_t *fuid)
 {
     return (
         fuid_get_type(fuid) == FUID_TYPE_FILE
     );
 }
 
-bool fuid_is_dir(const Fuid_t *fuid)
+bool fuid_is_dir(const fuid_t *fuid)
 {
     return (
         fuid_get_type(fuid) == FUID_TYPE_DIR
     );
 }
 
-bool fuid_is_symlink(const Fuid_t *fuid)
+bool fuid_is_symlink(const fuid_t *fuid)
 {
     return (
         fuid_get_type(fuid) == FUID_TYPE_SYMLINK
     );
 }
 
-bool fuid_is_fifo(const Fuid_t *fuid)
+bool fuid_is_fifo(const fuid_t *fuid)
 {
     return (
         fuid_get_type(fuid) == FUID_TYPE_FIFO
     );
 }
 
-bool fuid_is_sock(const Fuid_t *fuid)
+bool fuid_is_sock(const fuid_t *fuid)
 {
     return (
         fuid_get_type(fuid) == FUID_TYPE_SOCK
     );
 }
 
-bool fuid_is_blk(const Fuid_t *fuid)
+bool fuid_is_blk(const fuid_t *fuid)
 {
     return (
         fuid_get_type(fuid) == FUID_TYPE_BLK
     );
 }
 
-bool fuid_is_chr(const Fuid_t *fuid)
+bool fuid_is_chr(const fuid_t *fuid)
 {
     return (
         fuid_get_type(fuid) == FUID_TYPE_CHR
@@ -217,7 +217,7 @@ bool fuid_is_chr(const Fuid_t *fuid)
  * flags
  * ============================================================ */
 
-bool fuid_flag_test(const Fuid_t *fuid, uint16_t flag)
+bool fuid_flag_test(const fuid_t *fuid, uint16_t flag)
 {
     if (fuid == NULL) {
         return false;
@@ -228,7 +228,7 @@ bool fuid_flag_test(const Fuid_t *fuid, uint16_t flag)
     );
 }
 
-void fuid_flag_set(Fuid_t *fuid, uint16_t flag)
+void fuid_flag_set(fuid_t *fuid, uint16_t flag)
 {
     if (fuid == NULL) {
         return;
@@ -237,7 +237,7 @@ void fuid_flag_set(Fuid_t *fuid, uint16_t flag)
     fuid->flags |= flag;
 }
 
-void fuid_flag_clear(Fuid_t *fuid, uint16_t flag)
+void fuid_flag_clear(fuid_t *fuid, uint16_t flag)
 {
     if (fuid == NULL) {
         return;
@@ -250,7 +250,7 @@ void fuid_flag_clear(Fuid_t *fuid, uint16_t flag)
  * debug
  * ============================================================ */
 
-const char *fuid_to_str(const Fuid_t *fuid)
+const char *fuid_to_str(const fuid_t *fuid)
 {
     static __thread char buf[256];
 

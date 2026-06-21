@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#include "fuid/fuid.h"
+#include "object/fuid/fuid.h"
 
 /* ============================================================
  * 核心结构
@@ -14,17 +14,17 @@ typedef struct objkey {
 
     GenId_t gen;
 
-} objkey_t;
+} obj_key_t;
 
 /* ============================================================
  * helper
  * ============================================================ */
 
-static inline objkey_t objkey_make(
+static inline obj_key_t objkey_make(
                         ObjectId_t objectid,
                         GenId_t gen)
 {
-    objkey_t key;
+    obj_key_t key;
 
     key.objectid = objectid;
     key.gen      = gen;
@@ -33,7 +33,7 @@ static inline objkey_t objkey_make(
 }
 
 static inline bool objkey_valid(
-                        const objkey_t *key)
+                        const obj_key_t *key)
 {
     if (key == NULL) {
         return false;
@@ -51,8 +51,8 @@ static inline bool objkey_valid(
 }
 
 static inline bool objkey_equal(
-                        const objkey_t *lhs,
-                        const objkey_t *rhs)
+                        const obj_key_t *lhs,
+                        const obj_key_t *rhs)
 {
     if ((lhs == NULL) ||
         (rhs == NULL)) {

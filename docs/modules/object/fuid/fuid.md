@@ -77,7 +77,7 @@ gen=2
 FUID 统一设计为：
 
 ```c
-sizeof(Fuid_t) == 64
+sizeof(fuid_t) == 64
 ```
 
 优势：
@@ -183,7 +183,7 @@ Total = 64 Bytes
 编译期检查：
 
 ```c
-_Static_assert(sizeof(Fuid_t) == 64);
+_Static_assert(sizeof(fuid_t) == 64);
 ```
 
 
@@ -371,7 +371,7 @@ generation++
 上层模块通过：
 
 ```c
-Fuid_t
+fuid_t
 ```
 
 定位对象。

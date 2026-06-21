@@ -10,9 +10,7 @@ include build/build.mk
 
 MODULES := common
 MODULES += config
-MODULES += fuid
 MODULES += lsa
-MODULES += meta
 MODULES += object
 
 # ============================================================
@@ -35,9 +33,7 @@ APP_OBJ := $(OBJ_DIR)/main.o
 
 LIBS := $(LIB_DIR)/libcommon.a
 LIBS += $(LIB_DIR)/libconfig.a
-LIBS += $(LIB_DIR)/libfuid.a
 LIBS += $(LIB_DIR)/liblsa.a
-LIBS += $(LIB_DIR)/libmeta.a
 LIBS += $(LIB_DIR)/libobject.a
 
 # ============================================================

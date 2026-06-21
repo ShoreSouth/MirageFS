@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "common/fs_common.h"
-#include "meta/objmeta.h"
+#include "object/objmeta/objmeta.h"
 
 /* ============================================================
  * 内部函数
@@ -26,8 +26,8 @@ static int32_t objmeta_handle_valid(
  * ============================================================ */
 
 int32_t objmeta_init(
-                ObjMeta_t *meta,
-                const objkey_t *key,
+                obj_meta_t *meta,
+                const obj_key_t *key,
                 int32_t mount_id,
                 uint16_t handle_type,
                 uint16_t handle_bytes,
@@ -67,14 +67,15 @@ int32_t objmeta_init(
 
     memset(meta,
            0,
-           sizeof(ObjMeta_t));
+           sizeof(obj_meta_t));
 
-    meta->key          = *key;
-    meta->mount_id     = mount_id;
-    meta->handle_type  = handle_type;
-    meta->handle_bytes = handle_bytes;
+    meta->key             = *key;
+    meta->state           = OBJ_STATE_INIT;
+    meta->handle.mount_id = mount_id;
+    meta->handle.type     = handle_type;
+    meta->handle.len      = handle_bytes;
 
-    memcpy(meta->file_handle,
+    memcpy(meta->handle.data,
            file_handle,
            handle_bytes);
 
@@ -82,7 +83,7 @@ int32_t objmeta_init(
 }
 
 void objmeta_reset(
-            ObjMeta_t *meta)
+            obj_meta_t *meta)
 {
     if (meta == NULL) {
         return;
@@ -90,11 +91,11 @@ void objmeta_reset(
 
     memset(meta,
            0,
-           sizeof(ObjMeta_t));
+           sizeof(obj_meta_t));
 }
 
 int32_t objmeta_is_valid(
-                const ObjMeta_t *meta)
+                const obj_meta_t *meta)
 {
     if (meta == NULL) {
         return 0;
@@ -107,7 +108,7 @@ int32_t objmeta_is_valid(
     }
 
     if (!objmeta_handle_valid(
-            meta->handle_bytes)) {
+            meta->handle.len)) {
 
         return 0;
     }
@@ -116,8 +117,8 @@ int32_t objmeta_is_valid(
 }
 
 int32_t objmeta_equal(
-                const ObjMeta_t *lhs,
-                const ObjMeta_t *rhs)
+                const obj_meta_t *lhs,
+                const obj_meta_t *rhs)
 {
     if ((lhs == NULL) ||
         (rhs == NULL)) {
@@ -132,21 +133,21 @@ int32_t objmeta_equal(
         return 0;
     }
 
-    if (lhs->mount_id != rhs->mount_id) {
+    if (lhs->handle.mount_id != rhs->handle.mount_id) {
         return 0;
     }
 
-    if (lhs->handle_type != rhs->handle_type) {
+    if (lhs->handle.type != rhs->handle.type) {
         return 0;
     }
 
-    if (lhs->handle_bytes != rhs->handle_bytes) {
+    if (lhs->handle.len != rhs->handle.len) {
         return 0;
     }
 
-    if (memcmp(lhs->file_handle,
-               rhs->file_handle,
-               lhs->handle_bytes) != 0) {
+    if (memcmp(lhs->handle.data,
+               rhs->handle.data,
+               lhs->handle.len) != 0) {
 
         return 0;
     }
@@ -155,7 +156,7 @@ int32_t objmeta_equal(
 }
 
 void objmeta_dump(
-            const ObjMeta_t *meta)
+            const obj_meta_t *meta)
 {
     uint32_t i;
     uint32_t offset;
@@ -177,14 +178,14 @@ void objmeta_dump(
     offset = 0;
 
     for (i = 0;
-         i < meta->handle_bytes;
+         i < meta->handle.len;
          i++) {
 
         offset += snprintf(
                     handle_buf + offset,
                     sizeof(handle_buf) - offset,
                     "%02x",
-                    meta->file_handle[i]);
+                    meta->handle.data[i]);
 
         if (offset >= sizeof(handle_buf)) {
             break;
@@ -203,16 +204,24 @@ void objmeta_dump(
             meta->key.gen);
 
     FS_LOG_DUMP_INFO(
+            "refcnt       : %d",
+            meta->refcnt);
+
+    FS_LOG_DUMP_INFO(
+            "state        : %u",
+            meta->state);
+
+    FS_LOG_DUMP_INFO(
             "mount_id     : %d",
-            meta->mount_id);
+            meta->handle.mount_id);
 
     FS_LOG_DUMP_INFO(
             "handle_type  : %u",
-            meta->handle_type);
+            meta->handle.type);
 
     FS_LOG_DUMP_INFO(
             "handle_bytes : %u",
-            meta->handle_bytes);
+            meta->handle.len);
 
     FS_LOG_DUMP_INFO(
             "file_handle  : %s",

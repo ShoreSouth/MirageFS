@@ -497,7 +497,7 @@ typedef struct ObjMeta
 
     fs_atomic32_t refcnt;
 
-} ObjMeta_t;
+} obj_meta_t;
 ```
 
 增加引用：

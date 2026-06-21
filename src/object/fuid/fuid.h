@@ -76,7 +76,7 @@ typedef enum {
  *     - 支持 stale 检测
  * ============================================================ */
 
-typedef struct Fuid_t {
+typedef struct fuid {
 
     /* ---------- identity ---------- */
 
@@ -103,7 +103,7 @@ typedef struct Fuid_t {
     uint8_t  reserved0[12];
     uint64_t reserved1[2];
 
-} Fuid_t;
+} fuid_t;
 
 /* ============================================================
  * 编译期检查
@@ -111,30 +111,30 @@ typedef struct Fuid_t {
 
 #define FUID_SIZE 64
 
-_Static_assert(sizeof(Fuid_t) == FUID_SIZE,
-    "Fuid_t size invalid");
+_Static_assert(sizeof(fuid_t) == FUID_SIZE,
+    "fuid_t size invalid");
 
 /* ============================================================
  * 基础接口
  * ============================================================ */
 
 /* 是否有效 */
-bool fuid_is_valid(const Fuid_t *fuid);
+bool fuid_is_valid(const fuid_t *fuid);
 
 /* 设置为 invalid */
-void fuid_set_invalid(Fuid_t *fuid);
+void fuid_set_invalid(fuid_t *fuid);
 
 /* 初始化 */
-void fuid_init(Fuid_t *fuid);
+void fuid_init(fuid_t *fuid);
 
 /* identity 比较 */
-bool fuid_equal(const Fuid_t *a, const Fuid_t *b);
+bool fuid_equal(const fuid_t *a, const fuid_t *b);
 
 /* hash */
-uint64_t fuid_hash(const Fuid_t *fuid);
+uint64_t fuid_hash(const fuid_t *fuid);
 
 /* 构造 */
-Fuid_t fuid_build(Fsid_t fsid,
+fuid_t fuid_build(Fsid_t fsid,
     ObjectId_t objectid,
     GenId_t gen,
     fuid_type_t type);
@@ -148,35 +148,35 @@ const char *fuid_type_str(fuid_type_t type);
 
 bool fuid_type_valid(fuid_type_t type);
 
-fuid_type_t fuid_get_type(const Fuid_t *fuid);
+fuid_type_t fuid_get_type(const fuid_t *fuid);
 
 /* ============================================================
  * type helper
  * ============================================================ */
 
-bool fuid_is_file(const Fuid_t *fuid);
+bool fuid_is_file(const fuid_t *fuid);
 
-bool fuid_is_dir(const Fuid_t *fuid);
+bool fuid_is_dir(const fuid_t *fuid);
 
-bool fuid_is_symlink(const Fuid_t *fuid);
+bool fuid_is_symlink(const fuid_t *fuid);
 
-bool fuid_is_fifo(const Fuid_t *fuid);
+bool fuid_is_fifo(const fuid_t *fuid);
 
-bool fuid_is_sock(const Fuid_t *fuid);
+bool fuid_is_sock(const fuid_t *fuid);
 
-bool fuid_is_blk(const Fuid_t *fuid);
+bool fuid_is_blk(const fuid_t *fuid);
 
-bool fuid_is_chr(const Fuid_t *fuid);
+bool fuid_is_chr(const fuid_t *fuid);
 
 /* ============================================================
  * flags helper
  * ============================================================ */
 
-bool fuid_flag_test(const Fuid_t *fuid, uint16_t flag);
+bool fuid_flag_test(const fuid_t *fuid, uint16_t flag);
 
-void fuid_flag_set(Fuid_t *fuid, uint16_t flag);
+void fuid_flag_set(fuid_t *fuid, uint16_t flag);
 
-void fuid_flag_clear(Fuid_t *fuid, uint16_t flag);
+void fuid_flag_clear(fuid_t *fuid, uint16_t flag);
 
 /* ============================================================
  * debug
@@ -187,4 +187,4 @@ void fuid_flag_clear(Fuid_t *fuid, uint16_t flag);
  *
  * fs=1,obj=100,gen=1,type=file
  */
-const char *fuid_to_str(const Fuid_t *fuid);
+const char *fuid_to_str(const fuid_t *fuid);

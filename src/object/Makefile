@@ -5,6 +5,8 @@ LIB     = $(LIB_DIR)/lib$(MODULE).a
 #  源文件
 # ============================================================
 
-SRC := objtable.c
+SRC := fuid/fuid.c
+SRC += objmeta/objmeta.c
+SRC += objtable/objtable.c
 
 include ../../build/build.mk

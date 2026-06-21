@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 #include "common/fs_common.h"
-#include "meta/objmeta.h"
-#include "object/objkey.h"
+#include "object/objmeta/objmeta.h"
+#include "object/objtable/objkey.h"
 
 /* ============================================================
  * Object Table Entry
@@ -16,7 +16,7 @@
  */
 typedef struct objtable_entry {
 
-    ObjMeta_t meta; /* 对象元数据 */
+    obj_meta_t meta; /* 对象元数据 */
 
     fs_list_head_t node; /* hash节点 */
 
@@ -41,7 +41,7 @@ typedef struct objtable {
 
     fs_hash_t table;
 
-} objtable_t;
+} obj_table_t;
 
 /* ============================================================
  * 生命周期
@@ -51,14 +51,14 @@ typedef struct objtable {
  * 初始化对象表。
  */
 int objtable_init(
-            objtable_t *table,
+            obj_table_t *table,
             uint32_t bucket_nr);
 
 /*
  * 销毁对象表。
  */
 void objtable_destroy(
-            objtable_t *table);
+            obj_table_t *table);
 
 /* ============================================================
  * 基础操作
@@ -70,15 +70,15 @@ void objtable_destroy(
  * 若(objid, gen)已存在返回失败。
  */
 int objtable_insert(
-            objtable_t *table,
-            const ObjMeta_t *meta);
+            obj_table_t *table,
+            const obj_meta_t *meta);
 
 /*
  * 删除对象。
  */
 int objtable_remove(
-            objtable_t *table,
-            const objkey_t *key);
+            obj_table_t *table,
+            const obj_key_t *key);
 
 /*
  * 查找对象。
@@ -87,16 +87,16 @@ int objtable_remove(
  *      NULL    未找到
  *      meta    找到
  */
-ObjMeta_t *objtable_lookup(
-                objtable_t *table,
-                const objkey_t *key);
+obj_meta_t *objtable_lookup(
+                obj_table_t *table,
+                const obj_key_t *key);
 
 /*
  * 判断对象是否存在。
  */
 bool objtable_exists(
-            objtable_t *table,
-            const objkey_t *key);
+            obj_table_t *table,
+            const obj_key_t *key);
 
 /* ============================================================
  * 统计
@@ -106,4 +106,4 @@ bool objtable_exists(
  * 当前对象数量。
  */
 uint64_t objtable_count(
-            const objtable_t *table);
+            const obj_table_t *table);

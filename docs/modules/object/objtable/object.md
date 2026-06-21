@@ -39,7 +39,7 @@ Object 模块负责解决以下问题：
 已知：
 
 ```text
-objkey_t (objectid, gen)
+obj_key_t (objectid, gen)
 ```
 
 快速获取：
@@ -185,7 +185,7 @@ ObjMeta
 ```c
 typedef struct objtable_entry {
 
-    ObjMeta_t meta;
+    obj_meta_t meta;
 
     fs_list_head_t node;
 
@@ -199,7 +199,7 @@ typedef struct objtable_entry {
 
 ---
 
-### objtable_t
+### obj_table_t
 
 对象表主体。
 
@@ -208,7 +208,7 @@ typedef struct objtable {
 
     fs_hash_t table;
 
-} objtable_t;
+} obj_table_t;
 ```
 
 内部使用：
@@ -323,7 +323,7 @@ objtable_lookup()
 根据：
 
 ```text
-objkey_t (objectid, gen)
+obj_key_t (objectid, gen)
 ```
 
 获取：

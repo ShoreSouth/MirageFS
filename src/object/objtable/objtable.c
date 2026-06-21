@@ -2,8 +2,9 @@
 #include <string.h>
 
 #include "common/fs_common.h"
-#include "object/objkey.h"
-#include "object/objtable.h"
+#include "object/objtable/objkey.h"
+#include "object/objtable/objtable.h"
+#include "object/objmeta/objmeta.h"
 
 /* ============================================================
  * 内部函数
@@ -26,7 +27,7 @@ static uint64_t objtable_node_hash(
 static uint64_t objtable_key_hash(
                     const void *key)
 {
-    const objkey_t *objkey;
+    const obj_key_t *objkey;
 
     objkey = key;
 
@@ -39,7 +40,7 @@ static bool objtable_match(
                     const void *key)
 {
     const objtable_entry_t *entry;
-    const objkey_t *objkey;
+    const obj_key_t *objkey;
 
     entry = FS_CONTAINER_OF(
                 node,
@@ -56,8 +57,8 @@ static bool objtable_match(
 }
 
 static objtable_entry_t *objtable_find_entry(
-                            objtable_t *table,
-                            const objkey_t *key)
+                            obj_table_t *table,
+                            const obj_key_t *key)
 {
     fs_list_head_t *node;
 
@@ -80,7 +81,7 @@ static objtable_entry_t *objtable_find_entry(
  * ============================================================ */
 
 int objtable_init(
-            objtable_t *table,
+            obj_table_t *table,
             uint32_t bucket_nr)
 {
     if (table == NULL) {
@@ -88,7 +89,7 @@ int objtable_init(
         return -1;
     }
 
-    memset(table, 0, sizeof(objtable_t));
+    memset(table, 0, sizeof(obj_table_t));
 
     return fs_hash_init(
                 &table->table,
@@ -98,7 +99,7 @@ int objtable_init(
                 objtable_match);
 }
 
-void objtable_destroy(objtable_t *table)
+void objtable_destroy(obj_table_t *table)
 {
     uint32_t i;
 
@@ -138,7 +139,7 @@ void objtable_destroy(objtable_t *table)
 
     memset(table,
            0,
-           sizeof(objtable_t));
+           sizeof(obj_table_t));
 }
 
 /* ============================================================
@@ -146,12 +147,12 @@ void objtable_destroy(objtable_t *table)
  * ============================================================ */
 
 int objtable_insert(
-            objtable_t *table,
-            const ObjMeta_t *meta)
+            obj_table_t *table,
+            const obj_meta_t *meta)
 {
     objtable_entry_t *entry;
 
-    objkey_t key;
+    obj_key_t key;
 
     if (table == NULL) {
         FS_LOG_DUMP_ERROR("table is NULL");
@@ -193,7 +194,7 @@ int objtable_insert(
 
     memcpy(&entry->meta,
            meta,
-           sizeof(ObjMeta_t));
+           sizeof(obj_meta_t));
 
     fs_list_init(
             &entry->node);
@@ -210,8 +211,8 @@ int objtable_insert(
 }
 
 int objtable_remove(
-            objtable_t *table,
-            const objkey_t *key)
+            obj_table_t *table,
+            const obj_key_t *key)
 {
     objtable_entry_t *entry;
 
@@ -242,9 +243,9 @@ int objtable_remove(
     return 0;
 }
 
-ObjMeta_t *objtable_lookup(
-                objtable_t *table,
-                const objkey_t *key)
+obj_meta_t *objtable_lookup(
+                obj_table_t *table,
+                const obj_key_t *key)
 {
     objtable_entry_t *entry;
 
@@ -268,8 +269,8 @@ ObjMeta_t *objtable_lookup(
 }
 
 bool objtable_exists(
-            objtable_t *table,
-            const objkey_t *key)
+            obj_table_t *table,
+            const obj_key_t *key)
 {
     return (objtable_lookup(
                 table,
@@ -281,7 +282,7 @@ bool objtable_exists(
  * ============================================================ */
 
 uint64_t objtable_count(
-            const objtable_t *table)
+            const obj_table_t *table)
 {
     if (table == NULL) {
         return 0;

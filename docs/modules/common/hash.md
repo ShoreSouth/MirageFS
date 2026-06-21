@@ -225,7 +225,7 @@ typedef uint64_t (*fs_hash_key_hash_fn)(
 static uint64_t objtable_key_hash(
     const void *key)
 {
-    const objkey_t *objkey;
+    const obj_key_t *objkey;
 
     objkey = key;
 
@@ -255,7 +255,7 @@ static bool objtable_match(
     const void *key)
 {
     const objtable_entry_t *entry;
-    const objkey_t *objkey;
+    const obj_key_t *objkey;
 
     entry = FS_CONTAINER_OF(
         node,
@@ -395,7 +395,7 @@ n = Bucket链表长度
 ```c
 typedef struct objtable_entry {
 
-    ObjMeta_t meta;
+    obj_meta_t meta;
 
     fs_list_head_t node;
 
@@ -424,7 +424,7 @@ fs_hash_insert(
 查找：
 
 ```c
-objkey_t key = objkey_make(objectid, gen);
+obj_key_t key = objkey_make(objectid, gen);
 
 node = fs_hash_lookup(
     &table,
