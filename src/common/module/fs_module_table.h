@@ -13,10 +13,7 @@
                                     \
     _(COMMON,  "COMMON")            \
                                     \
-    _(FUID,    "FUID")              \
-    _(OBJMETA, "OBJMETA")           \
-    _(OBJTABLE,"OBJTABLE")          \
-    _(OBJMGR,  "OBJMGR")            \
+    _(OBJECT,    "OBJECT")          \
                                     \
     _(STORAGE, "STORAGE")           \
     _(CACHE,   "CACHE")             \
