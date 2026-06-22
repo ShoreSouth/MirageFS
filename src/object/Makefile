@@ -6,6 +6,7 @@ LIB     = $(LIB_DIR)/lib$(MODULE).a
 # ============================================================
 
 SRC := fuid/fuid.c
+SRC += objkey/objkey.c
 SRC += objmeta/objmeta.c
 SRC += objtable/objtable.c
 

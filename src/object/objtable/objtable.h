@@ -5,7 +5,7 @@
 
 #include "common/fs_common.h"
 #include "object/objmeta/objmeta.h"
-#include "object/objtable/objkey.h"
+#include "object/objkey/objkey.h"
 
 /* ============================================================
  * Object Table Entry

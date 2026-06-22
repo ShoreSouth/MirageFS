@@ -30,7 +30,7 @@
 
 #include "common/fs_common.h"
 #include "object/fuid/fuid.h"
-#include "object/objtable/objkey.h"
+#include "object/objkey/objkey.h"
 
 /* ============================================================
  * 常量定义

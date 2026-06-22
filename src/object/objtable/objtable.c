@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "common/fs_common.h"
-#include "object/objtable/objkey.h"
+#include "object/objkey/objkey.h"
 #include "object/objtable/objtable.h"
 #include "object/objmeta/objmeta.h"
 
