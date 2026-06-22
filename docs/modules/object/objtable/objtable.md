@@ -17,9 +17,9 @@ ObjTable 在 object 模块中的位置：
 ```text
 object/
 ├── fuid/          # 对象身份标识
+├── objkey/        # 对象索引键（obj_key_t）
 ├── objmeta/       # 对象元数据
 ├── objtable/      # 对象表（本模块）
-│   ├── objkey.h   # 对象 key 定义
 │   ├── objtable.h
 │   └── objtable.c
 └── objmgr/        # 对象生命周期管理器
@@ -191,25 +191,9 @@ ObjMeta
 
 ### obj_key_t
 
-对象 key，定义在 `objkey.h`。
+对象 key 定义在 `objkey/` 模块，详见 [ObjKey 设计文档](../objkey/objkey.md)。
 
-```c
-typedef struct objkey {
-
-    ObjectId_t objectid;
-
-    GenId_t gen;
-
-} obj_key_t;
-```
-
-提供 inline helper：
-
-```c
-objkey_make()    /* 构造 key           */
-objkey_valid()   /* 校验 key 有效性    */
-objkey_equal()   /* 比较两个 key       */
-```
+`obj_key_t` 是 16 字节的 value object，由 `(objectid, gen)` 组成，提供 `objkey_make()`、`objkey_is_valid()`、`objkey_equal()`、`objkey_hash()` 等内联 helper。
 
 ---
 

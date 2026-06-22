@@ -199,8 +199,7 @@ static uint64_t objtable_node_hash(
         objtable_entry_t,
         node);
 
-    return ((uint64_t)entry->meta.key.objectid) ^
-           ((uint64_t)entry->meta.key.gen);
+    return objkey_hash(&entry->meta.key);
 }
 ```
 
@@ -225,12 +224,7 @@ typedef uint64_t (*fs_hash_key_hash_fn)(
 static uint64_t objtable_key_hash(
     const void *key)
 {
-    const obj_key_t *objkey;
-
-    objkey = key;
-
-    return ((uint64_t)objkey->objectid) ^
-           ((uint64_t)objkey->gen);
+    return objkey_hash(key);
 }
 ```
 
@@ -255,20 +249,13 @@ static bool objtable_match(
     const void *key)
 {
     const objtable_entry_t *entry;
-    const obj_key_t *objkey;
 
     entry = FS_CONTAINER_OF(
         node,
         objtable_entry_t,
         node);
 
-    objkey = key;
-
-    return (entry->meta.key.objectid ==
-            objkey->objectid) &&
-
-           (entry->meta.key.gen ==
-            objkey->gen);
+    return objkey_equal(&entry->meta.key, key);
 }
 ```
 

@@ -1,8 +1,15 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "object/fuid/fuid.h"
+
+/* ============================================================
+ * 常量定义
+ * ============================================================ */
+
+#define OBJKEY_SIZE 16
 
 /* ============================================================
  * 核心结构
@@ -24,6 +31,13 @@ typedef struct obj_key
     GenId_t gen; /* 对象版本号，避免对象重用冲突 */
 
 } obj_key_t;
+
+/* ============================================================
+ * 编译期检查
+ * ============================================================ */
+
+_Static_assert(sizeof(obj_key_t) == OBJKEY_SIZE,
+               "obj_key_t size invalid");
 
 /* ============================================================
  * helper（内联）
@@ -50,7 +64,7 @@ static inline obj_key_t objkey_make(
  *
  * objectid 和 gen 均不能为 0。
  */
-static inline bool objkey_valid(
+static inline bool objkey_is_valid(
                 const obj_key_t *key)
 {
     if (key == NULL) {
@@ -76,6 +90,16 @@ static inline bool objkey_equal(
 
     return (lhs->objectid == rhs->objectid) &&
            (lhs->gen      == rhs->gen);
+}
+
+/*
+ * 计算对象 Key 的哈希值。
+ */
+static inline uint64_t objkey_hash(
+                const obj_key_t *key)
+{
+    return ((uint64_t)key->objectid) ^
+           ((uint64_t)key->gen);
 }
 
 /* ============================================================

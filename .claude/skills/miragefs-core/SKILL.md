@@ -223,7 +223,7 @@ For plain-data structs (stack / embedded, no internal heap resources):
 | Verb | Signature | Semantics |
 |------|-----------|-----------|
 | `xxx_make` | `T xxx_make(A a, B b)` | Construct a value object, return by value |
-| `xxx_valid` | `bool xxx_valid(const T *v)` | Return true if all fields are legal |
+| `xxx_is_valid` | `bool xxx_is_valid(const T *v)` | Return true if all fields are legal |
 | `xxx_equal` | `bool xxx_equal(const T *a, const T *b)` | Return true if identity fields match |
 | `xxx_from_yyy` | `void xxx_from_yyy(T *out, const Y *in)` | Convert / project from another type |
 | `xxx_hash` | `uint64_t xxx_hash(const T *v)` | Hash on identity fields |
@@ -233,13 +233,13 @@ Examples:
 ```c
 /* fuid — file unique identity (value object) */
 fuid_t  fuid_make(Fsid_t fsid, ObjectId_t oid, GenId_t gen, fuid_type_t type);
-bool    fuid_valid(const fuid_t *fuid);
+bool    fuid_is_valid(const fuid_t *fuid);
 bool    fuid_equal(const fuid_t *a, const fuid_t *b);
 void    fuid_init(fuid_t *fuid);   /* reset to zero / invalid */
 
 /* objkey — object index key (value object) */
 obj_key_t  objkey_make(ObjectId_t oid, GenId_t gen);
-bool       objkey_valid(const obj_key_t *key);
+bool       objkey_is_valid(const obj_key_t *key);
 bool       objkey_equal(const obj_key_t *lhs, const obj_key_t *rhs);
 void       objkey_from_fuid(obj_key_t *key, const fuid_t *fuid);
 
@@ -252,7 +252,7 @@ void          objhandle_from_fuid(obj_handle_t *h, const fuid_t *fuid);
 ```
 
 Rules:
-- `valid` does NOT use an `is_` prefix — `fuid_valid()`, not `fuid_is_valid()`.
+- `valid` uses an `is_` prefix — `fuid_is_valid()`, not `fuid_valid()`.
 - `make` is the single verb for value construction — never `build`, `create`, `new`, `construct`.
 - `from_xxx` is output-parameter style: `void xxx_from_yyy(T *out, const Y *in)`.
 - `init` on a value object means "reset to zero / invalid state" (no allocation).
@@ -368,9 +368,9 @@ init()      /* use <module>_init */
 Never mix verbs for the same operation across modules:
 
 ```c
-fuid_build()    /* wrong — use fuid_make() */
-fuid_is_valid() /* wrong — use fuid_valid() */
-objmeta_reset() /* wrong — use objmeta_deinit() */
+fuid_build()     /* wrong — use fuid_make() */
+objkey_valid()   /* wrong — use objkey_is_valid() */
+objmeta_reset()  /* wrong — use objmeta_deinit() */
 ```
 
 ---
@@ -511,7 +511,7 @@ static inline obj_key_t objkey_make(ObjectId_t oid, GenId_t gen)
     return key;
 }
 
-static inline bool objkey_valid(const obj_key_t *key)
+static inline bool objkey_is_valid(const obj_key_t *key)
 {
     if (key == NULL) { return false; }
     return (key->objectid != 0) && (key->gen != 0);
@@ -670,7 +670,7 @@ int  objtable_init(obj_table_t *table, uint32_t bucket_nr);
 int  objtable_insert(obj_table_t *table, const obj_meta_t *meta);
 
 /* bool: predicate */
-bool fuid_valid(const fuid_t *fuid);
+bool fuid_is_valid(const fuid_t *fuid);
 bool objkey_equal(const obj_key_t *a, const obj_key_t *b);
 
 /* value type: constructor */

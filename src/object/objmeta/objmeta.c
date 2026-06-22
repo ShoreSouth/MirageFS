@@ -43,7 +43,7 @@ int32_t objmeta_init(
         return -1;
     }
 
-    if (!objkey_valid(key)) {
+    if (!objkey_is_valid(key)) {
         FS_LOG_DUMP_ERROR("invalid key");
         return -1;
     }
@@ -101,7 +101,7 @@ bool objmeta_is_valid(
         return false;
     }
 
-    if (!objkey_valid(
+    if (!objkey_is_valid(
             &meta->key)) {
 
         return false;

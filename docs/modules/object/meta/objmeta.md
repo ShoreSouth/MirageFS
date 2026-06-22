@@ -95,11 +95,10 @@ sizeof(obj_meta_t) == 48
 字段构成：
 
 ```text
-obj_key_t        : 12 bytes  (objectid + gen)
+obj_key_t        : 16 bytes  (objectid + gen + padding)
 fs_atomic32_t   :  4 bytes  (refcnt)
 uint32_t        :  4 bytes  (state)
 obj_handle_t    : 24 bytes  (mount_id + type + len + data[16])
-padding         :  4 bytes
 ─────────────────────────
 Total           : 48 bytes
 ```
@@ -336,13 +335,13 @@ Offset  Size    Field
 ------  ----    ----------------
 0       8       key.objectid
 8       4       key.gen
-12      4       refcnt
-16      4       state
-20      4       handle.mount_id
-24      2       handle.type
-26      2       handle.len
-28      16      handle.data
-44      4       (padding)
+12      4       (key padding)
+16      4       refcnt
+20      4       state
+24      4       handle.mount_id
+28      2       handle.type
+30      2       handle.len
+32      16      handle.data
 
 Total = 48 Bytes
 ```
