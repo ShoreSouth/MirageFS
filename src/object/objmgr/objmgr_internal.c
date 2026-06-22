@@ -1,5 +1,6 @@
 #include "object/objmgr/objmgr_internal.h"
 #include "object/fuid/fuid.h"
+#include "object/obj_error.h"
 
 /*
  * ============================================================
@@ -81,7 +82,10 @@ int32_t objmgr_change_state(
 {
     if (meta == NULL)
     {
-        return FS_ERR_INVALID_PARAM;
+        FS_LOG_DUMP_ERROR(
+                "meta is NULL");
+
+        return obj_error(OBJ_SUB_STATE, FS_ERRNO_EINVAL);
     }
 
     /*

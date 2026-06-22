@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "common/fs_common.h"
+#include "object/obj_error.h"
 #include "object/objmeta/objmeta.h"
 
 /* ============================================================
@@ -35,17 +36,17 @@ int32_t objmeta_init(
 {
     if (meta == NULL) {
         FS_LOG_DUMP_ERROR("meta is NULL");
-        return -1;
+        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
     }
 
     if (key == NULL) {
         FS_LOG_DUMP_ERROR("key is NULL");
-        return -1;
+        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
     }
 
     if (!objkey_is_valid(key)) {
         FS_LOG_DUMP_ERROR("invalid key");
-        return -1;
+        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
     }
 
     if (!objmeta_handle_valid(handle_bytes)) {
@@ -54,7 +55,7 @@ int32_t objmeta_init(
                 "invalid handle_bytes=%u",
                 handle_bytes);
 
-        return -1;
+        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
     }
 
     if (file_handle == NULL) {
@@ -62,7 +63,7 @@ int32_t objmeta_init(
         FS_LOG_DUMP_ERROR(
                 "file_handle is NULL");
 
-        return -1;
+        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
     }
 
     memset(meta,
@@ -79,7 +80,7 @@ int32_t objmeta_init(
            file_handle,
            handle_bytes);
 
-    return 0;
+    return FS_OK;
 }
 
 void objmeta_reset(

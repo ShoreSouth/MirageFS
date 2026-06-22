@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "common/fs_common.h"
+#include "object/obj_error.h"
 #include "object/objkey/objkey.h"
 #include "object/objtable/objtable.h"
 #include "object/objmeta/objmeta.h"
@@ -73,17 +74,25 @@ int objtable_init(
 {
     if (table == NULL) {
         FS_LOG_DUMP_ERROR("table is NULL");
-        return -1;
+        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
     }
 
     memset(table, 0, sizeof(obj_table_t));
 
-    return fs_hash_init(
+    if (fs_hash_init(
                 &table->table,
                 bucket_nr,
                 objtable_node_hash,
                 objtable_key_hash,
-                objtable_match);
+                objtable_match)) {
+
+        FS_LOG_DUMP_ERROR(
+                "fs_hash_init failed");
+
+        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EIO);
+    }
+
+    return FS_OK;
 }
 
 void objtable_destroy(obj_table_t *table)
@@ -143,17 +152,17 @@ int objtable_insert(
 
     if (table == NULL) {
         FS_LOG_DUMP_ERROR("table is NULL");
-        return -1;
+        return obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
     }
 
     if (meta == NULL) {
         FS_LOG_DUMP_ERROR("meta is NULL");
-        return -1;
+        return obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
     }
 
     if (!objmeta_is_valid(meta)) {
         FS_LOG_DUMP_ERROR("invalid meta");
-        return -1;
+        return obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
     }
 
     key = objkey_make(
@@ -167,7 +176,7 @@ int objtable_insert(
         FS_LOG_DUMP_ERROR(
                 "object already exists");
 
-        return -1;
+        return obj_error(OBJ_SUB_INSERT, FS_ERRNO_EEXIST);
     }
 
     entry = calloc(
@@ -176,7 +185,7 @@ int objtable_insert(
 
     if (entry == NULL) {
         FS_LOG_DUMP_ERROR("calloc failed");
-        return -1;
+        return obj_error(OBJ_SUB_INSERT, FS_ERRNO_ENOMEM);
     }
 
     memcpy(&entry->meta,
@@ -190,11 +199,14 @@ int objtable_insert(
             &table->table,
             &entry->node) != 0) {
 
+        FS_LOG_DUMP_ERROR(
+                "fs_hash_insert failed");
+
         free(entry);
-        return -1;
+        return obj_error(OBJ_SUB_INSERT, FS_ERRNO_EIO);
     }
 
-    return 0;
+    return FS_OK;
 }
 
 int objtable_remove(
@@ -205,12 +217,12 @@ int objtable_remove(
 
     if (table == NULL) {
         FS_LOG_DUMP_ERROR("table is NULL");
-        return -1;
+        return obj_error(OBJ_SUB_REMOVE, FS_ERRNO_EINVAL);
     }
 
     if (key == NULL) {
         FS_LOG_DUMP_ERROR("key is NULL");
-        return -1;
+        return obj_error(OBJ_SUB_REMOVE, FS_ERRNO_EINVAL);
     }
 
     entry = objtable_find_entry(
@@ -218,7 +230,13 @@ int objtable_remove(
                 key);
 
     if (entry == NULL) {
-        return -1;
+        FS_LOG_DUMP_ERROR(
+                "object not found: "
+                "objectid=%lu gen=%u",
+                (unsigned long)key->objectid,
+                (unsigned int)key->gen);
+
+        return obj_error(OBJ_SUB_REMOVE, FS_ERRNO_ENOENT);
     }
 
     fs_hash_remove(
@@ -227,7 +245,7 @@ int objtable_remove(
 
     free(entry);
 
-    return 0;
+    return FS_OK;
 }
 
 obj_meta_t *objtable_lookup(
