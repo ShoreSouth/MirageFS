@@ -9,36 +9,55 @@
 
 bool fuid_is_valid(const fuid_t *fuid)
 {
+    bool valid;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
     if (fuid == NULL) {
-        return false;
+        valid = false;
+        goto out;
     }
 
     if (fuid->version != FUID_CURRENT_VERSION) {
-        return false;
+        valid = false;
+        goto out;
     }
 
     if (fuid->fsid == FUID_INVALID_FSID) {
-        return false;
+        valid = false;
+        goto out;
     }
 
     if (fuid->objectid == FUID_INVALID_OBJECTID) {
-        return false;
+        valid = false;
+        goto out;
     }
 
-    return true;
+    valid = true;
+
+out:
+    FS_LOG_DUMP_INFO("exit: %s",
+                     valid ? "true" : "false");
+    return valid;
 }
 
 void fuid_set_invalid(fuid_t *fuid)
 {
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (void *)fuid);
+
     if (fuid == NULL) {
         return;
     }
 
     memset(fuid, 0, sizeof(fuid_t));
+
+    FS_LOG_DUMP_INFO("exit: done");
 }
 
 void fuid_init(fuid_t *fuid)
 {
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (void *)fuid);
+
     if (fuid == NULL) {
         return;
     }
@@ -46,27 +65,43 @@ void fuid_init(fuid_t *fuid)
     memset(fuid, 0, sizeof(fuid_t));
 
     fuid->version = FUID_CURRENT_VERSION;
+
+    FS_LOG_DUMP_INFO("exit: done");
 }
 
 bool fuid_equal(const fuid_t *a, const fuid_t *b)
 {
+    bool equal;
+
+    FS_LOG_DUMP_INFO("enter: a=%p, b=%p",
+                     (const void *)a, (const void *)b);
+
     if (a == NULL || b == NULL) {
-        return false;
+        equal = false;
+        goto out;
     }
 
-    return (
+    equal = (
         a->fsid     == b->fsid     &&
         a->objectid == b->objectid &&
         a->gen      == b->gen
     );
+
+out:
+    FS_LOG_DUMP_INFO("exit: %s",
+                     equal ? "true" : "false");
+    return equal;
 }
 
 uint64_t fuid_hash(const fuid_t *fuid)
 {
     uint64_t h;
 
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
     if (fuid == NULL) {
-        return 0;
+        h = 0;
+        goto out;
     }
 
     h = fuid->fsid;
@@ -77,6 +112,8 @@ uint64_t fuid_hash(const fuid_t *fuid)
     h ^= (fuid->gen + 0x9e3779b97f4a7c15ULL +
           (h << 6) + (h >> 2));
 
+out:
+    FS_LOG_DUMP_INFO("exit: hash=0x%lx", (unsigned long)h);
     return h;
 }
 
@@ -87,6 +124,12 @@ fuid_t fuid_build(Fsid_t fsid,
 {
     fuid_t fuid;
 
+    FS_LOG_DUMP_INFO("enter: fsid=%lu, objectid=%lu, gen=%u, type=%u",
+                     (unsigned long)fsid,
+                     (unsigned long)objectid,
+                     (unsigned int)gen,
+                     (unsigned int)type);
+
     memset(&fuid, 0, sizeof(fuid_t));
 
     fuid.fsid     = fsid;
@@ -96,6 +139,7 @@ fuid_t fuid_build(Fsid_t fsid,
     fuid.type     = (uint8_t)type;
     fuid.version  = FUID_CURRENT_VERSION;
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return fuid;
 }
 
@@ -105,6 +149,10 @@ fuid_t fuid_build(Fsid_t fsid,
 
 bool fuid_type_valid(fuid_type_t type)
 {
+    bool valid;
+
+    FS_LOG_DUMP_INFO("enter: type=%u", (unsigned int)type);
+
     switch (type) {
 
     case FUID_TYPE_FILE:
@@ -114,50 +162,75 @@ bool fuid_type_valid(fuid_type_t type)
     case FUID_TYPE_SOCK:
     case FUID_TYPE_BLK:
     case FUID_TYPE_CHR:
-        return true;
+        valid = true;
+        break;
 
     default:
-        return false;
+        valid = false;
+        break;
     }
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     valid ? "true" : "false");
+    return valid;
 }
 
 fuid_type_t fuid_get_type(const fuid_t *fuid)
 {
+    fuid_type_t type;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
     if (fuid == NULL) {
-        return FUID_TYPE_INVALID;
+        type = FUID_TYPE_INVALID;
+    } else {
+        type = (fuid_type_t)fuid->type;
     }
 
-    return (fuid_type_t)fuid->type;
+    FS_LOG_DUMP_INFO("exit: %s", fuid_type_str(type));
+    return type;
 }
 
 const char *fuid_type_str(fuid_type_t type)
 {
+    const char *str;
+
     switch (type) {
 
     case FUID_TYPE_FILE:
-        return "file";
+        str = "file";
+        break;
 
     case FUID_TYPE_DIR:
-        return "dir";
+        str = "dir";
+        break;
 
     case FUID_TYPE_SYMLINK:
-        return "symlink";
+        str = "symlink";
+        break;
 
     case FUID_TYPE_FIFO:
-        return "fifo";
+        str = "fifo";
+        break;
 
     case FUID_TYPE_SOCK:
-        return "sock";
+        str = "sock";
+        break;
 
     case FUID_TYPE_BLK:
-        return "blk";
+        str = "blk";
+        break;
 
     case FUID_TYPE_CHR:
-        return "chr";
+        str = "chr";
+        break;
 
     default:
-        return "invalid";
+        str = "invalid";
+        break;
     }
+
+    return str;
 }
 
 /* ============================================================
@@ -166,51 +239,107 @@ const char *fuid_type_str(fuid_type_t type)
 
 bool fuid_is_file(const fuid_t *fuid)
 {
-    return (
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
+    result = (
         fuid_get_type(fuid) == FUID_TYPE_FILE
     );
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 bool fuid_is_dir(const fuid_t *fuid)
 {
-    return (
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
+    result = (
         fuid_get_type(fuid) == FUID_TYPE_DIR
     );
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 bool fuid_is_symlink(const fuid_t *fuid)
 {
-    return (
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
+    result = (
         fuid_get_type(fuid) == FUID_TYPE_SYMLINK
     );
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 bool fuid_is_fifo(const fuid_t *fuid)
 {
-    return (
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
+    result = (
         fuid_get_type(fuid) == FUID_TYPE_FIFO
     );
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 bool fuid_is_sock(const fuid_t *fuid)
 {
-    return (
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
+    result = (
         fuid_get_type(fuid) == FUID_TYPE_SOCK
     );
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 bool fuid_is_blk(const fuid_t *fuid)
 {
-    return (
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
+    result = (
         fuid_get_type(fuid) == FUID_TYPE_BLK
     );
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 bool fuid_is_chr(const fuid_t *fuid)
 {
-    return (
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p", (const void *)fuid);
+
+    result = (
         fuid_get_type(fuid) == FUID_TYPE_CHR
     );
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 /* ============================================================
@@ -219,31 +348,50 @@ bool fuid_is_chr(const fuid_t *fuid)
 
 bool fuid_flag_test(const fuid_t *fuid, uint16_t flag)
 {
+    bool result;
+
+    FS_LOG_DUMP_INFO("enter: fuid=%p, flag=0x%x",
+                     (const void *)fuid, flag);
+
     if (fuid == NULL) {
-        return false;
+        result = false;
+    } else {
+        result = (
+            (fuid->flags & flag) != 0
+        );
     }
 
-    return (
-        (fuid->flags & flag) != 0
-    );
+    FS_LOG_DUMP_INFO("exit: %s",
+                     result ? "true" : "false");
+    return result;
 }
 
 void fuid_flag_set(fuid_t *fuid, uint16_t flag)
 {
+    FS_LOG_DUMP_INFO("enter: fuid=%p, flag=0x%x",
+                     (void *)fuid, flag);
+
     if (fuid == NULL) {
         return;
     }
 
     fuid->flags |= flag;
+
+    FS_LOG_DUMP_INFO("exit: done, flags=0x%x", fuid->flags);
 }
 
 void fuid_flag_clear(fuid_t *fuid, uint16_t flag)
 {
+    FS_LOG_DUMP_INFO("enter: fuid=%p, flag=0x%x",
+                     (void *)fuid, flag);
+
     if (fuid == NULL) {
         return;
     }
 
     fuid->flags &= ~flag;
+
+    FS_LOG_DUMP_INFO("exit: done, flags=0x%x", fuid->flags);
 }
 
 /* ============================================================

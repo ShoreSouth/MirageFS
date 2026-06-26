@@ -697,27 +697,165 @@ Rules:
 
 Use MirageFS logging facilities only.
 
-Current logging macros:
+## Macros
 
 ```c
-FS_LOG_DUMP_DEBUG()
-
-FS_LOG_DUMP_INFO()
-
-FS_LOG_DUMP_WARN()
-
-FS_LOG_DUMP_ERROR()
+FS_LOG_DUMP_DEBUG(fmt, ...)   /* verbose —— 仅开发期开启 */
+FS_LOG_DUMP_INFO(fmt, ...)    /* 关键路径进出 / 状态变化 */
+FS_LOG_DUMP_WARN(fmt, ...)    /* 可恢复异常 */
+FS_LOG_DUMP_ERROR(fmt, ...)   /* 不可恢复错误 */
 ```
 
-Do not introduce:
+Each macro automatically injects `__FILE__`, `__LINE__`, `__func__` via `fs_log_write()`.
+
+Do NOT introduce `printf()`, `fprintf()`, `puts()` outside debugging experiments.
+
+## Log Levels — When To Use
+
+| Level | Use Case |
+|-------|----------|
+| `DEBUG` | Detailed internal state (hash bucket walk, mempool expansion, etc.) |
+| `INFO` | Function entry/exit, state transitions, key decisions |
+| `WARN` | Recoverable anomalies (retry, fallback, degraded mode) |
+| `ERROR` | Unrecoverable failure — always paired with `fs_error_str(err)` |
+
+## Error Log — Unified Pattern
+
+Every error path MUST follow this pattern:
 
 ```c
-printf()
-fprintf()
-puts()
+fs_error_t err;
+
+err = <module>_error(<SUB>, <ERRNO>);
+FS_LOG_DUMP_ERROR("<what> failed: <why>, err=%s (0x%x)",
+                  fs_error_str(err), err);
+return err;
 ```
 
-outside debugging experiments.
+Rules:
+- `<what>` describes the operation that failed (e.g., `fs_hash_init`, `param check`, `calloc`).
+- `<why>` gives the business reason (e.g., `table is NULL`, `object already exists`).
+- `err=%s` always uses `fs_error_str(err)` to emit the full decoded error.
+- `(0x%x)` always follows —— the raw hex value is grep-friendly and unambiguous.
+- The error object is created first, logged once, then returned.
+- `fs_error_str(err)` already emits severity + module + sub + errno + description —— do NOT duplicate that information in the format string.
+
+Correct:
+
+```c
+err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EEXIST);
+FS_LOG_DUMP_ERROR("insert failed: object already exists, "
+                  "key=(%lu,%u), err=%s (0x%x)",
+                  (unsigned long)key.objectid,
+                  (unsigned int)key.gen,
+                  fs_error_str(err), err);
+return err;
+```
+
+Wrong:
+
+```c
+/* BAD: bare string, no error code */
+FS_LOG_DUMP_ERROR("table is NULL");
+return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+
+/* BAD: passes fs_error_t as format string (CRASH) */
+FS_LOG_DUMP_ERROR(err);
+
+/* BAD: missing fs_error_str, error code not decoded */
+FS_LOG_DUMP_ERROR("init failed, ret=%d", ret);
+```
+
+## Entry / Exit — INFO Pattern
+
+Every public function MUST log entry and exit at `INFO` level.
+
+**Entry** —— log key input parameters:
+
+```c
+FS_LOG_DUMP_INFO("enter: table=%p, key=%p", (void *)table, (void *)key);
+```
+
+**Exit (success)** —— log key result:
+
+```c
+FS_LOG_DUMP_INFO("exit: ok, count=%lu", (unsigned long)count);
+```
+
+**Exit (not found / predicate false)** —— log the outcome:
+
+```c
+FS_LOG_DUMP_INFO("exit: not found");
+FS_LOG_DUMP_INFO("exit: false");
+```
+
+**Exit (error)** —— the error path already logs via `FS_LOG_DUMP_ERROR`; add a one-line exit:
+
+```c
+FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
+return ret;
+```
+
+**Void functions** —— log `done`:
+
+```c
+FS_LOG_DUMP_INFO("exit: done");
+```
+
+## Query Functions
+
+Query functions (`lookup`, `exists`, `count`, `is_valid`, `equal`, etc.) also get entry/exit INFO logs. If the volume becomes excessive, lower the global log level or selectively downgrade specific functions to `DEBUG` later. A consistent baseline is more important than premature optimization.
+
+## Internal Helpers
+
+`static` helper functions may omit entry/exit if they are thin wrappers (≤ 3 lines) or pure field-access predicates. Use judgment: if a helper contains branching or error paths, log it.
+
+## Complete Example
+
+```c
+int objtable_insert(obj_table_t *table, const obj_meta_t *meta)
+{
+    fs_error_t err;
+    objtable_entry_t *entry;
+    obj_key_t key;
+
+    FS_LOG_DUMP_INFO("enter: table=%p, meta=%p",
+                     (void *)table, (void *)meta);
+
+    if (table == NULL) {
+        err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: table is NULL, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    /* ... validation, business logic ... */
+
+    if (objtable_exists(table, &key)) {
+        err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EEXIST);
+        FS_LOG_DUMP_ERROR("insert failed: object already exists, "
+                          "key=(%lu,%u), err=%s (0x%x)",
+                          (unsigned long)key.objectid,
+                          (unsigned int)key.gen,
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    FS_LOG_DUMP_INFO("exit: ok");
+    return FS_OK;
+}
+```
+
+## Anti-Patterns Summary
+
+| Anti-Pattern | Why Wrong |
+|--------------|-----------|
+| Bare string, no error code | Can't grep for the error; can't correlate across modules |
+| `FS_LOG_DUMP_ERROR(err)` | `fs_error_t` (uint32_t) is not a format string —— potential crash |
+| `FS_LOG_DUMP_ERROR("... %d", err)` | Raw integer is opaque; use `fs_error_str(err) + (0x%x)` |
+| Missing entry/exit logs | Silent functions make production debugging impossible |
+| English+Chinese mixed in log messages | Logs must be grep-friendly; Chinese is for comments only |
+| `printf()` in production code | Bypasses the log infrastructure (file, rotation, level filter) |
 
 ---
 

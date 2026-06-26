@@ -276,21 +276,40 @@ open_by_handle_at()
 
 ```c
 typedef enum obj_state {
-    OBJ_STATE_INIT     = 0,  /* 刚创建，未激活     */
-    OBJ_STATE_ACTIVE,        /* 已激活，可正常使用  */
-    OBJ_STATE_DELETING,      /* 删除中，阻止新引用  */
-    OBJ_STATE_DELETED        /* 已销毁，等待回收    */
+    OBJ_STATE_INVALID = 0,  /* 对象不存在，由 lookup 返回 */
+    OBJ_STATE_INIT,         /* 刚创建，未激活              */
+    OBJ_STATE_ACTIVE,       /* 已激活，可正常使用          */
+    OBJ_STATE_DELETING      /* 删除中，阻止新引用          */
 } obj_state_t;
 ```
 
 状态迁移图：
 
 ```text
-INIT ──→ ACTIVE ──→ DELETING ──→ DELETED
-  │                    │
-  └────────────────────┘
-       (异常路径：直接销毁未激活对象)
+         INVALID
+            │
+       create()
+            ▼
+          INIT
+            │
+    初始化完成
+            ▼
+         ACTIVE
+            │
+        delete()
+            ▼
+        DELETING
+            │
+        ref==0
+            ▼
+      ObjPool Free
+            │
+            ▼
+        INVALID (对象不存在)
 ```
+
+- INVALID 不在 meta 中存储，仅由 `objmgr_state()` 在 lookup 失败时返回
+- 对象释放后即不存在，不再进入任何中间状态
 
 状态的读写由 objmgr 负责，objmeta 层仅提供存储字段。
 
@@ -413,49 +432,63 @@ objmeta_handle_valid()
 ObjMeta 的生命周期由 `state` 字段驱动，objmgr 负责状态迁移：
 
 ```text
-INIT ──→ ACTIVE ──→ DELETING ──→ DELETED
-  │                    │
-  └────────────────────┘
-       (异常路径：直接销毁未激活对象)
+         INVALID
+            │
+       create()
+            ▼
+          INIT
+            │
+    初始化完成
+            ▼
+         ACTIVE
+            │
+        delete()
+            ▼
+        DELETING
+            │
+        ref==0
+            ▼
+      ObjPool Free
+            │
+            ▼
+        INVALID (对象不存在)
 ```
 
 | 状态 | 含义 | 触发操作 |
 |------|------|----------|
+| INVALID | 对象不存在 | objmgr_state() 在 lookup 失败时返回 |
 | INIT | 刚分配，尚未激活 | objmeta_init() 置为此状态 |
 | ACTIVE | 已激活，可正常使用 | objmgr 激活对象时迁移 |
-| DELETING | 正在删除，阻止新引用 | objmgr 发起删除时迁移 |
-| DELETED | 已销毁，等待回收 | objmgr 完成删除后迁移 |
+| DELETING | 正在删除，阻止新引用 | objmgr 发起删除时迁移；refcnt==0 时 ObjTable Remove + ObjPool Free |
 
 objmeta 层仅通过 `state` 字段保存状态值，不参与状态迁移决策。
 refcnt 的增减由 objmgr 在状态迁移前后通过原子操作完成。
 
 ### 7.2 创建
 
-创建对象后：
-
-```c
-name_to_handle_at()
-```
-
-获取：
+objmgr_create() 流程：
 
 ```text
-mount_id
-handle_type
-file_handle
+objpool_alloc()
+    ↓
+objmeta_init(meta, fuid, handle)
+    ↓
+objmgr_insert_locked()
+    ↓
+objmgr_change_state(INIT → ACTIVE)
 ```
 
-随后构造：
+其中 `objmeta_init()` 内部完成：
+- `objkey_from_fuid()` — 从 FUID 构造内部 key
+- refcnt = 0
+- state = INIT
+- handle 整体拷贝
 
-```c
-objmeta_init()
-```
-
-建立映射，此时 state = INIT, refcnt = 0。
+调用方（objmgr）无需了解 obj_meta_t 内部布局。
 
 ### 7.3 激活
 
-objmgr 将 state 从 INIT 迁移至 ACTIVE，并根据需要增加 refcnt。
+objmgr 将 state 从 INIT 迁移至 ACTIVE。
 
 ### 7.4 查询
 
@@ -504,15 +537,14 @@ fd
 
 ### 7.6 删除
 
-objmgr 将 state 迁移为 DELETING → DELETED，递减 refcnt。
+objmgr 将 state 迁移为 ACTIVE → DELETING，递减 refcnt。
 
-最终调用：
+当 refcnt 降为 0 时：
+1. `objtable_remove()` — 从对象表中移除
+2. `objmeta_reset()` — 清空元数据（memset(0)）
+3. `objpool_free()` — 归还内存池
 
-```c
-objmeta_reset()
-```
-
-清空所有字段（refcnt 归零、state 归零、handle 归零）。
+对象释放后即不存在，不再保留任何状态。
 
 
 ---

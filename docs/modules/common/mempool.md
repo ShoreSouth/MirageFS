@@ -503,22 +503,37 @@ max_order
 
 ## Global Memory Pool
 
-为了简化使用，提供：
+为了简化使用，提供全局快捷接口：
 
 ```c
 fs_malloc()
-fs_free()
 fs_zalloc()
+fs_calloc()
 fs_realloc()
+fs_free()
 ```
-
-接口。
 
 内部等价：
 
 ```c
 fs_mp_alloc(fs_mp_global(), ...)
 ```
+
+### Pool-specific Interfaces
+
+需要操作特定 Pool 时使用完整接口：
+
+| 接口 | 说明 |
+|------|------|
+| `fs_mp_alloc(mp, size)` | 基本分配 |
+| `fs_mp_alloc_align(mp, size, align)` | 对齐分配，align 须为 2 的幂 |
+| `fs_mp_calloc(mp, n, size)` | 分配 n * size 字节并清零 |
+| `fs_mp_realloc(mp, ptr, new_size)` | 调整已分配块大小 |
+| `fs_mp_free(mp, ptr)` | 释放 |
+| `fs_mp_usable_size(ptr)` | 查询实际可用块大小 |
+
+`fs_mp_alloc_align` 基于 Buddy 块的自然对齐特性：order N 的块天然对齐到 `PAGE_SIZE << N`。
+若请求的对齐超过块的自然对齐，自动提升 order 以满足对齐要求。
 
 ### Initialization
 

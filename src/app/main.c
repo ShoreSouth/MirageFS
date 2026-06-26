@@ -7,6 +7,8 @@
 
 #include "common/fs_common.h"
 #include "config/fs_config.h"
+#include "lsa/include/lsa_api.h"
+#include "object/object_init.h"
 
 int main(void)
 {
@@ -22,16 +24,32 @@ int main(void)
      */
     fs_trace_ctx_t trace_ctx;
     FS_TRACE_BEGIN(&trace_ctx);
-    
+
     /*
      * 初始化日志打印
      */
     fs_log_init(NULL, FS_LOG_INFO);
 
     /*
+     * 模块初始化
+     *
+     * 顺序：从底层到上层
+     *
+     *   LSA     — 底层系统访问
+     *   Object  — 对象模块（注册 + 子模块初始化）
+     */
+    lsa_init();
+    object_init();
+
+    /*
      * 打印配置
      */
     fs_config_dump();
+
+    /*
+     * 模块销毁（逆序）
+     */
+    object_deinit();
 
     /*
      * 清除trace

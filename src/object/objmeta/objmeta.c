@@ -28,64 +28,67 @@ static bool objmeta_handle_valid(
 
 int32_t objmeta_init(
                 obj_meta_t *meta,
-                const obj_key_t *key,
-                int32_t mount_id,
-                uint16_t handle_type,
-                uint16_t handle_bytes,
-                const uint8_t *file_handle)
+                const fuid_t *fuid,
+                const obj_handle_t *handle)
 {
+    fs_error_t err;
+
+    FS_LOG_DUMP_INFO("enter: meta=%p, fuid=%p, handle=%p",
+                     (void *)meta, (const void *)fuid,
+                     (const void *)handle);
+
     if (meta == NULL) {
-        FS_LOG_DUMP_ERROR("meta is NULL");
-        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: meta is NULL, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
-    if (key == NULL) {
-        FS_LOG_DUMP_ERROR("key is NULL");
-        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+    if (fuid == NULL) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: fuid is NULL, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
-    if (!objkey_is_valid(key)) {
-        FS_LOG_DUMP_ERROR("invalid key");
-        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+    if (!fuid_is_valid(fuid)) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: invalid fuid, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
-    if (!objmeta_handle_valid(handle_bytes)) {
+    if (handle == NULL) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: handle is NULL, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
 
+    if (!objmeta_handle_valid(handle->len)) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR(
-                "invalid handle_bytes=%u",
-                handle_bytes);
-
-        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+                "param check failed: invalid handle_len=%u, err=%s (0x%x)",
+                (unsigned int)handle->len,
+                fs_error_str(err), err);
+        return err;
     }
 
-    if (file_handle == NULL) {
+    memset(meta, 0, sizeof(obj_meta_t));
 
-        FS_LOG_DUMP_ERROR(
-                "file_handle is NULL");
+    objkey_from_fuid(&meta->key, fuid);
+    meta->state  = OBJ_STATE_INIT;
+    meta->handle = *handle;
 
-        return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
-    }
-
-    memset(meta,
-           0,
-           sizeof(obj_meta_t));
-
-    meta->key             = *key;
-    meta->state           = OBJ_STATE_INIT;
-    meta->handle.mount_id = mount_id;
-    meta->handle.type     = handle_type;
-    meta->handle.len      = handle_bytes;
-
-    memcpy(meta->handle.data,
-           file_handle,
-           handle_bytes);
-
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
 void objmeta_reset(
             obj_meta_t *meta)
 {
+    FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
+
     if (meta == NULL) {
         return;
     }
@@ -93,67 +96,92 @@ void objmeta_reset(
     memset(meta,
            0,
            sizeof(obj_meta_t));
+
+    FS_LOG_DUMP_INFO("exit: done");
 }
 
 bool objmeta_is_valid(
                 const obj_meta_t *meta)
 {
+    bool valid;
+
+    FS_LOG_DUMP_INFO("enter: meta=%p", (const void *)meta);
+
     if (meta == NULL) {
-        return false;
+        valid = false;
+        goto out;
     }
 
     if (!objkey_is_valid(
             &meta->key)) {
-
-        return false;
+        valid = false;
+        goto out;
     }
 
     if (!objmeta_handle_valid(
             meta->handle.len)) {
-
-        return false;
+        valid = false;
+        goto out;
     }
 
-    return true;
+    valid = true;
+
+out:
+    FS_LOG_DUMP_INFO("exit: %s",
+                     valid ? "true" : "false");
+    return valid;
 }
 
 bool objmeta_equal(
                 const obj_meta_t *lhs,
                 const obj_meta_t *rhs)
 {
+    bool equal;
+
+    FS_LOG_DUMP_INFO("enter: lhs=%p, rhs=%p",
+                     (const void *)lhs, (const void *)rhs);
+
     if ((lhs == NULL) ||
         (rhs == NULL)) {
-
-        return false;
+        equal = false;
+        goto out;
     }
 
     if (!objkey_equal(
             &lhs->key,
             &rhs->key)) {
-
-        return false;
+        equal = false;
+        goto out;
     }
 
     if (lhs->handle.mount_id != rhs->handle.mount_id) {
-        return false;
+        equal = false;
+        goto out;
     }
 
     if (lhs->handle.type != rhs->handle.type) {
-        return false;
+        equal = false;
+        goto out;
     }
 
     if (lhs->handle.len != rhs->handle.len) {
-        return false;
+        equal = false;
+        goto out;
     }
 
     if (memcmp(lhs->handle.data,
                rhs->handle.data,
                lhs->handle.len) != 0) {
-
-        return false;
+        equal = false;
+        goto out;
     }
 
-    return true;
+    equal = true;
+
+out:
+    FS_LOG_DUMP_INFO("exit: %s",
+                     equal ? "true" : "false");
+    return equal;
 }
 
 void objmeta_dump(
@@ -164,10 +192,11 @@ void objmeta_dump(
 
     char handle_buf[128];
 
+    FS_LOG_DUMP_INFO("enter: meta=%p", (const void *)meta);
+
     if (meta == NULL) {
 
-        FS_LOG_DUMP_ERROR(
-                "meta is NULL");
+        FS_LOG_DUMP_ERROR("param check failed: meta is NULL");
 
         return;
     }
@@ -210,7 +239,7 @@ void objmeta_dump(
 
     FS_LOG_DUMP_INFO(
             "state        : %u",
-            (unsigned int)meta->state);
+            (unsigned int)objmeta_state(meta));
 
     FS_LOG_DUMP_INFO(
             "mount_id     : %d",
@@ -230,4 +259,6 @@ void objmeta_dump(
 
     FS_LOG_DUMP_INFO(
             "=============================");
+
+    FS_LOG_DUMP_INFO("exit: done");
 }

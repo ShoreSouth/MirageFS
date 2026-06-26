@@ -1,53 +1,37 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
+
+#include "object/obj_sub_table.h"
 
 /*
  * ============================================================
- * Object Layer 子模块操作
+ * Object Layer sub-error enum
  *
- * 用于 FS_ERR 的 sub 字段，
+ * 用于 fs_error_t 的 sub 字段，
  * 标识 Object Layer 内部具体执行的操作。
  * ============================================================
  */
 
-typedef enum obj_sub
-{
-    OBJ_SUB_NONE = 0,
+typedef enum obj_sub {
 
-    /*
-     * 初始化。
-     */
-    OBJ_SUB_INIT,
+#define OBJ_SUB_ENUM(name, str) OBJ_SUB_##name,
 
-    /*
-     * 对象生命周期。
-     */
-    OBJ_SUB_CREATE,
-    OBJ_SUB_DELETE,
+    OBJ_SUB_TABLE(OBJ_SUB_ENUM)
 
-    /*
-     * 对象查找。
-     */
-    OBJ_SUB_LOOKUP,
+#undef OBJ_SUB_ENUM
 
-    /*
-     * 对象表管理。
-     */
-    OBJ_SUB_INSERT,
-    OBJ_SUB_REMOVE,
-
-    /*
-     * 引用计数。
-     */
-    OBJ_SUB_GET,
-    OBJ_SUB_PUT,
-    OBJ_SUB_ACQUIRE,
-    OBJ_SUB_RELEASE,
-
-    /*
-     * 生命周期状态。
-     */
-    OBJ_SUB_STATE,
+    OBJ_SUB_MAX
 
 } obj_sub_t;
+
+/*
+ * ============================================================
+ * helper
+ * ============================================================
+ */
+
+const char *obj_sub_name(obj_sub_t sub);
+
+bool obj_sub_valid(uint32_t sub);

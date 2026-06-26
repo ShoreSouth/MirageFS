@@ -70,26 +70,37 @@
  *
  * ObjMeta 对象生命周期状态机：
  *
- *   INIT ──→ ACTIVE ──→ DELETING ──→ DELETED
- *     │                     │
- *     └─────────────────────┘
- *          (异常路径：直接销毁未激活对象)
+ *      INIT
+ *        │
+ *        ▼
+ *     ACTIVE
+ *        │
+ *        ▼
+ *    DELETING
+ *        │
+ *        ▼
+ *   ObjTable Remove
+ *        +
+ *   ObjPool Free
+ *
+ * 对象释放后即不存在，
+ * 不再进入任何状态。
  *
  * 说明：
+ * - INVALID  : 对象不存在（由 lookup 返回，不存储在 meta 中）
  * - INIT     : 刚分配，尚未被 objmgr 激活
  * - ACTIVE   : 已激活，可正常使用
- * - DELETING : 正在删除中，阻止新引用
- * - DELETED  : 已销毁，等待回收
+ * - DELETING : 正在删除中，阻止新引用；refcnt==0 时回收
  *
  * 状态的读写由 objmgr 负责，objmeta 层仅保存状态值。
  */
 
 typedef enum obj_state
 {
-    OBJ_STATE_INIT = 0,
+    OBJ_STATE_INVALID = 0,
+    OBJ_STATE_INIT,
     OBJ_STATE_ACTIVE,
-    OBJ_STATE_DELETING,
-    OBJ_STATE_DELETED
+    OBJ_STATE_DELETING
 
 } obj_state_t;
 
@@ -146,6 +157,18 @@ typedef struct obj_meta {
 _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
                "obj_meta_t size invalid");
 
+/*
+ * 读取对象生命周期状态。
+ *
+ * 封装 meta->state 的直接访问，
+ * 后续引入 Atomic/Barrier/RCU 时仅需修改此 getter。
+ */
+static inline obj_state_t objmeta_state(
+                const obj_meta_t *meta)
+{
+    return (obj_state_t)meta->state;
+}
+
 /* ============================================================
  * 对外接口
  * ============================================================ */
@@ -157,24 +180,18 @@ _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
  * OBJ_STATE_INIT。调用者需通过 objmgr 激活状态并管理引用计数。
  *
  * 参数：
- *      meta            : 目标对象
- *      key             : MirageFS object key
- *      mount_id        : Linux mount id
- *      handle_type     : Linux handle type
- *      handle_bytes    : handle 实际长度
- *      file_handle     : handle 数据
+ *      meta            : 目标对象（由 objpool_alloc 分配）
+ *      fuid            : MirageFS 对象标识
+ *      handle          : Linux backend handle
  *
  * 返回：
- *      0       : success
- *      <0      : failed
+ *      FS_OK           : success
+ *      <0              : failed
  */
 int32_t objmeta_init(
                 obj_meta_t *meta,
-                const obj_key_t *key,
-                int32_t mount_id,
-                uint16_t handle_type,
-                uint16_t handle_bytes,
-                const uint8_t *file_handle);
+                const fuid_t *fuid,
+                const obj_handle_t *handle);
 
 /*
  * 清空 ObjMeta。

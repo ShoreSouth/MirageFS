@@ -20,7 +20,7 @@
  *
  *   3. 状态迁移
  *          驱动 ObjMeta 的 state 状态机
- *          (INIT → ACTIVE → DELETING → DELETED)
+ *          (INIT → ACTIVE → DELETING)
  *
  * objmgr 内部持有全局 obj_table_t 实例，
  * 所有对象操作均通过 objmgr 统一管理。
@@ -64,20 +64,22 @@ void objmgr_deinit(void);
  * 并激活其生命周期状态。
  *
  * 参数：
- *      meta    : 完整的对象元数据
+ *      fuid    : 待创建对象的 FUID
+ *      handle  : 对象句柄
  *
  * 返回：
  *      0       : 成功
  *      <0      : 失败
  */
-int32_t objmgr_create(
-                obj_meta_t *meta);
+obj_meta_t *objmgr_create(
+                const fuid_t *fuid,
+                const obj_handle_t *handle);
 
 /*
  * 删除对象。
  *
- * 驱动状态迁移 DELETING → DELETED，
- * 最终从对象表中移除。
+ * 驱动状态迁移 ACTIVE → DELETING，
+ * 最终从对象表中移除并回收。
  *
  * 参数：
  *      fuid    : 待删除对象的 FUID
@@ -87,7 +89,7 @@ int32_t objmgr_create(
  *      <0      : 失败
  */
 int32_t objmgr_delete(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * ============================================================
@@ -109,13 +111,13 @@ int32_t objmgr_delete(
  *      非 NULL     : 对象元数据指针（由 objmgr 管理生命周期，调用者不应释放）
  */
 obj_meta_t *objmgr_lookup(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * 判断对象是否存在。
  */
 bool objmgr_exists(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * ============================================================
@@ -133,7 +135,7 @@ bool objmgr_exists(
  *      get()
  *
  * 如果对象不存在或当前状态不允许获取引用（例如
- * DELETING / DELETED），返回 NULL。
+ * DELETING），返回 NULL。
  *
  * 返回：
  *      NULL        : 获取失败
@@ -144,7 +146,7 @@ bool objmgr_exists(
  *      释放引用。
  */
 obj_meta_t *objmgr_acquire(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * 释放对象引用。
@@ -177,19 +179,19 @@ void objmgr_release(
  *      FS_ERR_BUSY         : 对象状态不允许获取引用（如 DELETING）
  */
 int32_t objmgr_get(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * 释放引用（refcnt--）。
  */
 int32_t objmgr_put(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * 获取当前引用计数。
  */
 int32_t objmgr_refcnt(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * ============================================================
@@ -203,7 +205,7 @@ int32_t objmgr_refcnt(
  * 返回 obj_state_t 枚举值。
  */
 obj_state_t objmgr_state(
-                fuid_t fuid);
+                const fuid_t *fuid);
 
 /*
  * ============================================================

@@ -1,103 +1,335 @@
 #include "object/objmgr/objmgr_internal.h"
-#include "object/fuid/fuid.h"
+
+#include <errno.h>
+
 #include "object/obj_error.h"
+#include "object/objpool/objpool.h"
 
 /*
  * ============================================================
- * 内部辅助函数
+ * ObjTable Helper
  * ============================================================
  */
 
-/*
- * 查找对象。
- *
- * 调用者必须已经持有 objmgr 全局锁。
- */
 obj_meta_t *objmgr_lookup_locked(
                 const obj_key_t *key)
 {
-    return objtable_lookup(
+    obj_meta_t *meta;
+
+    FS_LOG_DUMP_INFO("enter: key=%p", (const void *)key);
+
+    meta = objtable_lookup(
                 &g_objmgr.table,
                 key);
+
+    FS_LOG_DUMP_INFO("exit: meta=%p", (void *)meta);
+    return meta;
 }
 
-/*
- * 插入对象。
- *
- * 调用者必须已经持有 objmgr 全局锁。
- */
 int32_t objmgr_insert_locked(
                 obj_meta_t *meta)
 {
     int32_t ret;
 
-    ret = objtable_insert(
-                    &g_objmgr.table,
-                    meta);
+    FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
 
-    if (ret != FS_OK)
-    {
+    ret = objtable_insert(
+                &g_objmgr.table,
+                meta);
+
+    if (ret != FS_OK) {
+        FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
         return ret;
     }
 
     fs_atomic32_inc(
-            &g_objmgr.object_count);
+                &g_objmgr.object_count);
 
+    FS_LOG_DUMP_INFO("exit: ok, count=%d",
+                     (int)fs_atomic32_load(&g_objmgr.object_count));
     return FS_OK;
 }
 
-/*
- * 删除对象。
- *
- * 调用者必须已经持有 objmgr 全局锁。
- */
 int32_t objmgr_remove_locked(
                 const obj_key_t *key)
 {
     int32_t ret;
 
-    ret = objtable_remove(
-                    &g_objmgr.table,
-                    key);
+    FS_LOG_DUMP_INFO("enter: key=%p", (const void *)key);
 
-    if (ret != FS_OK)
-    {
+    ret = objtable_remove(
+                &g_objmgr.table,
+                key);
+
+    if (ret != FS_OK) {
+        FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
         return ret;
     }
 
     fs_atomic32_dec(
-            &g_objmgr.object_count);
+                &g_objmgr.object_count);
+
+    FS_LOG_DUMP_INFO("exit: ok, count=%d",
+                     (int)fs_atomic32_load(&g_objmgr.object_count));
+    return FS_OK;
+}
+
+/*
+ * ============================================================
+ * 生命周期 Helper
+ * ============================================================
+ */
+
+bool objmgr_state_can_transit(
+                obj_state_t from,
+                obj_state_t to)
+{
+    bool can;
+
+    FS_LOG_DUMP_INFO("enter: from=%u, to=%u",
+                     (unsigned int)from, (unsigned int)to);
+
+    switch (from)
+    {
+    case OBJ_STATE_INVALID:
+        can = false;
+        break;
+
+    case OBJ_STATE_INIT:
+        can = (to == OBJ_STATE_ACTIVE);
+        break;
+
+    case OBJ_STATE_ACTIVE:
+        can = (to == OBJ_STATE_DELETING);
+        break;
+
+    case OBJ_STATE_DELETING:
+    default:
+        can = false;
+        break;
+    }
+
+    FS_LOG_DUMP_INFO("exit: %s",
+                     can ? "true" : "false");
+    return can;
+}
+
+int32_t objmgr_change_state(
+                obj_meta_t *meta,
+                obj_state_t state)
+{
+    fs_error_t err;
+
+    FS_LOG_DUMP_INFO("enter: meta=%p, state=%u",
+                     (void *)meta, (unsigned int)state);
+
+    if (meta == NULL) {
+
+        err = obj_error(
+                    OBJ_SUB_STATE,
+                    EINVAL);
+
+        FS_LOG_DUMP_ERROR(
+                "param check failed: meta is NULL, err=%s (0x%x)",
+                fs_error_str(err), err);
+
+        return err;
+    }
+
+    if (!objmgr_state_can_transit(
+                    objmeta_state(meta),
+                    state)) {
+
+        err = obj_error(
+                    OBJ_SUB_STATE,
+                    EPERM);
+
+        FS_LOG_DUMP_ERROR(
+                "state transition failed: from=%u to=%u, err=%s (0x%x)",
+                (unsigned int)objmeta_state(meta),
+                (unsigned int)state,
+                fs_error_str(err), err);
+
+        return err;
+    }
+
+    meta->state = state;
+
+    FS_LOG_DUMP_INFO("exit: ok, new_state=%u",
+                     (unsigned int)state);
+    return FS_OK;
+}
+
+/*
+ * ============================================================
+ * 引用计数 Helper
+ * ============================================================
+ */
+
+int32_t objmgr_ref_get_locked(
+                obj_meta_t *meta)
+{
+    fs_error_t err;
+
+    FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
+
+    if (meta == NULL) {
+
+        err = obj_error(
+                    OBJ_SUB_GET,
+                    EINVAL);
+
+        FS_LOG_DUMP_ERROR(
+                "param check failed: meta is NULL, err=%s (0x%x)",
+                fs_error_str(err), err);
+
+        return err;
+    }
+
+    if (objmeta_state(meta) != OBJ_STATE_ACTIVE) {
+
+        err = obj_error(
+                    OBJ_SUB_GET,
+                    EBUSY);
+
+        FS_LOG_DUMP_ERROR(
+                "ref get failed: state=%u not ACTIVE, err=%s (0x%x)",
+                (unsigned int)objmeta_state(meta),
+                fs_error_str(err), err);
+
+        return err;
+    }
+
+    fs_atomic32_inc(
+                &meta->refcnt);
+
+    FS_LOG_DUMP_INFO("exit: ok, refcnt=%d",
+                     (int)fs_atomic32_load(&meta->refcnt));
+    return FS_OK;
+}
+
+/*
+ * 释放对象引用。
+ *
+ * 调用者必须已经持有 objmgr 全局锁。
+ */
+int32_t objmgr_ref_put_locked(
+                obj_meta_t *meta)
+{
+    fs_error_t err;
+
+    int32_t refcnt;
+
+    FS_LOG_DUMP_INFO(
+            "enter: meta=%p",
+            (void *)meta);
+
+    if (meta == NULL) {
+
+        err = obj_error(
+                    OBJ_SUB_PUT,
+                    EINVAL);
+
+        FS_LOG_DUMP_ERROR(
+                "param check failed: meta is NULL, err=%s (0x%x)",
+                fs_error_str(err),
+                err);
+
+        return err;
+    }
+
+    refcnt = fs_atomic32_load(
+                    &meta->refcnt);
+
+    if (refcnt <= 0) {
+
+        err = obj_error(
+                    OBJ_SUB_PUT,
+                    EINVAL);
+
+        FS_LOG_DUMP_ERROR(
+                "invalid refcnt=%d, err=%s (0x%x)",
+                refcnt,
+                fs_error_str(err),
+                err);
+
+        return err;
+    }
+
+    refcnt = fs_atomic32_dec(
+                    &meta->refcnt);
+
+    FS_LOG_DUMP_INFO(
+            "ref released: refcnt=%d",
+            refcnt);
+
+    /*
+     * 对象仍被引用。
+     */
+    if (refcnt > 0) {
+
+        FS_LOG_DUMP_INFO(
+                "exit: object still referenced");
+
+        return FS_OK;
+    }
+
+    /*
+     * refcnt == 0
+     *
+     * 仅当对象已进入 DELETING 状态时，
+     * 才执行最终回收。
+     */
+    if (objmeta_state(meta) != OBJ_STATE_DELETING) {
+
+        FS_LOG_DUMP_INFO(
+                "exit: refcnt=0 but state=%u",
+                (unsigned int)objmeta_state(meta));
+
+        return FS_OK;
+    }
+
+    FS_LOG_DUMP_INFO(
+            "final reclaim begin");
+
+    objmgr_reclaim_locked(meta);
+
+    FS_LOG_DUMP_INFO(
+            "exit: ok");
 
     return FS_OK;
 }
 
 /*
- * 修改对象状态。
- *
- * 调用者必须已经持有 objmgr 全局锁。
+ * ============================================================
+ * 回收 Helper
+ * ============================================================
  */
-int32_t objmgr_change_state(
-                obj_meta_t *meta,
-                obj_state_t state)
+
+void objmgr_reclaim_locked(
+                obj_meta_t *meta)
 {
-    if (meta == NULL)
-    {
-        FS_LOG_DUMP_ERROR(
-                "meta is NULL");
+    uint64_t objectid;
+    uint32_t gen;
 
-        return obj_error(OBJ_SUB_STATE, FS_ERRNO_EINVAL);
-    }
+    FS_LOG_DUMP_INFO(
+            "enter: meta=%p",
+            (void *)meta);
 
-    /*
-     * TODO:
-     * 后续可增加状态迁移合法性检查，例如：
-     *
-     * INIT      -> ACTIVE
-     * ACTIVE    -> DELETING
-     * DELETING  -> DELETED
-     */
+    objectid = meta->key.objectid;
+    gen      = meta->key.gen;
 
-    meta->state = state;
+    (void)objmgr_remove_locked(
+                &meta->key);
 
-    return FS_OK;
+    objmeta_reset(meta);
+
+    objpool_free(meta);
+
+    FS_LOG_DUMP_INFO(
+            "object reclaimed: objectid=%llu gen=%llu",
+            (unsigned long long)objectid,
+            (unsigned long long)gen);
+
+    FS_LOG_DUMP_INFO("exit");
 }
