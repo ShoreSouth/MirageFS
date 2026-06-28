@@ -24,58 +24,85 @@ TARGET := $(BIN_DIR)/miragefs
 # ============================================================
 
 APP_SRC := src/app/main.c
-
 APP_OBJ := $(OBJ_DIR)/main.o
 
 # ============================================================
 #  依赖库
 # ============================================================
 
-LIBS := $(LIB_DIR)/libconfig.a
-LIBS += $(LIB_DIR)/liblsa.a
-LIBS += $(LIB_DIR)/libobject.a
-LIBS += $(LIB_DIR)/libcommon.a
+LIBS  := $(LIB_DIR)/libconfig.a
+LIBS  += $(LIB_DIR)/liblsa.a
+LIBS  += $(LIB_DIR)/libobject.a
+LIBS  += $(LIB_DIR)/libcommon.a
 
 # ============================================================
-#  默认目标
+#  默认目标 — 全流程编排（shell inline，避免 $(call) 转义问题）
 # ============================================================
 
-all: prepare modules $(TARGET)
+all:
+	@$(ANIM_ENTRANCE)
+	@mkdir -p $(OUTPUT_DIR); date +%s > $(BUILD_START_FILE)
+	@cores=$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4); \
+	printf "$(C_DIM)  modules:$(C_RESET) $(C_BOLD)$(C_GREEN)%s$(C_RESET)$(C_DIM)  |  jobs:$(C_RESET) %s\n\n" \
+		"$(MODULES)" "$$cores"
+	@$(call PROGRESS_INIT,$(MODULES))
+	@$(MAKE) -s _build 2>&1 && { \
+		printf "\n"; \
+		rm -f $(PROGRESS_FILE) $(TOTAL_FILE); \
+		$(ANIM_SUCCESS); \
+		if [ -f $(BUILD_START_FILE) ]; then \
+			start=$$(cat $(BUILD_START_FILE)); \
+			now=$$(date +%s); \
+			elapsed=$$((now - start)); \
+			if [ $$elapsed -lt 60 ]; then \
+				printf "  $(C_DIM)build time: $${elapsed}s$(C_RESET)\n"; \
+			else \
+				mins=$$((elapsed / 60)); secs=$$((elapsed % 60)); \
+				printf "  $(C_DIM)build time: $${mins}m $${secs}s$(C_RESET)\n"; \
+			fi; \
+			rm -f $(BUILD_START_FILE); \
+		fi; \
+	} || { \
+		printf "\n"; \
+		rm -f $(PROGRESS_FILE) $(TOTAL_FILE); \
+		$(ANIM_FAILURE); \
+		if [ -f $(BUILD_START_FILE) ]; then \
+			start=$$(cat $(BUILD_START_FILE)); \
+			now=$$(date +%s); \
+			elapsed=$$((now - start)); \
+			printf "  $(C_DIM)build time: $${elapsed}s (failed)$(C_RESET)\n"; \
+			rm -f $(BUILD_START_FILE); \
+		fi; \
+		exit 1; \
+	}
 
 # ============================================================
-#  创建输出目录
+#  inner build
 # ============================================================
+
+_build: prepare modules app link
 
 prepare:
-	mkdir -p $(OBJ_DIR)
-	mkdir -p $(LIB_DIR)
-	mkdir -p $(BIN_DIR)
-
-# ============================================================
-#  编译模块
-# ============================================================
+	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(LIB_DIR)
+	@mkdir -p $(BIN_DIR)
 
 modules:
 	@for m in $(MODULES); do \
-		$(MAKE) -C src/$$m; \
+		$(MAKE) -s -C src/$$m; \
 	done
 
-# ============================================================
-#  编译 main
-# ============================================================
+app: $(APP_OBJ)
 
 $(APP_OBJ): $(APP_SRC)
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	@printf "    $(C_DIM)CC$(C_RESET)   %-40s" "main.c"
+	@$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@ && printf " $(C_GREEN)✓$(C_RESET)\n"
 
-# ============================================================
-#  链接最终程序
-# ============================================================
+link: $(TARGET)
 
 $(TARGET): $(APP_OBJ)
-	$(CC) $(CFLAGS) \
-	-o $@ \
-	$(APP_OBJ) \
-	$(LIBS)
+	@printf "    $(C_MAGENTA)LD$(C_RESET)   %-40s" "miragefs"
+	@$(CC) $(CFLAGS) -o $@ $(APP_OBJ) $(LIBS) && printf " $(C_GREEN)✓$(C_RESET)\n"
 
 # ============================================================
 #  清理
@@ -83,10 +110,10 @@ $(TARGET): $(APP_OBJ)
 
 clean:
 	@for m in $(MODULES); do \
-		$(MAKE) -C src/$$m clean; \
+		$(MAKE) -s -C src/$$m clean; \
 	done
-
-	rm -rf output
+	@rm -rf output
+	@printf "  $(C_GREEN)✓$(C_RESET) clean done\n"
 
 # ============================================================
 #  调试辅助
@@ -99,4 +126,4 @@ print:
 	@echo "LIB_DIR=$(LIB_DIR)"
 	@echo "BIN_DIR=$(BIN_DIR)"
 
-.PHONY: all prepare modules clean print
+.PHONY: all _build prepare modules app link clean print
