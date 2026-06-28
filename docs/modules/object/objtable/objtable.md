@@ -204,7 +204,7 @@ ObjMeta
 ```c
 typedef struct objtable_entry {
 
-    obj_meta_t meta;
+    obj_runtime_t *runtime;
 
     fs_list_head_t node;
 
@@ -213,8 +213,9 @@ typedef struct objtable_entry {
 
 说明：
 
-* meta 保存对象元数据
+* runtime 指向 pool 统一管理的 obj_runtime_t 实例（不持有数据副本）
 * node 用于挂接 Hash Bucket
+* entry 本身通过 calloc/free 管理，runtime 由 objpool 管理
 
 ---
 
@@ -278,7 +279,7 @@ ObjTable
  ObjTableEntry
 ```
 
-Hash 函数基于 `(objectid ^ gen)` 计算，回调通过 `objtable_node_hash` / `objtable_key_hash` / `objtable_match` 实现。
+Hash 函数基于 `(objectid ^ gen)` 计算，回调通过 `objtable_node_hash` / `objtable_key_hash` / `objtable_match` 实现，从 `entry->runtime->meta.key` 提取键值。
 
 ---
 

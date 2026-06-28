@@ -16,15 +16,19 @@ ObjMeta
 Linux Backend Object
 ```
 
-当前阶段，ObjMeta 承担两项职责：
+ObjMeta 承担唯一职责：
 
-1. **定位桥梁**：MirageFS Object ↔ Linux Backend Object
-2. **生命周期支撑**：提供 refcnt + state 字段，供 objmgr 管理对象生命周期
+**定位桥梁**：MirageFS Object ↔ Linux Backend Object
+
+生命周期相关信息（refcnt、state）已移至 obj_runtime_t，
+详见 [ObjRuntime 设计文档](../objruntime/objruntime.md)。
 
 ```text
 MirageFS Object
     ↕
-ObjMeta  (key, refcnt, state, handle)
+obj_runtime_t  (meta, refcnt, state)
+    ↕
+obj_meta_t  (key, handle)
     ↕
 Linux Backend Object
 ```
@@ -89,19 +93,20 @@ parent
 ObjMeta 设计为固定长度结构：
 
 ```c
-sizeof(obj_meta_t) == 48
+sizeof(obj_meta_t) == 40
 ```
 
 字段构成：
 
 ```text
 obj_key_t        : 16 bytes  (objectid + gen + padding)
-fs_atomic32_t   :  4 bytes  (refcnt)
-uint32_t        :  4 bytes  (state)
 obj_handle_t    : 24 bytes  (mount_id + type + len + data[16])
 ─────────────────────────
-Total           : 48 bytes
+Total           : 40 bytes
 ```
+
+生命周期信息由 obj_runtime_t 管理（sizeof == 48），
+obj_meta_t 保持轻量，仅描述对象固有属性。
 
 优势：
 
@@ -272,46 +277,12 @@ open_by_handle_at()
 
 ## 5. 数据结构设计
 
-### 5.1 obj_state_t — 生命周期状态
+### 5.1 生命周期状态
 
-```c
-typedef enum obj_state {
-    OBJ_STATE_INVALID = 0,  /* 对象不存在，由 lookup 返回 */
-    OBJ_STATE_INIT,         /* 刚创建，未激活              */
-    OBJ_STATE_ACTIVE,       /* 已激活，可正常使用          */
-    OBJ_STATE_DELETING      /* 删除中，阻止新引用          */
-} obj_state_t;
-```
+obj_state_t 枚举及状态迁移逻辑已移至 obj_runtime_t，
+详见 [ObjRuntime 设计文档](../objruntime/objruntime.md)。
 
-状态迁移图：
-
-```text
-         INVALID
-            │
-       create()
-            ▼
-          INIT
-            │
-    初始化完成
-            ▼
-         ACTIVE
-            │
-        delete()
-            ▼
-        DELETING
-            │
-        ref==0
-            ▼
-      ObjPool Free
-            │
-            ▼
-        INVALID (对象不存在)
-```
-
-- INVALID 不在 meta 中存储，仅由 `objmgr_state()` 在 lookup 失败时返回
-- 对象释放后即不存在，不再进入任何中间状态
-
-状态的读写由 objmgr 负责，objmeta 层仅提供存储字段。
+obj_meta_t 仅保存对象固有属性，不包含运行时状态。
 
 ### 5.2 obj_meta_t 结构定义
 
@@ -319,8 +290,6 @@ typedef enum obj_state {
 typedef struct obj_meta {
 
     obj_key_t       key;    /* MirageFS 对象唯一标识 */
-    fs_atomic32_t  refcnt; /* 引用计数，原子操作    */
-    uint32_t       state;  /* 生命周期状态          */
     obj_handle_t   handle; /* Linux backend handle  */
 
 } obj_meta_t;
@@ -331,10 +300,6 @@ typedef struct obj_meta {
 ```text
 +---------------+
 | obj_key_t key  |
-+---------------+
-| refcnt        |
-+---------------+
-| state         |
 +---------------+
 | obj_handle_t  |
 |  .mount_id    |
@@ -355,14 +320,12 @@ Offset  Size    Field
 0       8       key.objectid
 8       4       key.gen
 12      4       (key padding)
-16      4       refcnt
-20      4       state
-24      4       handle.mount_id
-28      2       handle.type
-30      2       handle.len
-32      16      handle.data
+16      4       handle.mount_id
+20      2       handle.type
+22      2       handle.len
+24      16      handle.data
 
-Total = 48 Bytes
+Total = 40 Bytes
 ```
 
 
@@ -373,6 +336,8 @@ Total = 48 Bytes
 保证结构尺寸固定：
 
 ```c
+#define OBJMETA_SIZE 40
+
 _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
                "obj_meta_t size invalid");
 ```
@@ -429,62 +394,31 @@ objmeta_handle_valid()
 
 ### 7.1 状态机
 
-ObjMeta 的生命周期由 `state` 字段驱动，objmgr 负责状态迁移：
+生命周期状态迁移由 obj_runtime_t 管理，详见 [ObjRuntime 设计文档](../objruntime/objruntime.md)。
 
-```text
-         INVALID
-            │
-       create()
-            ▼
-          INIT
-            │
-    初始化完成
-            ▼
-         ACTIVE
-            │
-        delete()
-            ▼
-        DELETING
-            │
-        ref==0
-            ▼
-      ObjPool Free
-            │
-            ▼
-        INVALID (对象不存在)
-```
-
-| 状态 | 含义 | 触发操作 |
-|------|------|----------|
-| INVALID | 对象不存在 | objmgr_state() 在 lookup 失败时返回 |
-| INIT | 刚分配，尚未激活 | objmeta_init() 置为此状态 |
-| ACTIVE | 已激活，可正常使用 | objmgr 激活对象时迁移 |
-| DELETING | 正在删除，阻止新引用 | objmgr 发起删除时迁移；refcnt==0 时 ObjTable Remove + ObjPool Free |
-
-objmeta 层仅通过 `state` 字段保存状态值，不参与状态迁移决策。
-refcnt 的增减由 objmgr 在状态迁移前后通过原子操作完成。
+obj_meta_t 本身是无状态的值对象，仅保存 key + handle。
 
 ### 7.2 创建
 
 objmgr_create() 流程：
 
 ```text
-objpool_alloc()
+objpool_alloc()           → 分配 obj_runtime_t
     ↓
-objmeta_init(meta, fuid, handle)
+objmeta_init(&rt->meta, fuid, handle)  → 初始化 meta 部分
     ↓
-objmgr_insert_locked()
+rt->state = INIT          → objmgr 设置初始状态
     ↓
-objmgr_change_state(INIT → ACTIVE)
+objmgr_insert_locked(rt)  → 注册到 ObjTable
+    ↓
+objmgr_change_state(rt, ACTIVE)  → 激活
 ```
 
 其中 `objmeta_init()` 内部完成：
 - `objkey_from_fuid()` — 从 FUID 构造内部 key
-- refcnt = 0
-- state = INIT
 - handle 整体拷贝
 
-调用方（objmgr）无需了解 obj_meta_t 内部布局。
+refcnt 和 state 的初始化由 objmgr 在 runtime 层完成。
 
 ### 7.3 激活
 
@@ -657,17 +591,16 @@ ObjMeta
 提供：
 
 ```c
-objmeta_dump()
+objmeta_dump()       /* 输出 key + handle */
+objruntime_dump()    /* 输出 meta + refcnt + state */
 ```
 
-输出内容：
+objmeta_dump 输出内容：
 
 ```text
 ========== ObjMeta ==========
 objectid     : 100
 gen          : 1
-refcnt       : 2
-state        : 1
 mount_id     : 23
 handle_type  : 1
 handle_bytes : 8
@@ -675,6 +608,7 @@ file_handle  : 0a01bcff...
 =============================
 ```
 
+objruntime_dump 额外输出 refcnt 和 state。
 用于：
 
 - Trace

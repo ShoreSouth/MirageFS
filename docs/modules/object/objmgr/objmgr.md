@@ -30,9 +30,10 @@ Object Layer 的整体结构如下：
 其中：
 
 * ObjMgr 负责对象生命周期管理
-* ObjPool 负责对象内存管理
+* ObjPool 负责运行时对象内存管理（obj_runtime_t）
 * ObjTable 提供对象索引
-* ObjMeta 保存对象运行时元数据
+* ObjMeta 保存对象固有元数据（key + handle）
+* ObjRuntime 聚合 meta + refcnt + state
 
 ---
 
@@ -50,9 +51,9 @@ ObjMgr 负责：
 
 ObjMgr 不负责：
 
-* 内存分配（ObjPool）
+* 内存分配（ObjPool，管理 obj_runtime_t）
 * Hash 索引实现（ObjTable）
-* 元数据组织（ObjMeta）
+* 元数据组织（ObjMeta + ObjRuntime）
 
 因此 ObjMgr 更像 Object Layer 的调度中心（Coordinator）。
 
@@ -129,31 +130,37 @@ objmgr_create()
 
         ▼
 
-objpool_alloc()
+objpool_alloc()           → obj_runtime_t *
 
         │
 
         ▼
 
-objmeta_init()
+objmeta_init(&rt->meta)   → 初始化 meta
 
         │
 
         ▼
 
-objtable_insert()
+rt->state = INIT          → 设置初始状态
 
         │
 
         ▼
 
-INIT → ACTIVE
+objtable_insert(rt)       → 注册到 ObjTable
 
         │
 
         ▼
 
-return obj_meta *
+INIT → ACTIVE             → 激活
+
+        │
+
+        ▼
+
+return &rt->meta           → 返回 obj_meta_t *
 ```
 
 说明：
@@ -215,7 +222,7 @@ objtable_remove()
 
 objmeta_reset()
 
-objpool_free()
+objpool_free(runtime)
 ```
 
 说明：

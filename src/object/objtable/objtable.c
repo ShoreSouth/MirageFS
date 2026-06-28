@@ -5,7 +5,6 @@
 #include "object/obj_error.h"
 #include "object/objkey/objkey.h"
 #include "object/objtable/objtable.h"
-#include "object/objmeta/objmeta.h"
 
 /* ============================================================
  * 内部函数
@@ -21,7 +20,7 @@ static uint64_t objtable_node_hash(
                 objtable_entry_t,
                 node);
 
-    return objkey_hash(&entry->meta.key);
+    return objkey_hash(&entry->runtime->meta.key);
 }
 
 static uint64_t objtable_key_hash(
@@ -41,7 +40,7 @@ static bool objtable_match(
                 objtable_entry_t,
                 node);
 
-    return objkey_equal(&entry->meta.key, key);
+    return objkey_equal(&entry->runtime->meta.key, key);
 }
 
 static objtable_entry_t *objtable_find_entry(
@@ -156,7 +155,7 @@ void objtable_destroy(obj_table_t *table)
 
 int objtable_insert(
             obj_table_t *table,
-            const obj_meta_t *meta)
+            obj_runtime_t *runtime)
 {
     fs_error_t err;
 
@@ -164,8 +163,8 @@ int objtable_insert(
 
     obj_key_t key;
 
-    FS_LOG_DUMP_INFO("enter: table=%p, meta=%p",
-                     (void *)table, (void *)meta);
+    FS_LOG_DUMP_INFO("enter: table=%p, runtime=%p",
+                     (void *)table, (void *)runtime);
 
     if (table == NULL) {
         err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
@@ -174,14 +173,14 @@ int objtable_insert(
         return err;
     }
 
-    if (meta == NULL) {
+    if (runtime == NULL) {
         err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: meta is NULL, err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("param check failed: runtime is NULL, err=%s (0x%x)",
                           fs_error_str(err), err);
         return err;
     }
 
-    if (!objmeta_is_valid(meta)) {
+    if (!objmeta_is_valid(&runtime->meta)) {
         err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: invalid meta, err=%s (0x%x)",
                           fs_error_str(err), err);
@@ -189,8 +188,8 @@ int objtable_insert(
     }
 
     key = objkey_make(
-                meta->key.objectid,
-                meta->key.gen);
+                runtime->meta.key.objectid,
+                runtime->meta.key.gen);
 
     if (objtable_exists(
             table,
@@ -217,9 +216,7 @@ int objtable_insert(
         return err;
     }
 
-    memcpy(&entry->meta,
-           meta,
-           sizeof(obj_meta_t));
+    entry->runtime = runtime;
 
     fs_list_init(
             &entry->node);
@@ -291,7 +288,7 @@ int objtable_remove(
     return FS_OK;
 }
 
-obj_meta_t *objtable_lookup(
+obj_runtime_t *objtable_lookup(
                 obj_table_t *table,
                 const obj_key_t *key)
 {
@@ -317,9 +314,9 @@ obj_meta_t *objtable_lookup(
         return NULL;
     }
 
-    FS_LOG_DUMP_INFO("exit: found, meta=%p",
-                     (void *)&entry->meta);
-    return &entry->meta;
+    FS_LOG_DUMP_INFO("exit: found, runtime=%p",
+                     (void *)entry->runtime);
+    return entry->runtime;
 }
 
 bool objtable_exists(

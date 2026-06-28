@@ -77,7 +77,6 @@ int32_t objmeta_init(
     memset(meta, 0, sizeof(obj_meta_t));
 
     objkey_from_fuid(&meta->key, fuid);
-    meta->state  = OBJ_STATE_INIT;
     meta->handle = *handle;
 
     FS_LOG_DUMP_INFO("exit: ok");
@@ -195,15 +194,11 @@ void objmeta_dump(
     FS_LOG_DUMP_INFO("enter: meta=%p", (const void *)meta);
 
     if (meta == NULL) {
-
         FS_LOG_DUMP_ERROR("param check failed: meta is NULL");
-
         return;
     }
 
-    memset(handle_buf,
-           0,
-           sizeof(handle_buf));
+    memset(handle_buf, 0, sizeof(handle_buf));
 
     offset = 0;
 
@@ -232,14 +227,6 @@ void objmeta_dump(
     FS_LOG_DUMP_INFO(
             "gen          : %u",
             (unsigned int)meta->key.gen);
-
-    FS_LOG_DUMP_INFO(
-            "refcnt       : %d",
-            (int)meta->refcnt);
-
-    FS_LOG_DUMP_INFO(
-            "state        : %u",
-            (unsigned int)objmeta_state(meta));
 
     FS_LOG_DUMP_INFO(
             "mount_id     : %d",

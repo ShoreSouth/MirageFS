@@ -60,7 +60,9 @@ src/
 │   ├── fuid/
 │   ├── objkey/
 │   ├── objmeta/
+│   ├── objruntime/
 │   ├── objtable/
+│   ├── objpool/
 │   └── objmgr/
 │
 ├── cache/
@@ -129,9 +131,30 @@ Provides object metadata management.
 
 Responsibilities:
 
-* metadata layout
+* metadata layout (key + handle)
 * metadata validation
 * metadata conversion
+
+obj_meta_t describes **what** an object is — identity and backend locator only.
+Runtime lifecycle state (refcnt, state) belongs to obj_runtime_t.
+
+---
+
+## objruntime
+
+Provides the runtime object instance that all modules reference.
+
+Responsibilities:
+
+* aggregates obj_meta_t + refcnt + state
+* lifecycle state machine (INIT → ACTIVE → DELETING)
+* serves as the shared anchor point for Cache, Storage, Journal modules
+
+obj_runtime_t describes an **object instance** — the runtime carrier for meta + lifecycle.
+obj_meta_t is a member of obj_runtime_t, not the root object itself.
+
+All modules (ObjMgr, Cache, Storage, VFS) reference `obj_runtime_t *`
+as the common handle. Modules that only need metadata access `runtime->meta`.
 
 ---
 
@@ -329,6 +352,7 @@ Examples:
 
 ```c
 void         objmeta_dump(const obj_meta_t *meta);
+void         objruntime_dump(const obj_runtime_t *rt);
 const char  *fuid_to_str(const fuid_t *fuid);
 const char  *fuid_type_str(fuid_type_t type);
 ```
@@ -490,6 +514,56 @@ Rules:
 
 ---
 
+# Parameter Direction Annotations
+
+All public API function documentation MUST annotate each parameter with a direction tag.
+
+Use one of three tags:
+
+| Tag | Meaning |
+|-----|---------|
+| `[IN]` | Read-only input. Callee reads but does not modify. `const` pointers are always `[IN]`. |
+| `[OUT]` | Output only. Callee writes to this parameter. Non-const pointers are usually `[OUT]`. |
+| `[IN/OUT]` | Input and output. Callee reads and may modify. Non-const pointers to mutable state. |
+
+Examples:
+
+```c
+/*
+ * 初始化 ObjMeta。
+ *
+ * 参数：
+ *      [OUT] meta      : 目标对象（由 objpool_alloc 分配）
+ *      [IN]  fuid      : MirageFS 对象标识
+ *      [IN]  handle    : Linux backend handle
+ */
+int32_t objmeta_init(
+                obj_meta_t *meta,
+                const fuid_t *fuid,
+                const obj_handle_t *handle);
+
+/*
+ * 插入对象。
+ *
+ * 参数：
+ *      [IN/OUT] table  : 对象表
+ *      [IN]     meta   : 待插入的元数据
+ */
+int objtable_insert(
+            obj_table_t *table,
+            const obj_meta_t *meta);
+```
+
+Rules:
+- Every parameter in a `/* 参数：... */` block must have a direction tag.
+- Tags appear left-aligned in a column of their own (`[IN]`, `[OUT]`, `[IN/OUT]` are 7 chars wide).
+- `const` pointers are always `[IN]` — the compiler enforces this.
+- Non-const pointers that are only written-to (not read) are `[OUT]`.
+- Non-const pointers that are both read and written are `[IN/OUT]`.
+- Value-type parameters (non-pointer) are always `[IN]` and may omit the tag when the intent is obvious.
+
+---
+
 # Inline Functions
 
 Value-object helpers belong in the header as `static inline`.
@@ -541,7 +615,7 @@ Once past the public boundary, internal static helpers may skip redundant NULL c
 Return conventions for NULL-able returns:
 - Functions returning pointers: `NULL` means "not found" or "error".
 - Functions returning `bool`: `false` on NULL input (defensive).
-- Functions returning `int`: negative errno value on NULL input.
+- Functions returning `int` / `int32_t`: positive `fs_error_t` on NULL input.
 
 ---
 
@@ -655,17 +729,17 @@ Use consistent return types across the codebase.
 
 | Return type | Meaning |
 |-------------|---------|
-| `int` / `int32_t` | `0` = success, negative = errno value |
+| `int` / `int32_t` | `FS_OK` (0) = success; positive = `fs_error_t` (severity\|module\|sub\|errno) |
 | `bool` | Predicate result (valid, equal, exists, etc.) |
 | `T` (value type) | Constructed value object (never fails) |
 | `T *` (pointer) | `NULL` = not found / error; non-NULL = valid pointer |
-| `fs_error_t` | `FS_OK` or specific error code |
+| `fs_error_t` | `FS_OK` (0) = success; positive value = structured error |
 | `uint64_t` / `uint32_t` | Count or hash (unsigned, never fails) |
 
 Examples:
 
 ```c
-/* int: 0 = ok, <0 = error */
+/* int / int32_t: FS_OK = ok, >0 = error (fs_error_t) */
 int  objtable_init(obj_table_t *table, uint32_t bucket_nr);
 int  objtable_insert(obj_table_t *table, const obj_meta_t *meta);
 
@@ -687,8 +761,8 @@ uint64_t fuid_hash(const fuid_t *fuid);
 ```
 
 Rules:
-- Never use bare `-1` or `NULL` without documenting the convention for that function.
-- Prefer `int` (0 / negative) for fallible operations; reserve `fs_error_t` for call chains that need to distinguish error categories.
+- Never use bare `-1` for error returns without documenting the convention.
+- `int` / `int32_t` functions in modules that use `fs_error_t` return `FS_OK` (0) on success and a positive `fs_error_t` on failure.
 - Value constructors (`xxx_make`) never fail — they simply pack fields.
 
 ---
@@ -1008,7 +1082,7 @@ Use opaque types when:
 
 Do NOT use opaque types when:
 - The struct is a value object passed by value (fuid_t, obj_key_t).
-- The struct is embedded inside another struct (obj_meta_t inside objtable_entry_t).
+- The struct is embedded inside another struct (obj_meta_t inside obj_runtime_t).
 - sizeof() or inline access is needed for performance on hot paths.
 
 ---

@@ -2,9 +2,8 @@
 
 #include "common/fs_common.h"
 
-#include "object/fuid/fuid.h"
+#include "object/objruntime/objruntime.h"
 #include "object/objkey/objkey.h"
-#include "object/objmeta/objmeta.h"
 #include "object/objtable/objtable.h"
 
 /*
@@ -76,18 +75,27 @@ extern obj_manager_t g_objmgr;
 
 /*
  * 查找对象。
+ *
+ * 参数：
+ *      [IN] key    : 对象标识
  */
-obj_meta_t *objmgr_lookup_locked(
+obj_runtime_t *objmgr_lookup_locked(
                 const obj_key_t *key);
 
 /*
  * 插入对象。
+ *
+ * 参数：
+ *      [IN] rt     : 待插入的运行时对象（由 pool 分配）
  */
 int32_t objmgr_insert_locked(
-                obj_meta_t *meta);
+                obj_runtime_t *rt);
 
 /*
  * 删除对象。
+ *
+ * 参数：
+ *      [IN] key    : 对象标识
  */
 int32_t objmgr_remove_locked(
                 const obj_key_t *key);
@@ -102,6 +110,10 @@ int32_t objmgr_remove_locked(
 
 /*
  * 判断状态迁移是否合法。
+ *
+ * 参数：
+ *      [IN] from   : 当前状态
+ *      [IN] to     : 目标状态
  */
 bool objmgr_state_can_transit(
                 obj_state_t from,
@@ -109,9 +121,13 @@ bool objmgr_state_can_transit(
 
 /*
  * 修改对象生命周期状态。
+ *
+ * 参数：
+ *      [IN/OUT] rt     : 运行时对象
+ *      [IN]     state  : 目标状态
  */
 int32_t objmgr_change_state(
-                obj_meta_t *meta,
+                obj_runtime_t *rt,
                 obj_state_t state);
 
 /*
@@ -126,18 +142,24 @@ int32_t objmgr_change_state(
  * 增加对象引用。
  *
  * 内部完成状态检查及引用计数增加。
+ *
+ * 参数：
+ *      [IN/OUT] rt : 运行时对象（refcnt 将被递增）
  */
 int32_t objmgr_ref_get_locked(
-                obj_meta_t *meta);
+                obj_runtime_t *rt);
 
 /*
  * 释放对象引用。
  *
  * 当引用计数降为 0 时，
  * 根据对象状态决定是否执行最终释放。
+ *
+ * 参数：
+ *      [IN/OUT] rt : 运行时对象（refcnt 将被递减，可能回收）
  */
 int32_t objmgr_ref_put_locked(
-                obj_meta_t *meta);
+                obj_runtime_t *rt);
 
 /*
  * ============================================================
@@ -149,5 +171,12 @@ int32_t objmgr_ref_put_locked(
  * 调用者必须已经持有 objmgr 全局锁。
  * ============================================================
  */
+
+/*
+ * 从表中移除对象，重置元数据，归还内存池。
+ *
+ * 参数：
+ *      [IN] rt     : 待回收的运行时对象（将被重置并归还 pool）
+ */
 void objmgr_reclaim_locked(
-                obj_meta_t *meta);
+                obj_runtime_t *rt);

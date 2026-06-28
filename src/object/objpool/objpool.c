@@ -1,9 +1,7 @@
-
-
 #include <string.h>
 #include <errno.h>
 
-#include "common//fs_common.h"
+#include "common/fs_common.h"
 #include "object/obj_error.h"
 #include "object/objpool/objpool.h"
 
@@ -16,7 +14,7 @@
 /*
  * 默认对象池容量。
  *
- * 当前支持约 4096 个 ObjMeta。
+ * 当前支持约 4096 个 obj_runtime_t。
  * 后续可改为配置文件读取。
  */
 #define OBJPOOL_DEFAULT_OBJECTS    4096U
@@ -29,8 +27,7 @@
 
 typedef struct obj_pool
 {
-    
-    fs_mempool_t *meta_pool; /* ObjMeta 专用内存池 */
+    fs_mempool_t *meta_pool; /* obj_runtime_t 专用内存池 */
 
 } obj_pool_t;
 
@@ -53,7 +50,7 @@ int32_t objpool_init(void)
     memset(&cfg, 0, sizeof(cfg));
 
     cfg.total_size =
-            sizeof(obj_meta_t) *
+            sizeof(obj_runtime_t) *
             OBJPOOL_DEFAULT_OBJECTS;
 
     cfg.max_order = FS_MP_MAX_ORDER;
@@ -70,7 +67,7 @@ int32_t objpool_init(void)
                     ENOMEM);
 
         FS_LOG_DUMP_ERROR(
-                "create obj meta pool failed, err=%s (0x%x)",
+                "create obj runtime pool failed, err=%s (0x%x)",
                 fs_error_str(err),
                 err);
 
@@ -104,11 +101,11 @@ void objpool_deinit(void)
  * ============================================================
  */
 
-obj_meta_t *objpool_alloc(void)
+obj_runtime_t *objpool_alloc(void)
 {
     fs_error_t err;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO("enter");
 
@@ -126,19 +123,19 @@ obj_meta_t *objpool_alloc(void)
         return NULL;
     }
 
-    meta = fs_mp_calloc(
+    rt = fs_mp_calloc(
                 g_objpool.meta_pool,
                 1,
-                sizeof(*meta));
+                sizeof(*rt));
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         err = obj_error(
                     OBJ_SUB_CREATE,
                     ENOMEM);
 
         FS_LOG_DUMP_ERROR(
-                "allocate obj meta failed, err=%s (0x%x)",
+                "allocate obj runtime failed, err=%s (0x%x)",
                 fs_error_str(err),
                 err);
 
@@ -146,30 +143,30 @@ obj_meta_t *objpool_alloc(void)
     }
 
     FS_LOG_DUMP_INFO(
-            "exit: meta=%p",
-            (void *)meta);
+            "exit: rt=%p",
+            (void *)rt);
 
-    return meta;
+    return rt;
 }
 
 void objpool_free(
-                obj_meta_t *meta)
+                obj_runtime_t *rt)
 {
     FS_LOG_DUMP_INFO(
-            "enter: meta=%p",
-            (void *)meta);
+            "enter: rt=%p",
+            (void *)rt);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         FS_LOG_DUMP_INFO(
-                "exit: meta is NULL");
+                "exit: rt is NULL");
 
         return;
     }
 
     fs_mp_free(
             g_objpool.meta_pool,
-            meta);
+            rt);
 
     FS_LOG_DUMP_INFO("exit");
 }

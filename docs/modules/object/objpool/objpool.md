@@ -6,7 +6,7 @@
 
 ObjPool 是 Object Layer 的对象内存池。
 
-它负责 **ObjMeta 对象的统一申请与释放**，为 ObjMgr 提供稳定的对象分配能力。
+它负责 **obj_runtime_t 对象的统一申请与释放**，为 ObjMgr 提供稳定的运行时对象分配能力。
 
 ObjPool 不关心：
 
@@ -45,8 +45,8 @@ ObjPool 仅负责以下职责：
 
 * 创建对象内存池
 * 销毁对象内存池
-* 分配 ObjMeta
-* 释放 ObjMeta
+* 分配 obj_runtime_t
+* 释放 obj_runtime_t
 
 除此之外，不参与任何业务逻辑。
 
@@ -282,23 +282,23 @@ objpool_deinit()
 
 ## objpool_alloc()
 
-申请一个 ObjMeta。
+申请一个 obj_runtime_t。
 
 返回：
 
 ```
-obj_meta_t *
+obj_runtime_t *
 ```
 
 返回的对象仅保证内存可用。
 
-对象初始化由 ObjMeta 完成。
+对象初始化由 objmeta_init() 和 objmgr 完成。
 
 ---
 
 ## objpool_free()
 
-释放一个 ObjMeta。
+释放一个 obj_runtime_t。
 
 ObjPool 不检查对象状态。
 

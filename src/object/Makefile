@@ -9,6 +9,7 @@ SRC := object_init.c
 SRC += fuid/fuid.c
 SRC += objkey/objkey.c
 SRC += objmeta/objmeta.c
+SRC += objruntime/objruntime.c
 SRC += objmgr/objmgr.c
 SRC += objmgr/objmgr_ref.c
 SRC += objmgr/objmgr_internal.c

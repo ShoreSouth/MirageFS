@@ -3,6 +3,7 @@
 #include "object/objmgr/objmgr.h"
 #include "object/objmgr/objmgr_internal.h"
 #include "object/obj_error.h"
+#include "object/objruntime/objruntime.h"
 
 /*
  * ============================================================
@@ -17,12 +18,12 @@ int32_t objmgr_get(
 
     obj_key_t key;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
     objkey_from_fuid(
                 &key,
@@ -31,10 +32,10 @@ int32_t objmgr_get(
     fs_mutex_lock(
             &g_objmgr.lock);
 
-    meta = objmgr_lookup_locked(
+    rt = objmgr_lookup_locked(
                     &key);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -52,7 +53,7 @@ int32_t objmgr_get(
     }
 
     err = objmgr_ref_get_locked(
-                    meta);
+                    rt);
 
     fs_mutex_unlock(
             &g_objmgr.lock);
@@ -81,12 +82,12 @@ int32_t objmgr_put(
 
     obj_key_t key;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
     objkey_from_fuid(
                 &key,
@@ -95,10 +96,10 @@ int32_t objmgr_put(
     fs_mutex_lock(
             &g_objmgr.lock);
 
-    meta = objmgr_lookup_locked(
+    rt = objmgr_lookup_locked(
                     &key);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -116,7 +117,7 @@ int32_t objmgr_put(
     }
 
     err = objmgr_ref_put_locked(
-                    meta);
+                    rt);
 
     fs_mutex_unlock(
             &g_objmgr.lock);
@@ -143,14 +144,14 @@ int32_t objmgr_refcnt(
 {
     obj_key_t key;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     int32_t refcnt;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
     objkey_from_fuid(
                 &key,
@@ -159,10 +160,10 @@ int32_t objmgr_refcnt(
     fs_mutex_lock(
             &g_objmgr.lock);
 
-    meta = objmgr_lookup_locked(
+    rt = objmgr_lookup_locked(
                     &key);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -174,7 +175,7 @@ int32_t objmgr_refcnt(
     }
 
     refcnt = fs_atomic32_load(
-                    &meta->refcnt);
+                    &rt->refcnt);
 
     fs_mutex_unlock(
             &g_objmgr.lock);
@@ -197,14 +198,14 @@ obj_meta_t *objmgr_acquire(
 {
     obj_key_t key;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     int32_t err;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
     objkey_from_fuid(
                 &key,
@@ -213,10 +214,10 @@ obj_meta_t *objmgr_acquire(
     fs_mutex_lock(
             &g_objmgr.lock);
 
-    meta = objmgr_lookup_locked(
+    rt = objmgr_lookup_locked(
                     &key);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -228,7 +229,7 @@ obj_meta_t *objmgr_acquire(
     }
 
     err = objmgr_ref_get_locked(
-                    meta);
+                    rt);
 
     if (err != FS_OK) {
 
@@ -245,10 +246,11 @@ obj_meta_t *objmgr_acquire(
             &g_objmgr.lock);
 
     FS_LOG_DUMP_INFO(
-            "exit: meta=%p",
-            (void *)meta);
+            "exit: rt=%p, meta=%p",
+            (void *)rt,
+            (void *)&rt->meta);
 
-    return meta;
+    return &rt->meta;
 }
 
 /*
@@ -260,6 +262,8 @@ obj_meta_t *objmgr_acquire(
 void objmgr_release(
                 obj_meta_t *meta)
 {
+    obj_runtime_t *rt;
+
     if (meta == NULL) {
 
         FS_LOG_DUMP_INFO(
@@ -272,11 +276,16 @@ void objmgr_release(
             "enter: meta=%p",
             (void *)meta);
 
+    rt = FS_CONTAINER_OF(
+                meta,
+                obj_runtime_t,
+                meta);
+
     fs_mutex_lock(
             &g_objmgr.lock);
 
     (void)objmgr_ref_put_locked(
-                    meta);
+                    rt);
 
     fs_mutex_unlock(
             &g_objmgr.lock);

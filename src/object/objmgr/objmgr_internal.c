@@ -11,31 +11,31 @@
  * ============================================================
  */
 
-obj_meta_t *objmgr_lookup_locked(
+obj_runtime_t *objmgr_lookup_locked(
                 const obj_key_t *key)
 {
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO("enter: key=%p", (const void *)key);
 
-    meta = objtable_lookup(
+    rt = objtable_lookup(
                 &g_objmgr.table,
                 key);
 
-    FS_LOG_DUMP_INFO("exit: meta=%p", (void *)meta);
-    return meta;
+    FS_LOG_DUMP_INFO("exit: rt=%p", (void *)rt);
+    return rt;
 }
 
 int32_t objmgr_insert_locked(
-                obj_meta_t *meta)
+                obj_runtime_t *rt)
 {
     int32_t ret;
 
-    FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
+    FS_LOG_DUMP_INFO("enter: rt=%p", (void *)rt);
 
     ret = objtable_insert(
                 &g_objmgr.table,
-                meta);
+                rt);
 
     if (ret != FS_OK) {
         FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
@@ -115,29 +115,29 @@ bool objmgr_state_can_transit(
 }
 
 int32_t objmgr_change_state(
-                obj_meta_t *meta,
+                obj_runtime_t *rt,
                 obj_state_t state)
 {
     fs_error_t err;
 
-    FS_LOG_DUMP_INFO("enter: meta=%p, state=%u",
-                     (void *)meta, (unsigned int)state);
+    FS_LOG_DUMP_INFO("enter: rt=%p, state=%u",
+                     (void *)rt, (unsigned int)state);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         err = obj_error(
                     OBJ_SUB_STATE,
                     EINVAL);
 
         FS_LOG_DUMP_ERROR(
-                "param check failed: meta is NULL, err=%s (0x%x)",
+                "param check failed: rt is NULL, err=%s (0x%x)",
                 fs_error_str(err), err);
 
         return err;
     }
 
     if (!objmgr_state_can_transit(
-                    objmeta_state(meta),
+                    objruntime_state(rt),
                     state)) {
 
         err = obj_error(
@@ -146,14 +146,14 @@ int32_t objmgr_change_state(
 
         FS_LOG_DUMP_ERROR(
                 "state transition failed: from=%u to=%u, err=%s (0x%x)",
-                (unsigned int)objmeta_state(meta),
+                (unsigned int)objruntime_state(rt),
                 (unsigned int)state,
                 fs_error_str(err), err);
 
         return err;
     }
 
-    meta->state = state;
+    rt->state = state;
 
     FS_LOG_DUMP_INFO("exit: ok, new_state=%u",
                      (unsigned int)state);
@@ -167,26 +167,26 @@ int32_t objmgr_change_state(
  */
 
 int32_t objmgr_ref_get_locked(
-                obj_meta_t *meta)
+                obj_runtime_t *rt)
 {
     fs_error_t err;
 
-    FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
+    FS_LOG_DUMP_INFO("enter: rt=%p", (void *)rt);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         err = obj_error(
                     OBJ_SUB_GET,
                     EINVAL);
 
         FS_LOG_DUMP_ERROR(
-                "param check failed: meta is NULL, err=%s (0x%x)",
+                "param check failed: rt is NULL, err=%s (0x%x)",
                 fs_error_str(err), err);
 
         return err;
     }
 
-    if (objmeta_state(meta) != OBJ_STATE_ACTIVE) {
+    if (objruntime_state(rt) != OBJ_STATE_ACTIVE) {
 
         err = obj_error(
                     OBJ_SUB_GET,
@@ -194,17 +194,17 @@ int32_t objmgr_ref_get_locked(
 
         FS_LOG_DUMP_ERROR(
                 "ref get failed: state=%u not ACTIVE, err=%s (0x%x)",
-                (unsigned int)objmeta_state(meta),
+                (unsigned int)objruntime_state(rt),
                 fs_error_str(err), err);
 
         return err;
     }
 
     fs_atomic32_inc(
-                &meta->refcnt);
+                &rt->refcnt);
 
     FS_LOG_DUMP_INFO("exit: ok, refcnt=%d",
-                     (int)fs_atomic32_load(&meta->refcnt));
+                     (int)fs_atomic32_load(&rt->refcnt));
     return FS_OK;
 }
 
@@ -214,24 +214,24 @@ int32_t objmgr_ref_get_locked(
  * 调用者必须已经持有 objmgr 全局锁。
  */
 int32_t objmgr_ref_put_locked(
-                obj_meta_t *meta)
+                obj_runtime_t *rt)
 {
     fs_error_t err;
 
     int32_t refcnt;
 
     FS_LOG_DUMP_INFO(
-            "enter: meta=%p",
-            (void *)meta);
+            "enter: rt=%p",
+            (void *)rt);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         err = obj_error(
                     OBJ_SUB_PUT,
                     EINVAL);
 
         FS_LOG_DUMP_ERROR(
-                "param check failed: meta is NULL, err=%s (0x%x)",
+                "param check failed: rt is NULL, err=%s (0x%x)",
                 fs_error_str(err),
                 err);
 
@@ -239,7 +239,7 @@ int32_t objmgr_ref_put_locked(
     }
 
     refcnt = fs_atomic32_load(
-                    &meta->refcnt);
+                    &rt->refcnt);
 
     if (refcnt <= 0) {
 
@@ -257,7 +257,7 @@ int32_t objmgr_ref_put_locked(
     }
 
     refcnt = fs_atomic32_dec(
-                    &meta->refcnt);
+                    &rt->refcnt);
 
     FS_LOG_DUMP_INFO(
             "ref released: refcnt=%d",
@@ -280,11 +280,11 @@ int32_t objmgr_ref_put_locked(
      * 仅当对象已进入 DELETING 状态时，
      * 才执行最终回收。
      */
-    if (objmeta_state(meta) != OBJ_STATE_DELETING) {
+    if (objruntime_state(rt) != OBJ_STATE_DELETING) {
 
         FS_LOG_DUMP_INFO(
                 "exit: refcnt=0 but state=%u",
-                (unsigned int)objmeta_state(meta));
+                (unsigned int)objruntime_state(rt));
 
         return FS_OK;
     }
@@ -292,7 +292,7 @@ int32_t objmgr_ref_put_locked(
     FS_LOG_DUMP_INFO(
             "final reclaim begin");
 
-    objmgr_reclaim_locked(meta);
+    objmgr_reclaim_locked(rt);
 
     FS_LOG_DUMP_INFO(
             "exit: ok");
@@ -307,29 +307,29 @@ int32_t objmgr_ref_put_locked(
  */
 
 void objmgr_reclaim_locked(
-                obj_meta_t *meta)
+                obj_runtime_t *rt)
 {
     uint64_t objectid;
     uint32_t gen;
 
     FS_LOG_DUMP_INFO(
-            "enter: meta=%p",
-            (void *)meta);
+            "enter: rt=%p",
+            (void *)rt);
 
-    objectid = meta->key.objectid;
-    gen      = meta->key.gen;
+    objectid = rt->meta.key.objectid;
+    gen      = rt->meta.key.gen;
 
     (void)objmgr_remove_locked(
-                &meta->key);
+                &rt->meta.key);
 
-    objmeta_reset(meta);
+    objmeta_reset(&rt->meta);
 
-    objpool_free(meta);
+    objpool_free(rt);
 
     FS_LOG_DUMP_INFO(
-            "object reclaimed: objectid=%llu gen=%llu",
+            "object reclaimed: objectid=%llu gen=%u",
             (unsigned long long)objectid,
-            (unsigned long long)gen);
+            (unsigned int)gen);
 
     FS_LOG_DUMP_INFO("exit");
 }

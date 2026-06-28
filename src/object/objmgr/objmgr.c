@@ -74,12 +74,12 @@ obj_state_t objmgr_state(
 {
     obj_key_t key;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
     objkey_from_fuid(
                 &key,
@@ -88,10 +88,10 @@ obj_state_t objmgr_state(
     fs_mutex_lock(
             &g_objmgr.lock);
 
-    meta = objmgr_lookup_locked(
+    rt = objmgr_lookup_locked(
                     &key);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -107,9 +107,9 @@ obj_state_t objmgr_state(
 
     FS_LOG_DUMP_INFO(
             "exit: state=%u",
-            (unsigned int)objmeta_state(meta));
+            (unsigned int)objruntime_state(rt));
 
-    return objmeta_state(meta);
+    return objruntime_state(rt);
 }
 
 /*
@@ -124,15 +124,15 @@ obj_meta_t *objmgr_create(
 {
     fs_error_t err;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
-    meta = objpool_alloc();
-    if (meta == NULL) {
+    rt = objpool_alloc();
+    if (rt == NULL) {
 
         FS_LOG_DUMP_ERROR(
                 "objpool_alloc failed");
@@ -141,7 +141,7 @@ obj_meta_t *objmgr_create(
     }
 
     err = objmeta_init(
-                meta,
+                &rt->meta,
                 fuid,
                 handle);
 
@@ -152,16 +152,19 @@ obj_meta_t *objmgr_create(
                 fs_error_str(err),
                 err);
 
-        objpool_free(meta);
+        objpool_free(rt);
 
         return NULL;
     }
+
+    rt->state  = OBJ_STATE_INIT;
+    rt->refcnt = 0;
 
     fs_mutex_lock(
             &g_objmgr.lock);
 
     err = objmgr_insert_locked(
-                meta);
+                rt);
 
     if (err != FS_OK) {
 
@@ -173,15 +176,15 @@ obj_meta_t *objmgr_create(
                 fs_error_str(err),
                 err);
 
-        objmeta_reset(meta);
+        objmeta_reset(&rt->meta);
 
-        objpool_free(meta);
+        objpool_free(rt);
 
         return NULL;
     }
 
     err = objmgr_change_state(
-                meta,
+                rt,
                 OBJ_STATE_ACTIVE);
 
     if (err != FS_OK) {
@@ -191,7 +194,7 @@ obj_meta_t *objmgr_create(
                 fs_error_str(err),
                 err);
 
-        objmgr_reclaim_locked(meta);
+        objmgr_reclaim_locked(rt);
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -203,10 +206,11 @@ obj_meta_t *objmgr_create(
             &g_objmgr.lock);
 
     FS_LOG_DUMP_INFO(
-            "exit: meta=%p",
-            (void *)meta);
+            "exit: rt=%p, meta=%p",
+            (void *)rt,
+            (void *)&rt->meta);
 
-    return meta;
+    return &rt->meta;
 }
 
 int32_t objmgr_delete(
@@ -216,14 +220,14 @@ int32_t objmgr_delete(
 
     obj_key_t key;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     int32_t refcnt;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
     objkey_from_fuid(
                 &key,
@@ -232,10 +236,10 @@ int32_t objmgr_delete(
     fs_mutex_lock(
             &g_objmgr.lock);
 
-    meta = objmgr_lookup_locked(
+    rt = objmgr_lookup_locked(
                     &key);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -252,7 +256,7 @@ int32_t objmgr_delete(
         return err;
     }
 
-    if (objmeta_state(meta) != OBJ_STATE_ACTIVE) {
+    if (objruntime_state(rt) != OBJ_STATE_ACTIVE) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -263,7 +267,7 @@ int32_t objmgr_delete(
 
         FS_LOG_DUMP_ERROR(
                 "state not ACTIVE: state=%u, err=%s (0x%x)",
-                (unsigned int)objmeta_state(meta),
+                (unsigned int)objruntime_state(rt),
                 fs_error_str(err),
                 err);
 
@@ -271,7 +275,7 @@ int32_t objmgr_delete(
     }
 
     err = objmgr_change_state(
-                meta,
+                rt,
                 OBJ_STATE_DELETING);
 
     if (err != FS_OK) {
@@ -288,11 +292,11 @@ int32_t objmgr_delete(
     }
 
     refcnt = fs_atomic32_load(
-                    &meta->refcnt);
+                    &rt->refcnt);
 
     if (refcnt == 0) {
 
-        objmgr_reclaim_locked(meta);
+        objmgr_reclaim_locked(rt);
     }
 
     fs_mutex_unlock(
@@ -315,12 +319,12 @@ obj_meta_t *objmgr_lookup(
 {
     obj_key_t key;
 
-    obj_meta_t *meta;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%llu",
+            "enter: objectid=%llu gen=%u",
             (unsigned long long)fuid->objectid,
-            (unsigned long long)fuid->gen);
+            (unsigned int)fuid->gen);
 
     objkey_from_fuid(
                 &key,
@@ -329,10 +333,10 @@ obj_meta_t *objmgr_lookup(
     fs_mutex_lock(
             &g_objmgr.lock);
 
-    meta = objmgr_lookup_locked(
+    rt = objmgr_lookup_locked(
                     &key);
 
-    if (meta == NULL) {
+    if (rt == NULL) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
@@ -343,14 +347,14 @@ obj_meta_t *objmgr_lookup(
         return NULL;
     }
 
-    if (objmeta_state(meta) != OBJ_STATE_ACTIVE) {
+    if (objruntime_state(rt) != OBJ_STATE_ACTIVE) {
 
         fs_mutex_unlock(
                 &g_objmgr.lock);
 
         FS_LOG_DUMP_INFO(
                 "exit: NULL (state=%u)",
-                (unsigned int)objmeta_state(meta));
+                (unsigned int)objruntime_state(rt));
 
         return NULL;
     }
@@ -359,10 +363,11 @@ obj_meta_t *objmgr_lookup(
             &g_objmgr.lock);
 
     FS_LOG_DUMP_INFO(
-            "exit: meta=%p",
-            (void *)meta);
+            "exit: rt=%p, meta=%p",
+            (void *)rt,
+            (void *)&rt->meta);
 
-    return meta;
+    return &rt->meta;
 }
 
 bool objmgr_exists(

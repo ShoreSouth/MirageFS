@@ -116,8 +116,8 @@ static inline uint64_t objkey_hash(
  *      (objectid, gen)
  *
  * 参数：
- *      key     : 输出对象 Key
- *      fuid    : 输入对象标识
+ *      [OUT] key   : 输出对象 Key
+ *      [IN]  fuid  : 输入对象标识
  */
 void objkey_from_fuid(
                 obj_key_t *key,

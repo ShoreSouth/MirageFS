@@ -4,7 +4,7 @@
 
 #include "common/fs_common.h"
 #include "object/fuid/fuid.h"
-#include "object/objmeta/objmeta.h"
+#include "object/objruntime/objruntime.h"
 
 /*
  * ============================================================
@@ -19,11 +19,14 @@
  *          get（获取引用）/ put（释放引用）
  *
  *   3. 状态迁移
- *          驱动 ObjMeta 的 state 状态机
+ *          驱动 obj_runtime_t 的 state 状态机
  *          (INIT → ACTIVE → DELETING)
  *
  * objmgr 内部持有全局 obj_table_t 实例，
  * 所有对象操作均通过 objmgr 统一管理。
+ *
+ * 公共 API 返回 obj_meta_t *（&runtime->meta），
+ * 内部以 obj_runtime_t * 作为运行时锚点。
  * ============================================================
  */
 
@@ -39,8 +42,8 @@
  * 创建内部 obj_table_t 实例。
  *
  * 返回：
- *      0       : 成功
- *      <0      : 失败
+ *      FS_OK       : 成功
+ *      >0          : 失败（fs_error_t）
  */
 int32_t objmgr_init(void);
 
@@ -60,16 +63,16 @@ void objmgr_deinit(void);
 /*
  * 创建对象。
  *
- * 将 ObjMeta 注册到内部对象表，
+ * 将 obj_runtime_t 注册到内部对象表，
  * 并激活其生命周期状态。
  *
  * 参数：
- *      fuid    : 待创建对象的 FUID
- *      handle  : 对象句柄
+ *      [IN] fuid      : 待创建对象的 FUID
+ *      [IN] handle    : 对象句柄
  *
  * 返回：
- *      0       : 成功
- *      <0      : 失败
+ *      non-NULL    : 成功，返回 obj_meta_t 指针
+ *      NULL        : 失败
  */
 obj_meta_t *objmgr_create(
                 const fuid_t *fuid,
@@ -82,11 +85,11 @@ obj_meta_t *objmgr_create(
  * 最终从对象表中移除并回收。
  *
  * 参数：
- *      fuid    : 待删除对象的 FUID
+ *      [IN] fuid   : 待删除对象的 FUID
  *
  * 返回：
- *      0       : 成功
- *      <0      : 失败
+ *      FS_OK       : 成功
+ *      >0          : 失败（fs_error_t）
  */
 int32_t objmgr_delete(
                 const fuid_t *fuid);
@@ -104,7 +107,7 @@ int32_t objmgr_delete(
  * 应调用 objmgr_get()。
  *
  * 参数：
- *      fuid    : 对象 FUID 标识
+ *      [IN] fuid   : 对象 FUID 标识
  *
  * 返回：
  *      NULL        : 未找到
@@ -159,7 +162,7 @@ obj_meta_t *objmgr_acquire(
  * objmgr 将根据对象状态决定是否释放对象。
  *
  * 参数：
- *      meta    : acquire() 返回的对象元数据
+ *      [IN/OUT] meta  : acquire() 返回的对象元数据（refcnt 将被递减，可能回收）
  */
 void objmgr_release(
                 obj_meta_t *meta);
@@ -174,9 +177,8 @@ void objmgr_release(
  * 获取引用（refcnt++）。
  *
  * 返回：
- *      FS_OK               : 成功
- *      FS_ERR_NOT_FOUND    : 对象不存在
- *      FS_ERR_BUSY         : 对象状态不允许获取引用（如 DELETING）
+ *      FS_OK       : 成功
+ *      >0          : 失败（fs_error_t：对象不存在 | 状态不允许）
  */
 int32_t objmgr_get(
                 const fuid_t *fuid);
