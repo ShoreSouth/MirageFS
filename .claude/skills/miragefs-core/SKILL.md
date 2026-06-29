@@ -227,6 +227,78 @@ Variable Length Arrays (VLA)
 
 # Naming Rules
 
+## Error Code System
+
+All modules (including COMMON) use the unified `fs_error_t` system. Never mix `0`/`-1` with `fs_error_t`.
+
+### Error Layout (32-bit)
+
+```
+ 31 30 | 29 -------- 20 | 19 -------- 8 | 7 -------- 0
+-------------------------------------------------------
+severity|   module id   |   sub error   |    errno
+```
+
+- **severity** (2-bit): `FS_SEV_INFO`, `FS_SEV_WARN`, `FS_SEV_ERROR`, `FS_SEV_FATAL`
+- **module** (10-bit): First-level module — `FS_MODULE_COMMON`, `FS_MODULE_OBJECT`, `FS_MODULE_LSA`, etc.
+- **sub** (12-bit): Component within the module. For COMMON: `FS_COMMON_SUB_HASH`, `FS_COMMON_SUB_LOCK`, `FS_COMMON_SUB_PATH`, etc. For OBJECT: `OBJ_SUB_INIT`, `OBJ_SUB_INSERT`, etc.
+- **errno** (8-bit): Linux errno value
+
+### Sub-Error Rules
+
+1. **`sub` identifies the internal component**, not necessarily a "sub-module". For example, COMMON's sub values are: HASH, LOCK, PATH, MEMPOOL, ATOMIC, LIST, LOG, OS, TRACE, UTILS, etc.
+2. **Only use `FS_SUB_NONE` (or `FS_COMMON_SUB_NONE`) as a fallback** when the error truly cannot be attributed to any specific component. It must not be the default choice.
+3. **Each module registers its sub-name callback** via `fs_sub_register()` during module init. For example, `object_init()` registers both `FS_MODULE_COMMON` and `FS_MODULE_OBJECT`.
+
+### Error Constructor Pattern
+
+Each module provides an error constructor that hardcodes its module ID:
+
+```c
+// COMMON module
+fs_error_t fs_common_error(uint32_t sub, int err);
+
+// Object Layer
+fs_error_t obj_error(obj_sub_t sub, int err);
+
+// LSA
+fs_error_t lsa_error(fs_op_t sub, int err);
+```
+
+Usage:
+
+```c
+return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
+return obj_error(OBJ_SUB_INSERT, FS_ERRNO_EEXIST);
+return lsa_error(FS_OP_LOOKUP, FS_ERRNO_ENOENT);
+```
+
+### Error Return Convention
+
+All functions that can fail return `fs_error_t` directly — never `int` or `int32_t`:
+
+```c
+fs_error_t fs_hash_init(fs_hash_t *hash, ...);
+fs_error_t fs_mutex_init(fs_mutex_t *lock, ...);
+fs_error_t objtable_init(obj_table_t *table, uint32_t bucket_nr);
+fs_error_t objmgr_init(void);
+```
+
+Check results with `fs_failed()` / `fs_succeeded()`:
+
+```c
+err = fs_hash_init(&table, bucket_nr, ...);
+if (fs_failed(err)) {
+    FS_LOG_DUMP_ERROR("fs_hash_init failed, err=%s (0x%x)",
+                      fs_error_str(err), err);
+    return err;
+}
+```
+
+Never bridge `0`/`-1` to `fs_error_t` — if a called function already returns `fs_error_t`, propagate it directly. Wrapping with a new error code loses the original component attribution.
+
+---
+
 ## Verb Convention (Public API)
 
 All public functions follow a strict verb-based naming convention.
@@ -300,16 +372,16 @@ Examples:
 
 ```c
 /* objtable — embedded hash table (init / deinit) */
-int  objtable_init(obj_table_t *table, uint32_t bucket_nr);
-void objtable_deinit(obj_table_t *table);
+fs_error_t  objtable_init(obj_table_t *table, uint32_t bucket_nr);
+void        objtable_deinit(obj_table_t *table);
 
 /* mempool — heap-allocated pool (create / destroy) */
 fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg);
 void          fs_mp_destroy(fs_mempool_t *mp);
 
 /* objmgr — global singleton (module-level init / deinit) */
-int32_t objmgr_init(void);
-void    objmgr_deinit(void);
+fs_error_t objmgr_init(void);
+void       objmgr_deinit(void);
 ```
 
 ### CRUD / Operation Verbs
@@ -331,8 +403,8 @@ For higher-level services (objmgr, vfs, cache):
 Examples:
 
 ```c
-int          objtable_insert(obj_table_t *t, const obj_meta_t *meta);
-int          objtable_remove(obj_table_t *t, const obj_key_t *key);
+fs_error_t   objtable_insert(obj_table_t *t, const obj_meta_t *meta);
+fs_error_t   objtable_remove(obj_table_t *t, const obj_key_t *key);
 obj_meta_t  *objtable_lookup(obj_table_t *t, const obj_key_t *key);
 bool         objtable_exists(obj_table_t *t, const obj_key_t *key);
 
@@ -406,10 +478,9 @@ Static functions should also preserve module context.
 Examples:
 
 ```c
-static int  cache_do_insert(void);
-static int  cache_do_remove(void);
-static bool objmeta_valid(const obj_meta_t *meta);
-static int  fs_mp_expand(void);
+static fs_error_t  cache_do_insert(void);
+static fs_error_t  cache_do_remove(void);
+static bool        objmeta_valid(const obj_meta_t *meta);
 ```
 
 Naming consistency is preferred over shortening.
@@ -537,7 +608,7 @@ Examples:
  *      [IN]  fuid      : MirageFS 对象标识
  *      [IN]  handle    : Linux backend handle
  */
-int32_t objmeta_init(
+fs_error_t objmeta_init(
                 obj_meta_t *meta,
                 const fuid_t *fuid,
                 const obj_handle_t *handle);
@@ -549,7 +620,7 @@ int32_t objmeta_init(
  *      [IN/OUT] table  : 对象表
  *      [IN]     meta   : 待插入的元数据
  */
-int objtable_insert(
+fs_error_t objtable_insert(
             obj_table_t *table,
             const obj_meta_t *meta);
 ```
@@ -601,10 +672,15 @@ Anything that allocates, locks, logs, or has complex error paths belongs in the 
 NULL checks on public API boundaries are required.
 
 ```c
-int objtable_insert(obj_table_t *table, const obj_meta_t *meta)
+fs_error_t objtable_insert(obj_table_t *table, const obj_meta_t *meta)
 {
+    fs_error_t err;
+
     if ((table == NULL) || (meta == NULL)) {
-        return -1;
+        err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: table or meta is NULL, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
     /* ... */
 }
@@ -615,7 +691,7 @@ Once past the public boundary, internal static helpers may skip redundant NULL c
 Return conventions for NULL-able returns:
 - Functions returning pointers: `NULL` means "not found" or "error".
 - Functions returning `bool`: `false` on NULL input (defensive).
-- Functions returning `int` / `int32_t`: positive `fs_error_t` on NULL input.
+- Functions returning `fs_error_t`: positive `fs_error_t` on NULL input (typically `FS_ERRNO_EINVAL`).
 
 ---
 
@@ -626,11 +702,11 @@ Opening brace on next line.
 Example:
 
 ```c
-int cache_lookup(cache_t *cache,
+fs_error_t cache_lookup(cache_t *cache,
                  uint64_t key)
 {
     if (cache == NULL) {
-        return FS_EINVAL;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
     }
 
     return FS_OK;
@@ -690,7 +766,7 @@ For short logical explanations:
 ```c
 /* 参数检查 */
 if (pool == NULL) {
-    return FS_EINVAL;
+    return fs_common_error(FS_COMMON_SUB_MEMPOOL, FS_ERRNO_EINVAL);
 }
 ```
 
@@ -729,23 +805,25 @@ Use consistent return types across the codebase.
 
 | Return type | Meaning |
 |-------------|---------|
-| `int` / `int32_t` | `FS_OK` (0) = success; positive = `fs_error_t` (severity\|module\|sub\|errno) |
+| `fs_error_t` | `FS_OK` (0) = success; positive value = structured error (severity\|module\|sub\|errno) |
 | `bool` | Predicate result (valid, equal, exists, etc.) |
 | `T` (value type) | Constructed value object (never fails) |
 | `T *` (pointer) | `NULL` = not found / error; non-NULL = valid pointer |
-| `fs_error_t` | `FS_OK` (0) = success; positive value = structured error |
-| `uint64_t` / `uint32_t` | Count or hash (unsigned, never fails) |
+| `uint64_t` / `uint32_t` / `int32_t` | Count, hash, or refcount (unsigned or signed, never fails) |
 
 Examples:
 
 ```c
-/* int / int32_t: FS_OK = ok, >0 = error (fs_error_t) */
-int  objtable_init(obj_table_t *table, uint32_t bucket_nr);
-int  objtable_insert(obj_table_t *table, const obj_meta_t *meta);
+/* fs_error_t: FS_OK = ok, >0 = structured error */
+fs_error_t  objtable_init(obj_table_t *table, uint32_t bucket_nr);
+fs_error_t  objtable_insert(obj_table_t *table, const obj_meta_t *meta);
+fs_error_t  fs_hash_init(fs_hash_t *hash, uint32_t bucket_nr, ...);
+fs_error_t  fs_mutex_init(fs_mutex_t *lock, const char *name, uint32_t flags);
 
 /* bool: predicate */
 bool fuid_is_valid(const fuid_t *fuid);
 bool objkey_equal(const obj_key_t *a, const obj_key_t *b);
+bool fs_path_is_absolute(const char *path);
 
 /* value type: constructor */
 fuid_t      fuid_make(Fsid_t fsid, ObjectId_t oid, GenId_t gen, fuid_type_t type);
@@ -755,15 +833,19 @@ obj_key_t   objkey_make(ObjectId_t oid, GenId_t gen);
 obj_meta_t *objtable_lookup(obj_table_t *table, const obj_key_t *key);
 obj_meta_t *objmgr_acquire(fuid_t fuid);
 
-/* unsigned: count / hash */
+/* count / refcnt: never fails */
 uint64_t objtable_count(const obj_table_t *table);
 uint64_t fuid_hash(const fuid_t *fuid);
+int32_t  objmgr_refcnt(const fuid_t *fuid);
 ```
 
 Rules:
-- Never use bare `-1` for error returns without documenting the convention.
-- `int` / `int32_t` functions in modules that use `fs_error_t` return `FS_OK` (0) on success and a positive `fs_error_t` on failure.
+- Every function that can fail must return `fs_error_t`. Never use `int` or `int32_t` for error returns.
+- Never use bare `0`/`-1` for error returns. Use `FS_OK` and structured `fs_error_t` values.
+- Check errors with `fs_failed(err)` or `fs_succeeded(err)`, never with `!= 0` or `== -1`.
+- Do not bridge `0`/`-1` into `fs_error_t` by wrapping — propagate the original `fs_error_t` directly.
 - Value constructors (`xxx_make`) never fail — they simply pack fields.
+- Count and refcount functions (`xxx_count`, `xxx_refcnt`) return their natural integer type.
 
 ---
 
@@ -887,7 +969,7 @@ Query functions (`lookup`, `exists`, `count`, `is_valid`, `equal`, etc.) also ge
 ## Complete Example
 
 ```c
-int objtable_insert(obj_table_t *table, const obj_meta_t *meta)
+fs_error_t objtable_insert(obj_table_t *table, const obj_meta_t *meta)
 {
     fs_error_t err;
     objtable_entry_t *entry;
