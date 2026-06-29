@@ -87,63 +87,56 @@ lsa_ret_t lsa_dir_iter_open(
                 lsa_dir_iter_t **iter_out)
 {
     lsa_dir_iter_t *iter;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, buffer_size=%u",
+                     dirfd, buffer_size);
 
     if (iter_out == NULL) {
-
-        return lsa_error(
-                    FS_OP_READDIR,
-                    EINVAL);
+        err = lsa_error(FS_OP_READDIR, EINVAL);
+        FS_LOG_DUMP_ERROR("dir_iter_open: invalid argument "
+                          "(iter_out is NULL), err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     if (buffer_size == 0U) {
-
-        buffer_size =
-                LSA_DIR_BUFFER_SIZE_DEFAULT;
+        buffer_size = LSA_DIR_BUFFER_SIZE_DEFAULT;
     }
 
-    if (buffer_size <
-        LSA_DIR_BUFFER_SIZE_MIN) {
-
-        return lsa_error(
-                    FS_OP_READDIR,
-                    EINVAL);
+    if (buffer_size < LSA_DIR_BUFFER_SIZE_MIN) {
+        err = lsa_error(FS_OP_READDIR, EINVAL);
+        FS_LOG_DUMP_ERROR("dir_iter_open: buffer_size too small (%u < %u), "
+                          "err=%s (0x%x)",
+                          buffer_size, LSA_DIR_BUFFER_SIZE_MIN,
+                          fs_error_str(err), err);
+        return err;
     }
 
-    iter = calloc(
-                1,
-                sizeof(*iter));
-
+    iter = calloc(1, sizeof(*iter));
     if (iter == NULL) {
-
-        FS_LOG_DUMP_ERROR(
-                "calloc failed");
-
-        return lsa_error(
-                    FS_OP_READDIR,
-                    ENOMEM);
+        err = lsa_error(FS_OP_READDIR, ENOMEM);
+        FS_LOG_DUMP_ERROR("dir_iter_open: calloc failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
-    iter->buffer =
-        malloc(buffer_size);
-
+    iter->buffer = malloc(buffer_size);
     if (iter->buffer == NULL) {
-
         free(iter);
 
-        FS_LOG_DUMP_ERROR(
-                "malloc failed");
-
-        return lsa_error(
-                    FS_OP_READDIR,
-                    ENOMEM);
+        err = lsa_error(FS_OP_READDIR, ENOMEM);
+        FS_LOG_DUMP_ERROR("dir_iter_open: malloc failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     iter->dirfd = dirfd;
-
     iter->buffer_size = buffer_size;
 
     *iter_out = iter;
 
+    FS_LOG_DUMP_INFO("exit: ok, iter=%p", (void *)iter);
     return FS_OK;
 }
 
@@ -155,14 +148,17 @@ lsa_ret_t lsa_dir_iter_open(
 lsa_ret_t lsa_dir_iter_close(
                 lsa_dir_iter_t *iter)
 {
+    FS_LOG_DUMP_INFO("enter: iter=%p", (void *)iter);
+
     if (iter == NULL) {
+        FS_LOG_DUMP_INFO("exit: already closed (iter is NULL)");
         return FS_OK;
     }
 
     free(iter->buffer);
-
     free(iter);
 
+    FS_LOG_DUMP_INFO("exit: done");
     return FS_OK;
 }
 
@@ -171,7 +167,7 @@ lsa_ret_t lsa_dir_iter_close(
  * ============================================================
  */
 
-static int lsa_dir_refill(
+static lsa_ret_t lsa_dir_refill(
                 lsa_dir_iter_t *iter)
 {
     int ret;
@@ -182,21 +178,18 @@ static int lsa_dir_refill(
                 iter->buffer_size);
 
     if (ret < 0) {
-        return -errno;
+        return lsa_error(FS_OP_READDIR, errno);
     }
 
     if (ret == 0) {
-
         iter->eof = true;
-
-        return 0;
+        return FS_OK;
     }
 
     iter->offset = 0;
-
     iter->bytes = (uint32_t)ret;
 
-    return ret;
+    return FS_OK;
 }
 
 /* ============================================================
@@ -209,38 +202,33 @@ lsa_ret_t lsa_dir_iter_next(
                 lsa_dirent_t *entry)
 {
     struct linux_dirent64 *dent;
-    int ret;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: iter=%p, entry=%p",
+                     (void *)iter, (void *)entry);
 
     if (iter == NULL ||
         entry == NULL) {
 
-        return lsa_error(
-                    FS_OP_READDIR,
-                    EINVAL);
+        err = lsa_error(FS_OP_READDIR, EINVAL);
+        FS_LOG_DUMP_ERROR("dir_iter_next: invalid argument, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     while (1) {
 
-        if (iter->offset >=
-            iter->bytes) {
+        if (iter->offset >= iter->bytes) {
 
-            ret = lsa_dir_refill(iter);
-
-            if (ret < 0) {
-
-                FS_LOG_DUMP_ERROR(
-                        "getdents64 failed");
-
-                return lsa_error(
-                            FS_OP_READDIR,
-                            -ret);
+            err = lsa_dir_refill(iter);
+            if (fs_failed(err)) {
+                FS_LOG_DUMP_ERROR("dir_iter_next: getdents64 failed, "
+                                  "err=%s (0x%x)", fs_error_str(err), err);
+                return err;
             }
 
-            if (ret == 0) {
-
-                return lsa_error(
-                            FS_OP_READDIR,
-                            ENOENT);
+            if (iter->eof) {
+                return lsa_error(FS_OP_READDIR, ENOENT);
             }
         }
 
@@ -272,6 +260,8 @@ lsa_ret_t lsa_dir_iter_next(
         iter->cookie.value =
             (uint64_t)dent->d_off;
 
+        FS_LOG_DUMP_INFO("exit: ok, name=%s, ino=%lu",
+                         entry->name, (unsigned long)entry->ino);
         return FS_OK;
     }
 }
@@ -285,34 +275,34 @@ lsa_ret_t lsa_dir_iter_seek(
                 lsa_dir_iter_t *iter,
                 lsa_dir_cookie_t cookie)
 {
-    if (iter == NULL) {
+    lsa_ret_t err;
 
-        return lsa_error(
-                    FS_OP_READDIR,
-                    EINVAL);
+    FS_LOG_DUMP_INFO("enter: iter=%p, cookie=%lu",
+                     (void *)iter, (unsigned long)cookie.value);
+
+    if (iter == NULL) {
+        err = lsa_error(FS_OP_READDIR, EINVAL);
+        FS_LOG_DUMP_ERROR("dir_iter_seek: invalid argument (iter is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     if (lseek(
             iter->dirfd,
             (off_t)cookie.value,
             SEEK_SET) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "seek cookie failed");
-
-        return lsa_error(
-                    FS_OP_READDIR,
-                    errno);
+        err = lsa_error(FS_OP_READDIR, errno);
+        FS_LOG_DUMP_ERROR("dir_iter_seek: lseek failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     iter->cookie = cookie;
-
     iter->offset = 0;
-
     iter->bytes = 0;
-
     iter->eof = false;
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
@@ -327,19 +317,22 @@ lsa_ret_t lsa_dir_iter_next_plus(
 {
     lsa_ret_t err;
 
+    FS_LOG_DUMP_INFO("enter: iter=%p, entry=%p",
+                     (void *)iter, (void *)entry);
+
     if (iter == NULL ||
         entry == NULL) {
 
-        return lsa_error(
-                    FS_OP_READDIRPLUS,
-                    EINVAL);
+        err = lsa_error(FS_OP_READDIRPLUS, EINVAL);
+        FS_LOG_DUMP_ERROR("dir_iter_next_plus: invalid argument, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     err = lsa_dir_iter_next(
                 iter,
                 &entry->entry);
-
-    if (err != FS_OK) {
+    if (fs_failed(err)) {
         return err;
     }
 
@@ -348,18 +341,13 @@ lsa_ret_t lsa_dir_iter_next_plus(
             entry->entry.name,
             &entry->st,
             AT_SYMLINK_NOFOLLOW) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "fstatat failed: "
-                "name=%s errno=%d(%s)",
-                entry->entry.name,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_READDIRPLUS,
-                    errno);
+        err = lsa_error(FS_OP_READDIRPLUS, errno);
+        FS_LOG_DUMP_ERROR("dir_iter_next_plus: fstatat failed, name=%s, "
+                          "err=%s (0x%x)",
+                          entry->entry.name, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok, name=%s", entry->entry.name);
     return FS_OK;
 }

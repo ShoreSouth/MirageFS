@@ -14,29 +14,25 @@ lsa_ret_t lsa_fstat(
                 int fd,
                 struct stat *st)
 {
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, st=%p", fd, (void *)st);
+
     if (st == NULL) {
-
-        FS_LOG_DUMP_ERROR(
-                "fstat invalid argument");
-
-        return lsa_error(
-                    FS_OP_GETATTR,
-                    EINVAL);
+        err = lsa_error(FS_OP_GETATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("fstat: invalid argument (st is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     if (fstat(fd, st) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "fstat failed: fd=%d errno=%d(%s)",
-                fd,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_GETATTR,
-                    errno);
+        err = lsa_error(FS_OP_GETATTR, errno);
+        FS_LOG_DUMP_ERROR("fstat failed: fd=%d, err=%s (0x%x)",
+                          fd, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
@@ -52,16 +48,17 @@ lsa_ret_t lsa_fstatat(
                 struct stat *st)
 {
     int stat_flags = 0;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, path=%s, flags=0x%x, st=%p",
+                     dirfd, path ? path : "(null)", flags, (void *)st);
 
     if (path == NULL ||
         st == NULL) {
-
-        FS_LOG_DUMP_ERROR(
-                "fstatat invalid argument");
-
-        return lsa_error(
-                    FS_OP_GETATTR,
-                    EINVAL);
+        err = lsa_error(FS_OP_GETATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("fstatat: invalid argument, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     if (fs_flag_test(flags, FS_FLAG_NOFOLLOW)) {
@@ -73,18 +70,13 @@ lsa_ret_t lsa_fstatat(
                 path,
                 st,
                 stat_flags) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "fstatat failed: path=%s errno=%d(%s)",
-                path,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_GETATTR,
-                    errno);
+        err = lsa_error(FS_OP_GETATTR, errno);
+        FS_LOG_DUMP_ERROR("fstatat failed: path=%s, err=%s (0x%x)",
+                          path, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
@@ -97,20 +89,18 @@ lsa_ret_t lsa_fchmod(
                 int fd,
                 mode_t mode)
 {
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, mode=%o", fd, mode);
+
     if (fchmod(fd, mode) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "fchmod failed: fd=%d mode=%o errno=%d(%s)",
-                fd,
-                mode,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_SETATTR,
-                    errno);
+        err = lsa_error(FS_OP_SETATTR, errno);
+        FS_LOG_DUMP_ERROR("fchmod failed: fd=%d, mode=%o, err=%s (0x%x)",
+                          fd, mode, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
@@ -124,23 +114,23 @@ lsa_ret_t lsa_fchown(
                 uid_t uid,
                 gid_t gid)
 {
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, uid=%u, gid=%u",
+                     fd, (unsigned int)uid, (unsigned int)gid);
+
     if (fchown(
                 fd,
                 uid,
                 gid) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "fchown failed: fd=%d uid=%u gid=%u errno=%d(%s)",
-                fd,
-                (unsigned int)uid,
-                (unsigned int)gid,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_SETATTR,
-                    errno);
+        err = lsa_error(FS_OP_SETATTR, errno);
+        FS_LOG_DUMP_ERROR("fchown failed: fd=%d, uid=%u, gid=%u, "
+                          "err=%s (0x%x)",
+                          fd, (unsigned int)uid, (unsigned int)gid,
+                          fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }

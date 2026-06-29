@@ -27,17 +27,20 @@ lsa_ret_t lsa_name_to_handle_at(
                 int flags)
 {
     lsa_linux_file_handle_t fh;
-
+    lsa_ret_t err;
     int ret;
+
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, path=%s, flags=%d",
+                     dirfd, path ? path : "(null)", flags);
 
     if (path == NULL ||
         handle == NULL ||
         mount_id == NULL) {
-        
-        FS_LOG_DUMP_ERROR(
-                "name_to_handle_at invalid argument");
 
-        return lsa_error(FS_OP_GETHANDLE, EINVAL);
+        err = lsa_error(FS_OP_GETHANDLE, EINVAL);
+        FS_LOG_DUMP_ERROR("name_to_handle_at: invalid argument, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     memset(&fh, 0, sizeof(fh));
@@ -52,18 +55,10 @@ lsa_ret_t lsa_name_to_handle_at(
                     flags);
 
     if (ret < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "name_to_handle_at failed: "
-                "path=%s "
-                "errno=%d(%s)",
-                path,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_GETHANDLE,
-                    errno);
+        err = lsa_error(FS_OP_GETHANDLE, errno);
+        FS_LOG_DUMP_ERROR("name_to_handle_at failed: path=%s, "
+                          "err=%s (0x%x)", path, fs_error_str(err), err);
+        return err;
     }
 
     handle->handle_bytes = fh.hdr.handle_bytes;
@@ -74,6 +69,7 @@ lsa_ret_t lsa_name_to_handle_at(
         fh.data,
         fh.hdr.handle_bytes);
 
+    FS_LOG_DUMP_INFO("exit: ok, mount_id=%d", *mount_id);
     return FS_OK;
 }
 
@@ -90,16 +86,18 @@ lsa_ret_t lsa_open_by_handle_at(
                 int *fd)
 {
     lsa_linux_file_handle_t fh;
-
+    lsa_ret_t err;
     int newfd;
+
+    FS_LOG_DUMP_INFO("enter: mount_fd=%d, flags=%d", mount_fd, flags);
 
     if (handle == NULL ||
         fd == NULL) {
 
-        FS_LOG_DUMP_ERROR(
-                "open_by_handle_at invalid argument");
-
-        return lsa_error(FS_OP_OPENHANDLE, EINVAL);
+        err = lsa_error(FS_OP_OPENHANDLE, EINVAL);
+        FS_LOG_DUMP_ERROR("open_by_handle_at: invalid argument, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     memset(&fh, 0, sizeof(fh));
@@ -121,19 +119,14 @@ lsa_ret_t lsa_open_by_handle_at(
                     flags);
 
     if (newfd < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "open_by_handle_at failed: "
-                "errno=%d(%s)",
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_OPENHANDLE,
-                    errno);
+        err = lsa_error(FS_OP_OPENHANDLE, errno);
+        FS_LOG_DUMP_ERROR("open_by_handle_at failed: err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     *fd = newfd;
 
+    FS_LOG_DUMP_INFO("exit: ok, fd=%d", newfd);
     return FS_OK;
 }

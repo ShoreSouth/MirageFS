@@ -16,31 +16,25 @@ lsa_ret_t lsa_statfs(
                 int fd,
                 struct statfs *st)
 {
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, st=%p", fd, (void *)st);
+
     if (st == NULL) {
-
-        FS_LOG_DUMP_ERROR(
-                "fstatfs invalid argument");
-
-        return lsa_error(
-                    FS_OP_STATFS,
-                    EINVAL);
+        err = lsa_error(FS_OP_STATFS, EINVAL);
+        FS_LOG_DUMP_ERROR("statfs: invalid argument (st is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     if (fstatfs(fd, st) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "fstatfs failed: "
-                "fd=%d "
-                "errno=%d(%s)",
-                fd,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_STATFS,
-                    errno);
+        err = lsa_error(FS_OP_STATFS, errno);
+        FS_LOG_DUMP_ERROR("statfs failed: fd=%d, err=%s (0x%x)",
+                          fd, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
@@ -52,20 +46,17 @@ lsa_ret_t lsa_statfs(
 lsa_ret_t lsa_syncfs(
                 int fd)
 {
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d", fd);
+
     if (syncfs(fd) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "syncfs failed: "
-                "fd=%d "
-                "errno=%d(%s)",
-                fd,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_SYNCFS,
-                    errno);
+        err = lsa_error(FS_OP_SYNCFS, errno);
+        FS_LOG_DUMP_ERROR("syncfs failed: fd=%d, err=%s (0x%x)",
+                          fd, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }

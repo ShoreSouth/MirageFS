@@ -19,16 +19,18 @@ lsa_ret_t lsa_getxattr(
                 size_t *actual)
 {
     ssize_t ret;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, name=%s, size=%zu",
+                     fd, name ? name : "(null)", size);
 
     if (name == NULL ||
         actual == NULL) {
 
-        FS_LOG_DUMP_ERROR(
-                "getxattr invalid argument");
-
-        return lsa_error(
-                    FS_OP_GETXATTR,
-                    EINVAL);
+        err = lsa_error(FS_OP_GETXATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("getxattr: invalid argument, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     ret = fgetxattr(
@@ -38,24 +40,15 @@ lsa_ret_t lsa_getxattr(
                 size);
 
     if (ret < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "getxattr failed: "
-                "fd=%d "
-                "name=%s "
-                "errno=%d(%s)",
-                fd,
-                name,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_GETXATTR,
-                    errno);
+        err = lsa_error(FS_OP_GETXATTR, errno);
+        FS_LOG_DUMP_ERROR("getxattr failed: fd=%d, name=%s, err=%s (0x%x)",
+                          fd, name, fs_error_str(err), err);
+        return err;
     }
 
     *actual = (size_t)ret;
 
+    FS_LOG_DUMP_INFO("exit: ok, actual=%zu", (size_t)ret);
     return FS_OK;
 }
 
@@ -72,33 +65,33 @@ lsa_ret_t lsa_setxattr(
                 fs_flags_t flags)
 {
     int xattr_flags = 0;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, name=%s, size=%zu, flags=0x%x",
+                     fd, name ? name : "(null)", size, flags);
 
     if (name == NULL) {
-
-        FS_LOG_DUMP_ERROR(
-                "setxattr invalid argument");
-
-        return lsa_error(
-                    FS_OP_SETXATTR,
-                    EINVAL);
+        err = lsa_error(FS_OP_SETXATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("setxattr: invalid argument (name is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     if (fs_flag_test(flags, FS_FLAG_REPLACE) &&
-    fs_flag_test(flags, FS_FLAG_EXCLUSIVE)) {
+        fs_flag_test(flags, FS_FLAG_EXCLUSIVE)) {
 
-        FS_LOG_DUMP_ERROR(
-                "setxattr invalid flags");
-
-        return lsa_error(
-                    FS_OP_SETXATTR,
-                    EINVAL);
+        err = lsa_error(FS_OP_SETXATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("setxattr: invalid flags (REPLACE and EXCLUSIVE "
+                          "are mutually exclusive), err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
     }
 
     if (fs_flag_test(
             flags,
             FS_FLAG_REPLACE)) {
 
-    xattr_flags |= XATTR_REPLACE;
+        xattr_flags |= XATTR_REPLACE;
     }
 
     if (fs_flag_test(
@@ -114,22 +107,13 @@ lsa_ret_t lsa_setxattr(
                 value,
                 size,
                 xattr_flags) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "setxattr failed: "
-                "fd=%d "
-                "name=%s "
-                "errno=%d(%s)",
-                fd,
-                name,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_SETXATTR,
-                    errno);
+        err = lsa_error(FS_OP_SETXATTR, errno);
+        FS_LOG_DUMP_ERROR("setxattr failed: fd=%d, name=%s, err=%s (0x%x)",
+                          fd, name, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
@@ -145,15 +129,15 @@ lsa_ret_t lsa_listxattr(
                 size_t *actual)
 {
     ssize_t ret;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
     if (actual == NULL) {
-
-        FS_LOG_DUMP_ERROR(
-                "listxattr invalid argument");
-
-        return lsa_error(
-                    FS_OP_LISTXATTR,
-                    EINVAL);
+        err = lsa_error(FS_OP_LISTXATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("listxattr: invalid argument (actual is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     ret = flistxattr(
@@ -162,22 +146,15 @@ lsa_ret_t lsa_listxattr(
                 size);
 
     if (ret < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "listxattr failed: "
-                "fd=%d "
-                "errno=%d(%s)",
-                fd,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_LISTXATTR,
-                    errno);
+        err = lsa_error(FS_OP_LISTXATTR, errno);
+        FS_LOG_DUMP_ERROR("listxattr failed: fd=%d, err=%s (0x%x)",
+                          fd, fs_error_str(err), err);
+        return err;
     }
 
     *actual = (size_t)ret;
 
+    FS_LOG_DUMP_INFO("exit: ok, actual=%zu", (size_t)ret);
     return FS_OK;
 }
 
@@ -190,34 +167,27 @@ lsa_ret_t lsa_removexattr(
                 int fd,
                 const char *name)
 {
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, name=%s",
+                     fd, name ? name : "(null)");
+
     if (name == NULL) {
-
-        FS_LOG_DUMP_ERROR(
-                "removexattr invalid argument");
-
-        return lsa_error(
-                    FS_OP_REMOVEXATTR,
-                    EINVAL);
+        err = lsa_error(FS_OP_REMOVEXATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("removexattr: invalid argument (name is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
     }
 
     if (fremovexattr(
                 fd,
                 name) < 0) {
-
-        FS_LOG_DUMP_ERROR(
-                "removexattr failed: "
-                "fd=%d "
-                "name=%s "
-                "errno=%d(%s)",
-                fd,
-                name,
-                errno,
-                strerror(errno));
-
-        return lsa_error(
-                    FS_OP_REMOVEXATTR,
-                    errno);
+        err = lsa_error(FS_OP_REMOVEXATTR, errno);
+        FS_LOG_DUMP_ERROR("removexattr failed: fd=%d, name=%s, "
+                          "err=%s (0x%x)", fd, name, fs_error_str(err), err);
+        return err;
     }
 
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
