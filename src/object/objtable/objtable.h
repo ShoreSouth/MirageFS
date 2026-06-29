@@ -63,9 +63,9 @@ typedef struct obj_table {
  *
  * 返回：
  *      FS_OK       : 成功
- *      >0          : 失败（fs_error_t）
+ *      fs_error_t  : 失败
  */
-int objtable_init(
+fs_error_t objtable_init(
             obj_table_t *table,
             uint32_t bucket_nr);
 
@@ -98,9 +98,9 @@ void objtable_destroy(
  *
  * 返回：
  *      FS_OK       : 成功
- *      >0          : 失败（fs_error_t，已存在或参数无效）
+ *      fs_error_t  : 失败（已存在或参数无效）
  */
-int objtable_insert(
+fs_error_t objtable_insert(
             obj_table_t *table,
             obj_runtime_t *runtime);
 
@@ -113,9 +113,9 @@ int objtable_insert(
  *
  * 返回：
  *      FS_OK       : 成功
- *      >0          : 失败（fs_error_t，不存在或参数无效）
+ *      fs_error_t  : 失败（不存在或参数无效）
  */
-int objtable_remove(
+fs_error_t objtable_remove(
             obj_table_t *table,
             const obj_key_t *key);
 

@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
+
+#include "common/error/fs_common_sub.h"
 
 /* ============================================================
  *  数值工具
@@ -33,7 +36,7 @@ static inline uint32_t fs_max_u32(uint32_t a, uint32_t b)
  *  对齐相关（IO / SGL 核心）
  * ============================================================ */
 
-static inline int fs_is_aligned(uint64_t x, uint64_t align)
+static inline bool fs_is_aligned(uint64_t x, uint64_t align)
 {
     return (x & (align - 1)) == 0;
 }
@@ -52,19 +55,19 @@ static inline uint64_t fs_align_up(uint64_t x, uint64_t align)
  *  区间处理
  * ============================================================ */
 
-static inline int fs_range_valid2(uint64_t offset, 
+static inline bool fs_range_valid2(uint64_t offset,
     uint64_t len, uint64_t max_size)
 {
     if (len == 0)
-        return 0;
+        return false;
 
     if (offset > UINT64_MAX - len)
-        return 0;
+        return false;
 
     if (offset + len > max_size)
-        return 0;
+        return false;
 
-    return 1;
+    return true;
 }
 
 static inline uint64_t fs_range_end(uint64_t offset, uint64_t len)
@@ -72,7 +75,7 @@ static inline uint64_t fs_range_end(uint64_t offset, uint64_t len)
     return offset + len;
 }
 
-static inline int fs_range_overlap(uint64_t o1, uint64_t l1,
+static inline bool fs_range_overlap(uint64_t o1, uint64_t l1,
                                    uint64_t o2, uint64_t l2)
 {
     uint64_t e1 = o1 + l1;
@@ -89,7 +92,7 @@ typedef struct {
     uint64_t tail_len;   // 被裁掉的尾部长度
 } fs_trim_info_t;
 
-static inline int fs_trim_to_aligned(uint64_t *offset,
+static inline fs_error_t fs_trim_to_aligned(uint64_t *offset,
     uint64_t *len, uint64_t align)
 {
     uint64_t start = *offset;
@@ -97,11 +100,11 @@ static inline int fs_trim_to_aligned(uint64_t *offset,
 
     /* 无效输入 */
     if (length == 0)
-        return 0;
+        return FS_OK;
 
     /* 防止溢出 */
     if (start > UINT64_MAX - length)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_UTILS, FS_ERRNO_EOVERFLOW);
 
     uint64_t end = start + length;
 
@@ -112,16 +115,16 @@ static inline int fs_trim_to_aligned(uint64_t *offset,
     /* 没有完整块 */
     if (aligned_start >= aligned_end) {
         *len = 0;
-        return 0;
+        return FS_OK;
     }
 
     *offset = aligned_start;
     *len    = aligned_end - aligned_start;
 
-    return 0;
+    return FS_OK;
 }
 
-static inline int fs_trim_to_aligned_ex(uint64_t *offset,
+static inline fs_error_t fs_trim_to_aligned_ex(uint64_t *offset,
                                         uint64_t *len,
                                         uint64_t align,
                                         fs_trim_info_t *info)
@@ -130,10 +133,10 @@ static inline int fs_trim_to_aligned_ex(uint64_t *offset,
     uint64_t orig_end   = *offset + *len;
 
     if (*len == 0)
-        return 0;
+        return FS_OK;
 
     if (*offset > UINT64_MAX - *len)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_UTILS, FS_ERRNO_EOVERFLOW);
 
     uint64_t aligned_start = fs_align_up(orig_start, align);
     uint64_t aligned_end   = fs_align_down(orig_end, align);
@@ -142,7 +145,7 @@ static inline int fs_trim_to_aligned_ex(uint64_t *offset,
         info->head_len = *len;
         info->tail_len = 0;
         *len = 0;
-        return 0;
+        return FS_OK;
     }
 
     info->head_len = aligned_start - orig_start;
@@ -151,7 +154,7 @@ static inline int fs_trim_to_aligned_ex(uint64_t *offset,
     *offset = aligned_start;
     *len    = aligned_end - aligned_start;
 
-    return 0;
+    return FS_OK;
 }
 
 /* ============================================================

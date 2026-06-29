@@ -11,7 +11,7 @@
  * ============================================================
  */
 
-int32_t objmgr_get(
+fs_error_t objmgr_get(
                 const fuid_t *fuid)
 {
     fs_error_t err;
@@ -75,7 +75,7 @@ int32_t objmgr_get(
  * ============================================================
  */
 
-int32_t objmgr_put(
+fs_error_t objmgr_put(
                 const fuid_t *fuid)
 {
     fs_error_t err;
@@ -200,7 +200,7 @@ obj_meta_t *objmgr_acquire(
 
     obj_runtime_t *rt;
 
-    int32_t err;
+    fs_error_t err;
 
     FS_LOG_DUMP_INFO(
             "enter: objectid=%llu gen=%u",

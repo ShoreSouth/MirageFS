@@ -195,9 +195,9 @@ fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg)
         fs_list_init(&mp->free_area[i]);
     }
 
-    if (fs_mutex_init(&mp->lock,
-                      "mempool",
-                      FS_LOCK_F_DEBUG) != 0) {
+    if (fs_failed(fs_mutex_init(&mp->lock,
+                                "mempool",
+                                FS_LOCK_F_DEBUG))) {
 
         FS_LOG_DUMP_ERROR("mutex init failed");
 
@@ -680,11 +680,12 @@ size_t fs_mp_usable_size(const void *ptr)
  * Global Pool
  * ============================================================ */
 
-int fs_mp_global_init(const fs_mp_config_t *cfg)
+fs_error_t fs_mp_global_init(const fs_mp_config_t *cfg)
 {
     g_mp = fs_mp_create(cfg);
 
-    return (g_mp != NULL) ? 0 : -1;
+    return (g_mp != NULL) ? FS_OK :
+           fs_common_error(FS_COMMON_SUB_MEMPOOL, FS_ERRNO_ENOMEM);
 }
 
 void fs_mp_global_fini(void)

@@ -36,7 +36,7 @@
  *      FS_OK      成功
  *      其它       失败
  */
-int32_t objpool_init(void);
+fs_error_t objpool_init(void);
 
 /*
  * 销毁对象池。

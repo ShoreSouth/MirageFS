@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#include "common/error/fs_common_sub.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -139,13 +141,13 @@ typedef struct fs_rwlock {
  *          FS_LOCK_F_XXX
  *
  * 返回:
- *      0      成功
- *      -1     失败
+ *      FS_OK       成功
+ *      fs_error_t  失败
  *
  * 注意:
  *      lock必须在destroy前保持有效
  */
-int fs_mutex_init(fs_mutex_t *lock,
+fs_error_t fs_mutex_init(fs_mutex_t *lock,
               const char *name,
               uint32_t flags);
 
@@ -205,7 +207,7 @@ bool fs_mutex_is_locked(fs_mutex_t *lock);
 /*
  * 初始化读写锁
  */
-int fs_rwlock_init(fs_rwlock_t *lock,
+fs_error_t fs_rwlock_init(fs_rwlock_t *lock,
                const char *name,
                uint32_t flags);
 

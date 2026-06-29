@@ -8,14 +8,15 @@
  * mutex
  * ============================================================ */
 
-int fs_mutex_init(fs_mutex_t *lock,
+fs_error_t fs_mutex_init(fs_mutex_t *lock,
               const char *name,
               uint32_t flags)
 {
+    int rc;
     pthread_mutexattr_t attr;
 
     if (lock == NULL) {
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_LOCK, FS_ERRNO_EINVAL);
     }
 
     memset(lock, 0, sizeof(*lock));
@@ -28,12 +29,12 @@ int fs_mutex_init(fs_mutex_t *lock,
                                   PTHREAD_MUTEX_RECURSIVE);
     }
 
-    if (pthread_mutex_init(&lock->mutex,
-                           &attr) != 0) {
+    rc = pthread_mutex_init(&lock->mutex, &attr);
+    if (rc != 0) {
 
         pthread_mutexattr_destroy(&attr);
 
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_LOCK, rc);
     }
 
     pthread_mutexattr_destroy(&attr);
@@ -42,7 +43,7 @@ int fs_mutex_init(fs_mutex_t *lock,
     lock->flags = flags;
     lock->name  = name;
 
-    return 0;
+    return FS_OK;
 }
 
 void fs_mutex_destroy(fs_mutex_t *lock)
@@ -110,27 +111,28 @@ bool fs_mutex_is_locked(fs_mutex_t *lock)
  * rwlock
  * ============================================================ */
 
-int fs_rwlock_init(fs_rwlock_t *lock,
+fs_error_t fs_rwlock_init(fs_rwlock_t *lock,
                const char *name,
                uint32_t flags)
 {
+    int rc;
+
     if (lock == NULL) {
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_LOCK, FS_ERRNO_EINVAL);
     }
 
     memset(lock, 0, sizeof(*lock));
 
-    if (pthread_rwlock_init(&lock->rwlock,
-                            NULL) != 0) {
-
-        return -1;
+    rc = pthread_rwlock_init(&lock->rwlock, NULL);
+    if (rc != 0) {
+        return fs_common_error(FS_COMMON_SUB_LOCK, rc);
     }
 
     lock->magic = FS_RWLOCK_MAGIC;
     lock->flags = flags;
     lock->name  = name;
 
-    return 0;
+    return FS_OK;
 }
 
 void fs_rwlock_destroy(fs_rwlock_t *lock)

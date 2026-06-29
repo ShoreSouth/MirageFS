@@ -20,7 +20,7 @@ static uint32_t fs_hash_index(
  * 生命周期
  * ============================================================ */
 
-int fs_hash_init(
+fs_error_t fs_hash_init(
             fs_hash_t *hash,
             uint32_t bucket_nr,
             fs_hash_node_hash_fn node_hash_fn,
@@ -31,27 +31,27 @@ int fs_hash_init(
 
     if (hash == NULL) {
         FS_LOG_DUMP_ERROR("hash is NULL");
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
     }
 
     if (bucket_nr == 0) {
         FS_LOG_DUMP_ERROR("invalid bucket_nr");
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
     }
 
     if (node_hash_fn == NULL) {
         FS_LOG_DUMP_ERROR("node_hash_fn is NULL");
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
     }
 
     if (key_hash_fn == NULL) {
         FS_LOG_DUMP_ERROR("key_hash_fn is NULL");
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
     }
 
     if (match_fn == NULL) {
         FS_LOG_DUMP_ERROR("match_fn is NULL");
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
     }
 
     memset(hash, 0, sizeof(fs_hash_t));
@@ -60,7 +60,7 @@ int fs_hash_init(
                            sizeof(fs_list_head_t));
     if (hash->buckets == NULL) {
         FS_LOG_DUMP_ERROR("calloc buckets failed");
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_ENOMEM);
     }
 
     for (i = 0; i < bucket_nr; i++) {
@@ -73,7 +73,7 @@ int fs_hash_init(
     hash->key_hash_fn = key_hash_fn;
     hash->match_fn = match_fn;
 
-    return 0;
+    return FS_OK;
 }
 
 void fs_hash_destroy(fs_hash_t *hash)
@@ -91,7 +91,7 @@ void fs_hash_destroy(fs_hash_t *hash)
  * 基础操作
  * ============================================================ */
 
-int fs_hash_insert(
+fs_error_t fs_hash_insert(
             fs_hash_t *hash,
             fs_list_head_t *node)
 {
@@ -100,7 +100,7 @@ int fs_hash_insert(
 
     if ((hash == NULL) ||
         (node == NULL)) {
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
     }
 
     hash_value = hash->node_hash_fn(node);
@@ -113,7 +113,7 @@ int fs_hash_insert(
 
     hash->entry_nr++;
 
-    return 0;
+    return FS_OK;
 }
 
 void fs_hash_remove(

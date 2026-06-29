@@ -26,10 +26,10 @@ obj_runtime_t *objmgr_lookup_locked(
     return rt;
 }
 
-int32_t objmgr_insert_locked(
+fs_error_t objmgr_insert_locked(
                 obj_runtime_t *rt)
 {
-    int32_t ret;
+    fs_error_t ret;
 
     FS_LOG_DUMP_INFO("enter: rt=%p", (void *)rt);
 
@@ -37,8 +37,9 @@ int32_t objmgr_insert_locked(
                 &g_objmgr.table,
                 rt);
 
-    if (ret != FS_OK) {
-        FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
+    if (fs_failed(ret)) {
+        FS_LOG_DUMP_INFO("exit: failed, err=%s (0x%x)",
+                         fs_error_str(ret), ret);
         return ret;
     }
 
@@ -50,10 +51,10 @@ int32_t objmgr_insert_locked(
     return FS_OK;
 }
 
-int32_t objmgr_remove_locked(
+fs_error_t objmgr_remove_locked(
                 const obj_key_t *key)
 {
-    int32_t ret;
+    fs_error_t ret;
 
     FS_LOG_DUMP_INFO("enter: key=%p", (const void *)key);
 
@@ -61,8 +62,9 @@ int32_t objmgr_remove_locked(
                 &g_objmgr.table,
                 key);
 
-    if (ret != FS_OK) {
-        FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
+    if (fs_failed(ret)) {
+        FS_LOG_DUMP_INFO("exit: failed, err=%s (0x%x)",
+                         fs_error_str(ret), ret);
         return ret;
     }
 
@@ -114,7 +116,7 @@ bool objmgr_state_can_transit(
     return can;
 }
 
-int32_t objmgr_change_state(
+fs_error_t objmgr_change_state(
                 obj_runtime_t *rt,
                 obj_state_t state)
 {
@@ -166,7 +168,7 @@ int32_t objmgr_change_state(
  * ============================================================
  */
 
-int32_t objmgr_ref_get_locked(
+fs_error_t objmgr_ref_get_locked(
                 obj_runtime_t *rt)
 {
     fs_error_t err;
@@ -213,7 +215,7 @@ int32_t objmgr_ref_get_locked(
  *
  * 调用者必须已经持有 objmgr 全局锁。
  */
-int32_t objmgr_ref_put_locked(
+fs_error_t objmgr_ref_put_locked(
                 obj_runtime_t *rt)
 {
     fs_error_t err;

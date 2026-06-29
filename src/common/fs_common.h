@@ -8,6 +8,7 @@
 #include "common/atomic/fs_atomic.h"
 #include "common/error/fs_errno.h"
 #include "common/error/fs_error.h"
+#include "common/error/fs_common_sub.h"
 #include "common/flag/fs_flag.h"
 #include "common/hash/fs_hash.h"
 #include "common/list/fs_list.h"

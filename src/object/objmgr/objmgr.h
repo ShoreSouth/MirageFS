@@ -43,9 +43,9 @@
  *
  * 返回：
  *      FS_OK       : 成功
- *      >0          : 失败（fs_error_t）
+ *      fs_error_t  : 失败
  */
-int32_t objmgr_init(void);
+fs_error_t objmgr_init(void);
 
 /*
  * 销毁对象管理器。
@@ -89,9 +89,9 @@ obj_meta_t *objmgr_create(
  *
  * 返回：
  *      FS_OK       : 成功
- *      >0          : 失败（fs_error_t）
+ *      fs_error_t  : 失败
  */
-int32_t objmgr_delete(
+fs_error_t objmgr_delete(
                 const fuid_t *fuid);
 
 /*
@@ -178,15 +178,15 @@ void objmgr_release(
  *
  * 返回：
  *      FS_OK       : 成功
- *      >0          : 失败（fs_error_t：对象不存在 | 状态不允许）
+ *      fs_error_t  : 失败（对象不存在 | 状态不允许）
  */
-int32_t objmgr_get(
+fs_error_t objmgr_get(
                 const fuid_t *fuid);
 
 /*
  * 释放引用（refcnt--）。
  */
-int32_t objmgr_put(
+fs_error_t objmgr_put(
                 const fuid_t *fuid);
 
 /*

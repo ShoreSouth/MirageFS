@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "common/list/fs_list.h"
+#include "common/error/fs_common_sub.h"
 
 /* ============================================================
  * 默认配置
@@ -67,7 +68,7 @@ typedef struct fs_hash {
 /*
  * 初始化。
  */
-int fs_hash_init(fs_hash_t *hash,
+fs_error_t fs_hash_init(fs_hash_t *hash,
                  uint32_t bucket_nr,
                  fs_hash_node_hash_fn hash_fn,
                  fs_hash_key_hash_fn key_hash_fn,
@@ -87,7 +88,7 @@ void fs_hash_destroy(fs_hash_t *hash);
  *
  * node 必须已初始化。
  */
-int fs_hash_insert(fs_hash_t *hash,
+fs_error_t fs_hash_insert(fs_hash_t *hash,
                    fs_list_head_t *node);
 
 /*

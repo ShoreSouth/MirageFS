@@ -1,12 +1,14 @@
 #pragma once
 
+#include "common/error/fs_error.h"
+
 /*
  * ============================================================
  * Object Module Bootstrap
  *
  * object_init() 负责：
  *
- *   1. 向 common/error 注册 Object Layer 的
+ *   1. 向 common/error 注册 COMMON 和 Object Layer 的
  *      sub-error → name 转换函数
  *
  *   2. 委托各子模块初始化（objmgr → objtable ...）
@@ -22,6 +24,6 @@
  * ============================================================
  */
 
-int object_init(void);
+fs_error_t object_init(void);
 
 void object_deinit(void);

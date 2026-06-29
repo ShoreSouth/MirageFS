@@ -1,5 +1,6 @@
 #include "object/object_init.h"
 
+#include "common/error/fs_common_sub.h"
 #include "common/error/fs_sub.h"
 #include "object/obj_sub.h"
 #include "object/objmgr/objmgr.h"
@@ -11,15 +12,18 @@
  * ============================================================
  */
 
-int object_init(void)
+fs_error_t object_init(void)
 {
-    int ret;
+    fs_error_t ret;
+
+    /*
+     * 注册 COMMON 模块的 sub-error → name 转换函数。
+     */
+    fs_sub_register(FS_MODULE_COMMON,
+                    (fs_sub_name_fn)fs_common_sub_name);
 
     /*
      * 注册 Object Layer 的 sub-error → name 转换函数。
-     *
-     * 此后 fs_error_str() 即可正确解析
-     * FS_MODULE_OBJECT 的 sub 字段。
      */
     fs_sub_register(FS_MODULE_OBJECT,
                     (fs_sub_name_fn)obj_sub_name);

@@ -6,42 +6,46 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-int fs_path_join(char *dst, size_t size,
+fs_error_t fs_path_join(char *dst, size_t size,
                  const char *a, const char *b)
 {
     if (!dst || !a || !b)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_EINVAL);
 
     if (snprintf(dst, size, "%s/%s", a, b) >= (int)size)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_ENOSPC);
 
-    return 0;
+    return FS_OK;
 }
 
-int fs_path_join_safe(char *dst, size_t size,
+fs_error_t fs_path_join_safe(char *dst, size_t size,
                       const char *a, const char *b)
 {
     if (!dst || !a || !b)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_EINVAL);
 
     if (a[0] == '\0')
-        return snprintf(dst, size, "%s", b) < (int)size ? 0 : -1;
+        return snprintf(dst, size, "%s", b) < (int)size ? FS_OK :
+               fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_ENOSPC);
 
     if (b[0] == '\0')
-        return snprintf(dst, size, "%s", a) < (int)size ? 0 : -1;
+        return snprintf(dst, size, "%s", a) < (int)size ? FS_OK :
+               fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_ENOSPC);
 
     int need_slash = (a[strlen(a) - 1] != '/');
 
     if (need_slash)
-        return snprintf(dst, size, "%s/%s", a, b) < (int)size ? 0 : -1;
+        return snprintf(dst, size, "%s/%s", a, b) < (int)size ? FS_OK :
+               fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_ENOSPC);
     else
-        return snprintf(dst, size, "%s%s", a, b) < (int)size ? 0 : -1;
+        return snprintf(dst, size, "%s%s", a, b) < (int)size ? FS_OK :
+               fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_ENOSPC);
 }
 
-int fs_path_normalize(char *dst, size_t size, const char *src)
+fs_error_t fs_path_normalize(char *dst, size_t size, const char *src)
 {
     if (!dst || !src)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_EINVAL);
 
     char buf[512];
     snprintf(buf, sizeof(buf), "%s", src);
@@ -77,19 +81,19 @@ int fs_path_normalize(char *dst, size_t size, const char *src)
     if (dst[0] == '\0')
         snprintf(dst, size, ".");
 
-    return 0;
+    return FS_OK;
 }
 
-int fs_path_dirname(char *dst, size_t size, const char *path)
+fs_error_t fs_path_dirname(char *dst, size_t size, const char *path)
 {
     if (!dst || !path)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_EINVAL);
 
     const char *slash = strrchr(path, '/');
 
     if (!slash) {
         snprintf(dst, size, ".");
-        return 0;
+        return FS_OK;
     }
 
     size_t len = slash - path;
@@ -98,12 +102,12 @@ int fs_path_dirname(char *dst, size_t size, const char *path)
         len = 1;
 
     if (len >= size)
-        return -1;
+        return fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_ENOSPC);
 
     memcpy(dst, path, len);
     dst[len] = '\0';
 
-    return 0;
+    return FS_OK;
 }
 
 const char* fs_path_basename(const char *path)
@@ -115,25 +119,25 @@ const char* fs_path_basename(const char *path)
     return slash ? slash + 1 : path;
 }
 
-int fs_path_is_absolute(const char *path)
+bool fs_path_is_absolute(const char *path)
 {
     return path && path[0] == '/';
 }
 
-int fs_path_is_empty(const char *path)
+bool fs_path_is_empty(const char *path)
 {
     return (!path || path[0] == '\0');
 }
 
-int fs_path_exists(const char *path)
+bool fs_path_exists(const char *path)
 {
     return access(path, F_OK) == 0;
 }
 
-int fs_path_mkdir_recursive(const char *path, int mode)
+fs_error_t fs_path_mkdir_recursive(const char *path, int mode)
 {
     if (!path || path[0] == '\0')
-        return -EINVAL;
+        return fs_common_error(FS_COMMON_SUB_PATH, FS_ERRNO_EINVAL);
 
     char buf[512];
     snprintf(buf, sizeof(buf), "%s", path);
@@ -144,7 +148,7 @@ int fs_path_mkdir_recursive(const char *path, int mode)
 
             if (mkdir(buf, mode) != 0) {
                 if (errno != EEXIST)
-                    return -errno;
+                    return fs_common_error(FS_COMMON_SUB_PATH, errno);
             }
 
             *p = '/';
@@ -153,8 +157,8 @@ int fs_path_mkdir_recursive(const char *path, int mode)
 
     if (mkdir(buf, mode) != 0) {
         if (errno != EEXIST)
-            return -errno;
+            return fs_common_error(FS_COMMON_SUB_PATH, errno);
     }
 
-    return 0;
+    return FS_OK;
 }

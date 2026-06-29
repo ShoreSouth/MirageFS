@@ -67,7 +67,7 @@ static objtable_entry_t *objtable_find_entry(
  * 生命周期
  * ============================================================ */
 
-int objtable_init(
+fs_error_t objtable_init(
             obj_table_t *table,
             uint32_t bucket_nr)
 {
@@ -85,14 +85,13 @@ int objtable_init(
 
     memset(table, 0, sizeof(obj_table_t));
 
-    if (fs_hash_init(
+    err = fs_hash_init(
                 &table->table,
                 bucket_nr,
                 objtable_node_hash,
                 objtable_key_hash,
-                objtable_match)) {
-
-        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EIO);
+                objtable_match);
+    if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("fs_hash_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
         return err;
@@ -153,7 +152,7 @@ void objtable_destroy(obj_table_t *table)
  * 基础操作
  * ============================================================ */
 
-int objtable_insert(
+fs_error_t objtable_insert(
             obj_table_t *table,
             obj_runtime_t *runtime)
 {
@@ -221,11 +220,10 @@ int objtable_insert(
     fs_list_init(
             &entry->node);
 
-    if (fs_hash_insert(
+    err = fs_hash_insert(
             &table->table,
-            &entry->node) != 0) {
-
-        err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EIO);
+            &entry->node);
+    if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("fs_hash_insert failed, err=%s (0x%x)",
                           fs_error_str(err), err);
 
@@ -237,7 +235,7 @@ int objtable_insert(
     return FS_OK;
 }
 
-int objtable_remove(
+fs_error_t objtable_remove(
             obj_table_t *table,
             const obj_key_t *key)
 {

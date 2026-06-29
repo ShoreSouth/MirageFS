@@ -88,7 +88,7 @@ obj_runtime_t *objmgr_lookup_locked(
  * 参数：
  *      [IN] rt     : 待插入的运行时对象（由 pool 分配）
  */
-int32_t objmgr_insert_locked(
+fs_error_t objmgr_insert_locked(
                 obj_runtime_t *rt);
 
 /*
@@ -97,7 +97,7 @@ int32_t objmgr_insert_locked(
  * 参数：
  *      [IN] key    : 对象标识
  */
-int32_t objmgr_remove_locked(
+fs_error_t objmgr_remove_locked(
                 const obj_key_t *key);
 
 /*
@@ -126,7 +126,7 @@ bool objmgr_state_can_transit(
  *      [IN/OUT] rt     : 运行时对象
  *      [IN]     state  : 目标状态
  */
-int32_t objmgr_change_state(
+fs_error_t objmgr_change_state(
                 obj_runtime_t *rt,
                 obj_state_t state);
 
@@ -146,7 +146,7 @@ int32_t objmgr_change_state(
  * 参数：
  *      [IN/OUT] rt : 运行时对象（refcnt 将被递增）
  */
-int32_t objmgr_ref_get_locked(
+fs_error_t objmgr_ref_get_locked(
                 obj_runtime_t *rt);
 
 /*
@@ -158,7 +158,7 @@ int32_t objmgr_ref_get_locked(
  * 参数：
  *      [IN/OUT] rt : 运行时对象（refcnt 将被递减，可能回收）
  */
-int32_t objmgr_ref_put_locked(
+fs_error_t objmgr_ref_put_locked(
                 obj_runtime_t *rt);
 
 /*

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdbool.h>
+
+#include "common/error/fs_common_sub.h"
 
 /* =========================================================
  * 路径工具模块（fs_path）
@@ -16,7 +19,7 @@
  * ========================= */
 
 /* 拼接路径：dst = a + "/" + b */
-int fs_path_join(
+fs_error_t fs_path_join(
     char *dst,
     size_t size,
     const char *a,
@@ -24,7 +27,7 @@ int fs_path_join(
 );
 
 /* 安全拼接（避免重复 '/'） */
-int fs_path_join_safe(
+fs_error_t fs_path_join_safe(
     char *dst,
     size_t size,
     const char *a,
@@ -42,7 +45,7 @@ int fs_path_join_safe(
  * 示例：
  *   "/a//b/./c/../d" -> "/a/b/d"
  */
-int fs_path_normalize(
+fs_error_t fs_path_normalize(
     char *dst,
     size_t size,
     const char *src
@@ -53,7 +56,7 @@ int fs_path_normalize(
  * ========================= */
 
 /* dirname："/a/b/c" -> "/a/b" */
-int fs_path_dirname(
+fs_error_t fs_path_dirname(
     char *dst,
     size_t size,
     const char *path
@@ -67,10 +70,10 @@ const char* fs_path_basename(const char *path);
  * ========================= */
 
 /* 是否绝对路径 */
-int fs_path_is_absolute(const char *path);
+bool fs_path_is_absolute(const char *path);
 
 /* 是否为空路径 */
-int fs_path_is_empty(const char *path);
+bool fs_path_is_empty(const char *path);
 
 /* =========================
  * OS辅助（工具用途）
@@ -81,7 +84,7 @@ int fs_path_is_empty(const char *path);
  *
  * ⚠️ 非MirageFS语义
  */
-int fs_path_exists(const char *path);
+bool fs_path_exists(const char *path);
 
 /*
  * 递归创建目录（mkdir -p）
@@ -91,7 +94,7 @@ int fs_path_exists(const char *path);
  *   - 日志目录
  *   - 工具代码
  */
-int fs_path_mkdir_recursive(
+fs_error_t fs_path_mkdir_recursive(
     const char *path,
     int mode
 );

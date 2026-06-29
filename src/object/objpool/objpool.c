@@ -39,7 +39,7 @@ static obj_pool_t g_objpool;
  * ============================================================
  */
 
-int32_t objpool_init(void)
+fs_error_t objpool_init(void)
 {
     fs_error_t err;
 

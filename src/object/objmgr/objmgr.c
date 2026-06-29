@@ -20,34 +20,36 @@ obj_manager_t g_objmgr;
  * ============================================================
  */
 
-int32_t objmgr_init(void)
+fs_error_t objmgr_init(void)
 {
-    int ret;
+    fs_error_t ret;
 
     FS_LOG_DUMP_INFO("enter");
 
     ret = objtable_init(&g_objmgr.table,
                         FS_HASH_DEFAULT_BUCKET_NR);
-    if (ret != 0) {
-        FS_LOG_DUMP_ERROR("objtable_init failed, ret=%d", (int)ret);
-        FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
+    if (fs_failed(ret)) {
+        FS_LOG_DUMP_ERROR("objtable_init failed, err=%s (0x%x)",
+                          fs_error_str(ret), ret);
+        FS_LOG_DUMP_INFO("exit: failed");
         return ret;
     }
 
     ret = fs_mutex_init(&g_objmgr.lock,
                         "objmgr",
                         0);
-    if (ret != 0) {
-        FS_LOG_DUMP_ERROR("fs_mutex_init failed, ret=%d", (int)ret);
+    if (fs_failed(ret)) {
+        FS_LOG_DUMP_ERROR("fs_mutex_init failed, err=%s (0x%x)",
+                          fs_error_str(ret), ret);
         objtable_destroy(&g_objmgr.table);
-        FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
+        FS_LOG_DUMP_INFO("exit: failed");
         return ret;
     }
 
     fs_atomic32_init(&g_objmgr.object_count, 0);
 
     FS_LOG_DUMP_INFO("exit: ok");
-    return 0;
+    return FS_OK;
 }
 
 void objmgr_deinit(void)
@@ -213,7 +215,7 @@ obj_meta_t *objmgr_create(
     return &rt->meta;
 }
 
-int32_t objmgr_delete(
+fs_error_t objmgr_delete(
                 const fuid_t *fuid)
 {
     fs_error_t err;

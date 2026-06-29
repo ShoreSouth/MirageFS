@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/macros/fs_defs.h"
+#include "common/error/fs_common_sub.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -145,7 +146,7 @@ void fs_mp_destroy(fs_mempool_t *mp);
 /*
  * 全局池初始化
  */
-int fs_mp_global_init(const fs_mp_config_t *cfg);
+fs_error_t fs_mp_global_init(const fs_mp_config_t *cfg);
 
 /*
  * 全局池销毁
