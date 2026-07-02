@@ -12,6 +12,7 @@ MODULES := common
 MODULES += config
 MODULES += lsa
 MODULES += object
+MODULES += fsc
 
 # ============================================================
 #  最终程序
@@ -33,6 +34,7 @@ APP_OBJ := $(OBJ_DIR)/main.o
 LIBS  := $(LIB_DIR)/libconfig.a
 LIBS  += $(LIB_DIR)/liblsa.a
 LIBS  += $(LIB_DIR)/libobject.a
+LIBS  += $(LIB_DIR)/libfsc.a
 LIBS  += $(LIB_DIR)/libcommon.a
 
 # ============================================================

@@ -191,10 +191,8 @@ void objmeta_dump(
 
     char handle_buf[128];
 
-    FS_LOG_DUMP_INFO("enter: meta=%p", (const void *)meta);
-
     if (meta == NULL) {
-        FS_LOG_DUMP_ERROR("param check failed: meta is NULL");
+        FS_LOG_DUMP_INFO("objmeta: null");
         return;
     }
 
@@ -217,35 +215,12 @@ void objmeta_dump(
         }
     }
 
-    FS_LOG_DUMP_INFO(
-            "========== ObjMeta ==========");
-
-    FS_LOG_DUMP_INFO(
-            "objectid     : %lu",
-            (unsigned long)meta->key.objectid);
-
-    FS_LOG_DUMP_INFO(
-            "gen          : %u",
-            (unsigned int)meta->key.gen);
-
-    FS_LOG_DUMP_INFO(
-            "mount_id     : %d",
-            (int)meta->handle.mount_id);
-
-    FS_LOG_DUMP_INFO(
-            "handle_type  : %u",
-            (unsigned int)meta->handle.type);
-
-    FS_LOG_DUMP_INFO(
-            "handle_bytes : %u",
-            (unsigned int)meta->handle.len);
-
-    FS_LOG_DUMP_INFO(
-            "file_handle  : %s",
-            handle_buf);
-
-    FS_LOG_DUMP_INFO(
-            "=============================");
-
-    FS_LOG_DUMP_INFO("exit: done");
+    FS_LOG_DUMP_INFO("objmeta: objectid=%lu, gen=%u, mount_id=%d, "
+                     "handle_type=%u, handle_bytes=%u, file_handle=%s",
+                     (unsigned long)meta->key.objectid,
+                     (unsigned int)meta->key.gen,
+                     (int)meta->handle.mount_id,
+                     (unsigned int)meta->handle.type,
+                     (unsigned int)meta->handle.len,
+                     handle_buf);
 }

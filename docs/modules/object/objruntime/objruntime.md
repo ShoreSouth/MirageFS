@@ -229,21 +229,12 @@ obj_state_t objruntime_state(const obj_runtime_t *rt);
 void objruntime_dump(const obj_runtime_t *rt);
 ```
 
-输出 meta、refcnt、state 全部字段。
+输出 meta、refcnt、state 的单行快照，避免 dump 路径产生过多日志。
 
 输出格式：
 
 ```text
-========== ObjRuntime ==========
-objectid     : 100
-gen          : 1
-refcnt       : 2
-state        : 1 (ACTIVE)
-mount_id     : 23
-handle_type  : 1
-handle_bytes : 8
-file_handle  : 0a01bcff...
-=============================
+objruntime: objectid=100, gen=1, refcnt=2, state=1, mount_id=23, handle_type=1, handle_bytes=8, file_handle=0a01bcff...
 ```
 
 ---

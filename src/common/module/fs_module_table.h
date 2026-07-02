@@ -18,7 +18,7 @@
     _(STORAGE, "STORAGE")           \
     _(CACHE,   "CACHE")             \
                                     \
-    _(FSMGR,   "FSMGR")             \
+    _(FSC,     "FSC")               \
     _(VFS,     "VFS")               \
                                     \
     _(LSA,     "LSA")               \

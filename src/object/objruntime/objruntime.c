@@ -15,10 +15,8 @@ void objruntime_dump(
 
     char handle_buf[128];
 
-    FS_LOG_DUMP_INFO("enter: rt=%p", (const void *)rt);
-
     if (rt == NULL) {
-        FS_LOG_DUMP_ERROR("param check failed: rt is NULL");
+        FS_LOG_DUMP_INFO("objruntime: null");
         return;
     }
 
@@ -41,43 +39,15 @@ void objruntime_dump(
         }
     }
 
-    FS_LOG_DUMP_INFO(
-            "========== ObjRuntime ==========");
-
-    FS_LOG_DUMP_INFO(
-            "objectid     : %lu",
-            (unsigned long)rt->meta.key.objectid);
-
-    FS_LOG_DUMP_INFO(
-            "gen          : %u",
-            (unsigned int)rt->meta.key.gen);
-
-    FS_LOG_DUMP_INFO(
-            "refcnt       : %d",
-            (int)rt->refcnt);
-
-    FS_LOG_DUMP_INFO(
-            "state        : %u",
-            (unsigned int)objruntime_state(rt));
-
-    FS_LOG_DUMP_INFO(
-            "mount_id     : %d",
-            (int)rt->meta.handle.mount_id);
-
-    FS_LOG_DUMP_INFO(
-            "handle_type  : %u",
-            (unsigned int)rt->meta.handle.type);
-
-    FS_LOG_DUMP_INFO(
-            "handle_bytes : %u",
-            (unsigned int)rt->meta.handle.len);
-
-    FS_LOG_DUMP_INFO(
-            "file_handle  : %s",
-            handle_buf);
-
-    FS_LOG_DUMP_INFO(
-            "=============================");
-
-    FS_LOG_DUMP_INFO("exit: done");
+    FS_LOG_DUMP_INFO("objruntime: objectid=%lu, gen=%u, refcnt=%d, "
+                     "state=%u, mount_id=%d, handle_type=%u, "
+                     "handle_bytes=%u, file_handle=%s",
+                     (unsigned long)rt->meta.key.objectid,
+                     (unsigned int)rt->meta.key.gen,
+                     (int)fs_atomic32_load(&rt->refcnt),
+                     (unsigned int)objruntime_state(rt),
+                     (int)rt->meta.handle.mount_id,
+                     (unsigned int)rt->meta.handle.type,
+                     (unsigned int)rt->meta.handle.len,
+                     handle_buf);
 }

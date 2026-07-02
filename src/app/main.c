@@ -7,6 +7,7 @@
 
 #include "common/fs_common.h"
 #include "config/fs_config.h"
+#include "fsc/fsc_init.h"
 #include "lsa/include/lsa_api.h"
 #include "object/object_init.h"
 
@@ -40,6 +41,7 @@ int main(void)
      */
     lsa_init();
     object_init();
+    fsc_init();
 
     /*
      * 打印配置
@@ -49,6 +51,7 @@ int main(void)
     /*
      * 模块销毁（逆序）
      */
+    fsc_deinit();
     object_deinit();
 
     /*

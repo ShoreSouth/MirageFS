@@ -598,17 +598,11 @@ objruntime_dump()    /* 输出 meta + refcnt + state */
 objmeta_dump 输出内容：
 
 ```text
-========== ObjMeta ==========
-objectid     : 100
-gen          : 1
-mount_id     : 23
-handle_type  : 1
-handle_bytes : 8
-file_handle  : 0a01bcff...
-=============================
+objmeta: objectid=100, gen=1, mount_id=23, handle_type=1, handle_bytes=8, file_handle=0a01bcff...
 ```
 
-objruntime_dump 额外输出 refcnt 和 state。
+`objmeta_dump()` 和 `objruntime_dump()` 都保持单行输出。
+`objruntime_dump()` 额外输出 refcnt 和 state。
 用于：
 
 - Trace

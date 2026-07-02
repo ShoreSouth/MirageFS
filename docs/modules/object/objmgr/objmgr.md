@@ -13,7 +13,7 @@ ObjMgr 是 Object Layer 唯一对外暴露对象管理能力的模块。
 Object Layer 的整体结构如下：
 
 ```text
-                 VFS / FSMGR
+                 VFS / FSC
                       │
                 create / lookup
                 acquire / release
@@ -624,4 +624,4 @@ ObjMgr 是 MirageFS Object Layer 的核心协调模块。
  内存管理    对象索引    对象元数据
 ```
 
-这种设计遵循高内聚、低耦合原则，使 Object Layer 能够在保持稳定 API 的前提下，持续演进对象缓存、细粒度锁、Slab 分配器及其它高性能特性，而无需影响上层 VFS/FSMGR 的使用方式。
+这种设计遵循高内聚、低耦合原则，使 Object Layer 能够在保持稳定 API 的前提下，持续演进对象缓存、细粒度锁、Slab 分配器及其它高性能特性，而无需影响上层 VFS/FSC 的使用方式。
