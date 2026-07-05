@@ -37,6 +37,8 @@ LIBS  += $(LIB_DIR)/libobject.a
 LIBS  += $(LIB_DIR)/liblsa.a
 LIBS  += $(LIB_DIR)/libcommon.a
 
+LINK_LIBS := -Wl,--start-group $(LIBS) -Wl,--end-group
+
 # ============================================================
 #  默认目标 — 全流程编排（shell inline，避免 $(call) 转义问题）
 # ============================================================
@@ -104,7 +106,7 @@ link: $(TARGET)
 
 $(TARGET): $(APP_OBJ)
 	@printf "    $(C_MAGENTA)LD$(C_RESET)   %-40s" "miragefs"
-	@$(CC) $(CFLAGS) -o $@ $(APP_OBJ) $(LIBS) && printf " $(C_GREEN)✓$(C_RESET)\n"
+	@$(CC) $(CFLAGS) -o $@ $(APP_OBJ) $(LINK_LIBS) && printf " $(C_GREEN)✓$(C_RESET)\n"
 
 # ============================================================
 #  清理

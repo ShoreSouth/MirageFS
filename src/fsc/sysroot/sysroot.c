@@ -155,7 +155,7 @@ fs_error_t fsc_sysroot_init(const char *path)
         return err;
     }
 
-    g_sysroot.root_fuid = fuid_build(FSC_SYSROOT_FSID,
+    g_sysroot.root_fuid = fuid_make(FSC_SYSROOT_FSID,
                                      FSC_SYSROOT_OBJECT_ID,
                                      FSC_SYSROOT_GEN,
                                      FUID_TYPE_DIR);

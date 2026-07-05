@@ -22,6 +22,33 @@ All generated code and design proposals should follow these rules unless explici
 
 ---
 
+
+## WSL Execution Rules
+
+本项目在 WSL2 Ubuntu 环境中开发，仓库路径固定为：
+
+```text
+/home/shore/work/github/MirageFS
+```
+
+执行命令时应直接在 WSL bash 环境中运行，工作目录必须是上述路径。
+不要通过 Windows UNC 路径访问仓库，例如 `\\wsl.localhost\...` 或
+`\\wsl$\...`。
+
+开始关键任务前可检查：
+
+```sh
+pwd
+uname -a
+echo "$SHELL"
+whoami
+git rev-parse --show-toplevel
+```
+
+文件修改优先使用 WSL 内部的 `git diff` / `git apply` 或 `python3` 脚本。
+不要在 PowerShell 中构造包含中文注释的大型 here-doc 后再转发给 WSL。
+补丁匹配应基于函数名、结构体字段、英文符号等稳定内容，不依赖中文注释。
+
 # Working Principles
 
 Before writing code:
@@ -506,7 +533,6 @@ init()      /* use <module>_init */
 Never mix verbs for the same operation across modules:
 
 ```c
-fuid_build()     /* wrong — use fuid_make() */
 objkey_valid()   /* wrong — use objkey_is_valid() */
 objmeta_reset()  /* wrong — use objmeta_deinit() */
 ```

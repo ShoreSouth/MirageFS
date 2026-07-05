@@ -100,11 +100,18 @@ void fs_mutex_unlock(fs_mutex_t *lock)
 
 bool fs_mutex_is_locked(fs_mutex_t *lock)
 {
+    bool locked;
+
     if (lock == NULL) {
         return false;
     }
 
-    return !fs_mutex_trylock(lock);
+    locked = !fs_mutex_trylock(lock);
+    if (!locked) {
+        fs_mutex_unlock(lock);
+    }
+
+    return locked;
 }
 
 /* ============================================================

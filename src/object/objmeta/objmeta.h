@@ -128,7 +128,7 @@ _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
  *      FS_OK           : 成功
  *      >0              : 失败（fs_error_t）
  */
-int32_t objmeta_init(
+fs_error_t objmeta_init(
                 obj_meta_t *meta,
                 const fuid_t *fuid,
                 const obj_handle_t *handle);
@@ -141,6 +141,12 @@ int32_t objmeta_init(
  *
  * 参数：
  *      [OUT] meta  : 目标对象（内容将被清零）
+ */
+void objmeta_deinit(
+                obj_meta_t *meta);
+
+/*
+ * 兼容旧名称。新代码请使用 objmeta_deinit()。
  */
 void objmeta_reset(
                 obj_meta_t *meta);

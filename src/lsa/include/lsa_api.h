@@ -220,7 +220,32 @@ lsa_ret_t lsa_read(
                 size_t size,
                 size_t *actual);
 
+/*
+ * 完整读取 size 字节。
+ *
+ * lsa_read() 是单次 read(2) 封装，允许 partial IO；
+ * lsa_read_full() 会循环读取，直到读满、EOF 或出错。
+ * EOF 不视为错误，actual 返回实际读取字节数。
+ */
+lsa_ret_t lsa_read_full(
+                int fd,
+                void *buf,
+                size_t size,
+                size_t *actual);
+
 lsa_ret_t lsa_write(
+                int fd,
+                const void *buf,
+                size_t size,
+                size_t *actual);
+
+/*
+ * 完整写入 size 字节。
+ *
+ * lsa_write() 是单次 write(2) 封装，允许 partial IO；
+ * lsa_write_full() 会循环写入，直到写满或出错。
+ */
+lsa_ret_t lsa_write_full(
                 int fd,
                 const void *buf,
                 size_t size,
@@ -284,6 +309,12 @@ lsa_ret_t lsa_fchown(
  * ============================================================
  */
 
+/*
+ * 打开目录迭代器。
+ *
+ * dirfd 为借用句柄，迭代器不会接管所有权；调用方仍负责关闭
+ * dirfd。lsa_dir_iter_close() 只释放 iterator 自身和内部缓冲区。
+ */
 lsa_ret_t lsa_dir_iter_open(
                 int dirfd,
                 uint32_t buffer_size,
@@ -374,15 +405,6 @@ lsa_ret_t lsa_unmap(
  */
 
 void lsa_init(void);
-
-/*
- * ============================================================
- * Error Helper
- * ============================================================
- */
-
-fs_error_t lsa_errno_map(
-                int err);
 
 #ifdef __cplusplus
 }

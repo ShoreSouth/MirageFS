@@ -26,7 +26,7 @@ static bool objmeta_handle_valid(
  * 对外接口
  * ============================================================ */
 
-int32_t objmeta_init(
+fs_error_t objmeta_init(
                 obj_meta_t *meta,
                 const fuid_t *fuid,
                 const obj_handle_t *handle)
@@ -83,7 +83,7 @@ int32_t objmeta_init(
     return FS_OK;
 }
 
-void objmeta_reset(
+void objmeta_deinit(
             obj_meta_t *meta)
 {
     FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
@@ -97,6 +97,12 @@ void objmeta_reset(
            sizeof(obj_meta_t));
 
     FS_LOG_DUMP_INFO("exit: done");
+}
+
+void objmeta_reset(
+            obj_meta_t *meta)
+{
+    objmeta_deinit(meta);
 }
 
 bool objmeta_is_valid(

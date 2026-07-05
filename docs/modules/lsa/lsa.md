@@ -716,3 +716,33 @@ LSA 是 MirageFS 的 Linux 适配层。
 LSA 只负责访问文件系统，不负责管理文件系统。
 
 对象管理、缓存管理、元数据管理等职责由上层模块承担。
+
+
+## 8. Partial IO 与 Full IO
+
+LSA 同时提供单次 IO 和完整 IO 两组接口：
+
+```c
+lsa_read()
+lsa_write()
+lsa_read_full()
+lsa_write_full()
+```
+
+`lsa_read()` / `lsa_write()` 是对单次 `read(2)` / `write(2)` 的轻量封装，
+允许返回 partial IO，实际字节数通过 `actual` 返回。
+
+`lsa_read_full()` 会循环读取，直到：
+
+- 读取满 `size` 字节；
+- 遇到 EOF；
+- 系统调用出错。
+
+EOF 不视为错误，调用方通过 `actual` 判断实际读取字节数。
+
+`lsa_write_full()` 会循环写入，直到写满 `size` 字节或出错。如果底层
+`write(2)` 返回 0 且没有前进，视为 `EIO`，避免调用方陷入无限循环。
+
+目录迭代器 `lsa_dir_iter_open()` 中传入的 `dirfd` 为借用句柄，iterator
+不会接管 fd 所有权；`lsa_dir_iter_close()` 只释放 iterator 和内部缓冲区，
+调用方仍负责关闭 `dirfd`。

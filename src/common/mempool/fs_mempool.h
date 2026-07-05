@@ -75,6 +75,15 @@ typedef struct fs_mp_hdr {
 
     uint64_t req_size; /* 用户申请大小 */
 
+    /*
+     * buddy block 起点到 header 的偏移。
+     *
+     * 普通分配时为 0；对齐分配时 header 可能位于 block 内部，
+     * free 时依靠该字段找回原始 buddy block。
+     */
+    uint64_t block_offset;
+
+
 } fs_mp_hdr_t;
 
 /* ============================================================

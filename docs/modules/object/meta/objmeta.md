@@ -644,3 +644,15 @@ ObjMeta 是 MirageFS 元数据层中最底层的对象定位模块。
 - 生命周期支撑：提供 refcnt + state 字段供 objmgr 使用
 
 不参与路径解析和目录树管理。
+
+
+## 8. API 命名与返回类型
+
+`objmeta_init()` 是可失败函数，返回类型统一为 `fs_error_t`，调用方应使用
+`fs_failed()` / `fs_succeeded()` 判断结果。
+
+`obj_meta_t` 是嵌入式值结构，不拥有外部 heap 资源。清空接口使用
+`objmeta_deinit()`，语义是将结构体恢复为零值、未初始化状态。
+
+为了兼容旧调用点，当前仍保留 `objmeta_reset()` 作为薄封装。新代码应优先
+使用 `objmeta_deinit()`，后续调用点全部迁移后可以移除旧名称。

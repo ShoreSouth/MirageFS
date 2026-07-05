@@ -844,3 +844,52 @@ MirageFS Unified Memory Subsystem
 ```
 
 统一管理整个文件系统的动态内存生命周期。
+
+
+## 对齐分配
+
+`fs_mp_alloc_align()` 提供真正的对齐分配语义。
+
+普通 `fs_mp_alloc()` 的布局为：
+
+```text
+buddy block start
+    |
+    v
++--------------------+
+| fs_mp_hdr_t        |
++--------------------+
+| user pointer       |
++--------------------+
+```
+
+对齐分配时，为了让 user pointer 满足 `align`，header 可能放在
+buddy block 内部：
+
+```text
+buddy block start
+    |
+    | block_offset
+    v
++--------------------+
+| fs_mp_hdr_t        |
++--------------------+
+| aligned user ptr   |
++--------------------+
+```
+
+`fs_mp_hdr_t::block_offset` 记录 buddy block 起点到 header 的偏移。
+释放时先通过 user pointer 找到 header，再用 `block_offset` 还原原始
+buddy block 起点，最后参与 buddy merge。
+
+约束：
+
+- `align` 必须是 2 的幂，且不能为 0。
+- order 计算会逐级检查 block size，要求 block 本身可保证 align 对齐，
+  且能容纳 `FS_ALIGN_UP(sizeof(header), align) + size`。
+- 如果所需空间超过最大 order，分配失败。
+- `fs_mp_usable_size()` 返回扣除 header 和对齐偏移后的可用容量。
+
+`fs_mp_create()` 会根据配置的 `total_size` 自动上取整到可容纳的
+buddy order，并用 `max_order` 作为上限。这样调用方可以传入期望容量，
+不需要手工保证它刚好等于 `PAGE_SIZE << order`。

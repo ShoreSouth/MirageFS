@@ -797,3 +797,14 @@ MirageFS Lock Subsystem
 ```
 
 统一管理整个文件系统同步机制。
+
+
+## fs_mutex_is_locked 语义
+
+`fs_mutex_is_locked()` 是状态查询辅助接口，不应改变锁的最终状态。
+实现上会先尝试 `trylock`：
+
+- 如果 `trylock` 失败，说明锁已被持有，返回 `true`。
+- 如果 `trylock` 成功，说明锁原本未被持有，函数会立即释放锁并返回 `false`。
+
+因此调用方不能依赖该函数获得锁所有权，它只用于调试、断言或诊断场景。

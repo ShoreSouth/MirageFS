@@ -333,7 +333,7 @@ uint64_t
 对象创建时：
 
 ```c
-fuid_build()
+fuid_make()
 ```
 
 生成 FUID。
@@ -522,3 +522,26 @@ FUID 模块仅负责：
 FUID 属于 MirageFS 最基础对象模型模块之一。
 
 其上层所有元数据对象均通过 FUID 建立关联。
+
+
+## 9. API 命名与有效性校验
+
+FUID 是值对象，构造接口统一使用 `fuid_make()`：
+
+```c
+fuid_t fuid_make(Fsid_t fsid,
+                 ObjectId_t objectid,
+                 GenId_t gen,
+                 fuid_type_t type);
+```
+
+构造接口统一为 `fuid_make()`，不再保留旧名称兼容层。
+
+`fuid_is_valid()` 会校验：
+
+- `version == FUID_CURRENT_VERSION`
+- `fsid != FUID_INVALID_FSID`
+- `objectid != FUID_INVALID_OBJECTID`
+- `type` 必须是合法的 `fuid_type_t`
+
+这样可以避免非法对象类型进入 ObjMeta、ObjTable 或 ObjMgr。

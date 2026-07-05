@@ -134,7 +134,7 @@ bool fuid_equal(const fuid_t *a, const fuid_t *b);
 uint64_t fuid_hash(const fuid_t *fuid);
 
 /* 构造 */
-fuid_t fuid_build(Fsid_t fsid,
+fuid_t fuid_make(Fsid_t fsid,
     ObjectId_t objectid,
     GenId_t gen,
     fuid_type_t type);

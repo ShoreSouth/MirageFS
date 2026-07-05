@@ -1,6 +1,7 @@
 #include "common/mempool/fs_mempool_internal.h"
 #include "common/mempool/fs_mempool.h"
 #include "common/list/fs_list.h"
+#include "common/macros/fs_macros.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +24,10 @@ uint32_t fs_mp_calc_order(size_t size)
     uint64_t need_size;
     uint32_t order;
 
+    if (size > SIZE_MAX - sizeof(fs_mp_hdr_t)) {
+        return UINT32_MAX;
+    }
+
     need_size = size + sizeof(fs_mp_hdr_t);
 
     for (order = FS_MP_MIN_ORDER;
@@ -30,6 +35,69 @@ uint32_t fs_mp_calc_order(size_t size)
          order++) {
 
         if (FS_MP_ORDER_SIZE(order) >= need_size) {
+            return order;
+        }
+    }
+
+    return UINT32_MAX;
+}
+
+static uint32_t fs_mp_calc_order_align(
+                size_t size,
+                size_t align)
+{
+    uint64_t user_offset;
+    uint64_t need_size;
+    uint64_t block_size;
+    uint32_t order;
+
+    if (align == 0) {
+        return UINT32_MAX;
+    }
+
+    if (sizeof(fs_mp_hdr_t) > UINT64_MAX - (align - 1)) {
+        return UINT32_MAX;
+    }
+
+    user_offset = FS_ALIGN_UP((uint64_t)sizeof(fs_mp_hdr_t),
+                              (uint64_t)align);
+    if (size > UINT64_MAX - user_offset) {
+        return UINT32_MAX;
+    }
+
+    need_size = user_offset + size;
+
+    for (order = FS_MP_MIN_ORDER;
+         order <= FS_MP_MAX_ORDER;
+         order++) {
+
+        block_size = FS_MP_ORDER_SIZE(order);
+
+        if (block_size < align) {
+            continue;
+        }
+
+        if (block_size >= need_size) {
+            return order;
+        }
+    }
+
+    return UINT32_MAX;
+}
+
+static uint32_t fs_mp_calc_pool_order(uint64_t total_size)
+{
+    uint32_t order;
+
+    if (total_size == 0) {
+        return UINT32_MAX;
+    }
+
+    for (order = FS_MP_MIN_ORDER;
+         order <= FS_MP_MAX_ORDER;
+         order++) {
+
+        if (FS_MP_ORDER_SIZE(order) >= total_size) {
             return order;
         }
     }
@@ -159,36 +227,49 @@ fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg)
 {
     fs_mempool_t *mp;
     uint32_t i;
+    uint32_t pool_order;
+    uint64_t pool_size;
 
-    FS_ASSERT(cfg != NULL);
+    if (cfg == NULL) {
+        FS_LOG_DUMP_ERROR("create mempool failed: cfg is NULL");
+        return NULL;
+    }
 
-    FS_LOG_DUMP_INFO("enter: total_size=%llu max_order=%u",
+    pool_order = fs_mp_calc_pool_order(cfg->total_size);
+    if (pool_order == UINT32_MAX ||
+        cfg->max_order > FS_MP_MAX_ORDER ||
+        pool_order > cfg->max_order) {
+
+        FS_LOG_DUMP_ERROR("create mempool failed: invalid config "
+                          "total_size=%llu max_order=%u",
+                          (unsigned long long)cfg->total_size,
+                          cfg->max_order);
+        return NULL;
+    }
+
+    pool_size = FS_MP_ORDER_SIZE(pool_order);
+
+    FS_LOG_DUMP_INFO("enter: total_size=%llu pool_size=%llu max_order=%u",
                      (unsigned long long)cfg->total_size,
-                     cfg->max_order);
+                     (unsigned long long)pool_size,
+                     pool_order);
 
     mp = calloc(1, sizeof(*mp));
-
     if (mp == NULL) {
-
         FS_LOG_DUMP_ERROR("calloc mp failed");
-
         return NULL;
     }
 
     mp->base = aligned_alloc(FS_MP_PAGE_SIZE,
-                             cfg->total_size);
-
+                             pool_size);
     if (mp->base == NULL) {
-
         FS_LOG_DUMP_ERROR("aligned_alloc failed");
-
         free(mp);
-
         return NULL;
     }
 
-    mp->total_size = cfg->total_size;
-    mp->max_order  = cfg->max_order;
+    mp->total_size = pool_size;
+    mp->max_order  = pool_order;
     mp->flags      = cfg->flags;
 
     for (i = 0; i <= FS_MP_MAX_ORDER; i++) {
@@ -200,26 +281,21 @@ fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg)
                                 FS_LOCK_F_DEBUG))) {
 
         FS_LOG_DUMP_ERROR("mutex init failed");
-
         free(mp->base);
         free(mp);
-
         return NULL;
     }
 
-    /*
-     * 初始整个pool作为一个最大块
-     */
     fs_mp_push_block(mp,
                      mp->max_order,
                      mp->base);
 
-    mp->stats.total_bytes = cfg->total_size;
-    mp->stats.free_bytes  = cfg->total_size;
+    mp->stats.total_bytes = pool_size;
+    mp->stats.free_bytes  = pool_size;
 
-    FS_LOG_DUMP_INFO("exit: ok total_size=%llu max_order=%u",
-                     (unsigned long long)cfg->total_size,
-                     cfg->max_order);
+    FS_LOG_DUMP_INFO("exit: ok pool_size=%llu max_order=%u",
+                     (unsigned long long)pool_size,
+                     pool_order);
 
     return mp;
 }
@@ -247,67 +323,56 @@ void fs_mp_destroy(fs_mempool_t *mp)
  * Allocation
  * ============================================================ */
 
-void *fs_mp_alloc(fs_mempool_t *mp,
-            size_t size)
+static void *fs_mp_alloc_with_order(
+                fs_mempool_t *mp,
+                size_t size,
+                uint32_t order,
+                size_t align)
 {
-    uint32_t order;
     uint32_t cur_order;
 
     void *block;
     void *buddy;
+    void *ret;
+    void *user_ptr;
 
     fs_mp_hdr_t *hdr;
+    uintptr_t user_addr;
 
-    FS_LOG_DUMP_INFO("enter: mp=%p size=%zu",
-                     (void *)mp, size);
+    FS_LOG_DUMP_INFO("enter: mp=%p size=%zu align=%zu",
+                     (void *)mp, size, align);
+
+    ret = NULL;
 
     if (mp == NULL || size == 0) {
-        return NULL;
+        goto out;
     }
 
-    order = fs_mp_calc_order(size);
-
-    if (order == UINT32_MAX) {
-
-        FS_LOG_DUMP_WARN("size too large size=%zu",
-                    size);
-
-        return NULL;
+    if (order == UINT32_MAX || order > mp->max_order) {
+        FS_LOG_DUMP_WARN("size too large size=%zu align=%zu",
+                         size, align);
+        goto out;
     }
 
     FS_MP_LOCK(mp);
 
-    /*
-     * 找可用块
-     */
     for (cur_order = order;
          cur_order <= mp->max_order;
          cur_order++) {
 
         block = fs_mp_pop_block(mp, cur_order);
-
         if (block != NULL) {
             break;
         }
     }
 
     if (cur_order > mp->max_order) {
-
         mp->stats.alloc_fail_count++;
-
-        FS_MP_UNLOCK(mp);
-
-        FS_LOG_DUMP_WARN("alloc failed size=%zu",
-                    size);
-
-        return NULL;
+        FS_LOG_DUMP_WARN("alloc failed size=%zu", size);
+        goto unlock;
     }
 
-    /*
-     * split
-     */
     while (cur_order > order) {
-
         cur_order--;
 
         buddy = ((uint8_t *)block +
@@ -320,18 +385,24 @@ void *fs_mp_alloc(fs_mempool_t *mp,
         mp->stats.split_count++;
     }
 
-    hdr = (fs_mp_hdr_t *)block;
+    if (align == 0) {
+        align = 1;
+    }
 
-    hdr->magic    = FS_MP_MAGIC_ALLOC;
-    hdr->order    = order;
-    hdr->flags    = 0;
+    user_addr = FS_ALIGN_UP((uintptr_t)block + sizeof(*hdr),
+                            (uintptr_t)align);
+    hdr = (fs_mp_hdr_t *)(user_addr - sizeof(*hdr));
+
+    hdr->magic = FS_MP_MAGIC_ALLOC;
+    hdr->order = order;
+    hdr->flags = 0;
     hdr->req_size = size;
+    hdr->block_offset = (uint64_t)((uintptr_t)hdr - (uintptr_t)block);
 
-    block = fs_mp_hdr_to_ptr(hdr);
+    user_ptr = fs_mp_hdr_to_ptr(hdr);
 
     if (mp->flags & FS_MP_F_POISON) {
-
-        memset(block,
+        memset(user_ptr,
                FS_MP_POISON_ALLOC,
                size);
     }
@@ -339,7 +410,6 @@ void *fs_mp_alloc(fs_mempool_t *mp,
     mp->stats.alloc_count++;
     mp->stats.used_bytes += FS_MP_ORDER_SIZE(order);
     mp->stats.free_bytes -= FS_MP_ORDER_SIZE(order);
-
     mp->stats.current_allocs++;
 
     if (mp->stats.used_bytes >
@@ -349,12 +419,27 @@ void *fs_mp_alloc(fs_mempool_t *mp,
             mp->stats.used_bytes;
     }
 
+    ret = user_ptr;
+
+unlock:
     FS_MP_UNLOCK(mp);
 
-    FS_LOG_DUMP_INFO("exit: ptr=%p order=%u",
-                     block, order);
+out:
+    FS_LOG_DUMP_INFO("exit: ptr=%p order=%u", ret, order);
+    return ret;
+}
 
-    return block;
+void *fs_mp_alloc(fs_mempool_t *mp,
+            size_t size)
+{
+    uint32_t order;
+
+    order = fs_mp_calc_order(size);
+
+    return fs_mp_alloc_with_order(mp,
+                                  size,
+                                  order,
+                                  1);
 }
 
 void *fs_mp_alloc_align(fs_mempool_t *mp,
@@ -362,105 +447,35 @@ void *fs_mp_alloc_align(fs_mempool_t *mp,
                   size_t align)
 {
     uint32_t order;
-    uint32_t order_align;
-
-    size_t real_size;
-
-    uint64_t block_size;
 
     if (mp == NULL || size == 0) {
-
         FS_LOG_DUMP_WARN("alloc_align: invalid param "
                     "mp=%p size=%zu align=%zu",
                     (void *)mp, size, align);
-
         return NULL;
     }
 
-    if ((align & (align - 1)) != 0) {
+    if (align == 0 ||
+        (align & (align - 1)) != 0) {
 
         FS_LOG_DUMP_WARN("alloc_align: align not power of 2 "
                     "align=%zu",
                     align);
-
         return NULL;
     }
 
-    order = fs_mp_calc_order(size);
-
+    order = fs_mp_calc_order_align(size, align);
     if (order == UINT32_MAX) {
-
         FS_LOG_DUMP_WARN("alloc_align: size too large "
                     "size=%zu",
                     size);
-
         return NULL;
     }
 
-    /*
-     * Buddy block of order N is naturally aligned to
-     * PAGE_SIZE << N. If align exceeds the block size
-     * that order would provide, raise the order.
-     */
-    if (align > FS_MP_PAGE_SIZE) {
-
-        block_size = FS_MP_ORDER_SIZE(order);
-
-        if (align > block_size) {
-
-            order_align = 0;
-
-            block_size = FS_MP_PAGE_SIZE;
-
-            while (block_size < align &&
-                   order_align < FS_MP_MAX_ORDER) {
-
-                order_align++;
-                block_size <<= 1;
-            }
-
-            if (order_align > FS_MP_MAX_ORDER) {
-
-                FS_LOG_DUMP_WARN("alloc_align: "
-                            "align too large "
-                            "align=%zu",
-                            align);
-
-                return NULL;
-            }
-
-            if (order_align > order) {
-                order = order_align;
-            }
-        }
-
-        /*
-         * Enforce alignment via overallocation.
-         *
-         * Allocate enough extra that an
-         * aligned address within the block
-         * is guaranteed.
-         */
-        real_size = FS_MP_ORDER_SIZE(order) -
-                    sizeof(fs_mp_hdr_t);
-
-        if (align > real_size) {
-
-            order++;
-
-            if (order > FS_MP_MAX_ORDER) {
-
-                FS_LOG_DUMP_WARN("alloc_align: "
-                            "align too large "
-                            "align=%zu",
-                            align);
-
-                return NULL;
-            }
-        }
-    }
-
-    return fs_mp_alloc(mp, size);
+    return fs_mp_alloc_with_order(mp,
+                                  size,
+                                  order,
+                                  align);
 }
 
 void *fs_mp_calloc(fs_mempool_t *mp,
@@ -603,7 +618,7 @@ void fs_mp_free(fs_mempool_t *mp,
     order = hdr->order;
     origin_order = order;
 
-    block = (void *)hdr;
+    block = (uint8_t *)hdr - hdr->block_offset;
 
     FS_MP_LOCK(mp);
 
@@ -673,7 +688,8 @@ size_t fs_mp_usable_size(const void *ptr)
     hdr = fs_mp_ptr_to_hdr((void *)ptr);
 
     return FS_MP_ORDER_SIZE(hdr->order) -
-           sizeof(fs_mp_hdr_t);
+           sizeof(fs_mp_hdr_t) -
+           hdr->block_offset;
 }
 
 /* ============================================================

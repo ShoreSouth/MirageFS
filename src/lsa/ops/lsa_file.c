@@ -71,6 +71,61 @@ lsa_ret_t lsa_read(
     return FS_OK;
 }
 
+lsa_ret_t lsa_read_full(
+                int fd,
+                void *buf,
+                size_t size,
+                size_t *actual)
+{
+    uint8_t *cursor;
+    size_t done;
+    ssize_t ret;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
+
+    if (buf == NULL) {
+        err = lsa_error(FS_OP_READ, EINVAL);
+        FS_LOG_DUMP_ERROR("read_full: invalid argument (buf is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    cursor = buf;
+    done = 0;
+
+    while (done < size) {
+        ret = read(fd,
+                   cursor + done,
+                   size - done);
+
+        if (ret < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+
+            err = lsa_error(FS_OP_READ, errno);
+            FS_LOG_DUMP_ERROR("read_full failed: fd=%d, done=%zu, "
+                              "size=%zu, err=%s (0x%x)",
+                              fd, done, size, fs_error_str(err), err);
+            return err;
+        }
+
+        if (ret == 0) {
+            break;
+        }
+
+        done += (size_t)ret;
+    }
+
+    if (actual != NULL) {
+        *actual = done;
+    }
+
+    FS_LOG_DUMP_INFO("exit: ok, bytes=%zu", done);
+    return FS_OK;
+}
+
 /* ============================================================
  * write
  * ============================================================
@@ -111,6 +166,65 @@ lsa_ret_t lsa_write(
     }
 
     FS_LOG_DUMP_INFO("exit: ok, bytes=%zd", ret);
+    return FS_OK;
+}
+
+lsa_ret_t lsa_write_full(
+                int fd,
+                const void *buf,
+                size_t size,
+                size_t *actual)
+{
+    const uint8_t *cursor;
+    size_t done;
+    ssize_t ret;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
+
+    if (buf == NULL) {
+        err = lsa_error(FS_OP_WRITE, EINVAL);
+        FS_LOG_DUMP_ERROR("write_full: invalid argument (buf is NULL), "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    cursor = buf;
+    done = 0;
+
+    while (done < size) {
+        ret = write(fd,
+                    cursor + done,
+                    size - done);
+
+        if (ret < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+
+            err = lsa_error(FS_OP_WRITE, errno);
+            FS_LOG_DUMP_ERROR("write_full failed: fd=%d, done=%zu, "
+                              "size=%zu, err=%s (0x%x)",
+                              fd, done, size, fs_error_str(err), err);
+            return err;
+        }
+
+        if (ret == 0) {
+            err = lsa_error(FS_OP_WRITE, EIO);
+            FS_LOG_DUMP_ERROR("write_full stopped without progress: "
+                              "fd=%d, done=%zu, size=%zu, err=%s (0x%x)",
+                              fd, done, size, fs_error_str(err), err);
+            return err;
+        }
+
+        done += (size_t)ret;
+    }
+
+    if (actual != NULL) {
+        *actual = done;
+    }
+
+    FS_LOG_DUMP_INFO("exit: ok, bytes=%zu", done);
     return FS_OK;
 }
 

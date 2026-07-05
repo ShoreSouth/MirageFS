@@ -33,6 +33,11 @@ bool fuid_is_valid(const fuid_t *fuid)
         goto out;
     }
 
+    if (!fuid_type_valid((fuid_type_t)fuid->type)) {
+        valid = false;
+        goto out;
+    }
+
     valid = true;
 
 out:
@@ -117,10 +122,10 @@ out:
     return h;
 }
 
-fuid_t fuid_build(Fsid_t fsid,
-                ObjectId_t objectid,
-                GenId_t gen,
-                fuid_type_t type)
+fuid_t fuid_make(Fsid_t fsid,
+                 ObjectId_t objectid,
+                 GenId_t gen,
+                 fuid_type_t type)
 {
     fuid_t fuid;
 
