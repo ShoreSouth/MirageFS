@@ -132,6 +132,18 @@ lsa_ret_t lsa_open_by_handle_at(
                 int *fd);
 
 /*
+ * 通过路径启动全局唯一的 FSC sysroot。
+ *
+ * 这是系统根锚点的窄边界例外，只应在启动阶段使用。
+ * 非 LSA 模块不应在此边界之外暴露 fd/path，调用方应保存并复用
+ * 返回的 file handle。
+ */
+lsa_ret_t lsa_bootstrap_root(
+                const char *path,
+                lsa_file_handle_t *handle,
+                int32_t *mount_id);
+
+/*
  * ============================================================
  * Namespace Operations
  * ============================================================

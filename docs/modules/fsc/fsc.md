@@ -306,3 +306,15 @@ FSC 是 MirageFS 文件系统控制平面的一级模块。
 * namespace acquire / release
 
 FSC 的核心原则是：控制面统一管理 filesystem identity，Object Layer 只保存并使用该身份，二者边界清晰。
+
+---
+
+# 10. Sysroot 启动根目录
+
+FSC 当前新增 sysroot 子模块，用于维护 MirageFS 全局唯一的项目系统根目录。
+
+sysroot 是所有 filesystem root 的父级目录。它本身不进入 objtable，也不进入 fstable，而是由 FSC 单独保存一份运行态资源。这样可以避免把系统级根资源混入普通对象表或文件系统根目录表。
+
+当前启动顺序中，fsc_sysroot_init 位于 fsid_init、nspool_init、fsmgr_init 之前。它是 LSA 之上的唯一路径启动例外：启动时可以使用默认路径 ./miragefs.root 创建目录并获取 handle；启动完成后，FSC 仍应回到 FUID 与 obj_handle_t 模型，不向上层暴露 fd/path。
+
+详细设计见：docs/modules/fsc/sysroot.md

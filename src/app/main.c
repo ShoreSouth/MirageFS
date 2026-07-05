@@ -13,6 +13,7 @@
 
 int main(void)
 {
+    fs_error_t err;
     printf("MirageFS Starting...\n");
 
     /*
@@ -40,8 +41,19 @@ int main(void)
      *   Object  — 对象模块（注册 + 子模块初始化）
      */
     lsa_init();
-    object_init();
-    fsc_init();
+
+    err = object_init();
+    if (fs_failed(err)) {
+        FS_TRACE_END();
+        return 1;
+    }
+
+    err = fsc_init();
+    if (fs_failed(err)) {
+        object_deinit();
+        FS_TRACE_END();
+        return 1;
+    }
 
     /*
      * 打印配置

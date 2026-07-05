@@ -1,5 +1,7 @@
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "lsa/internal/lsa_internal.h"
 #include "lsa/internal/lsa_error.h"
@@ -129,4 +131,43 @@ lsa_ret_t lsa_open_by_handle_at(
 
     FS_LOG_DUMP_INFO("exit: ok, fd=%d", newfd);
     return FS_OK;
+}
+
+/*
+ * ============================================================
+ * sysroot bootstrap
+ * ============================================================
+ *
+ * 仅供 FSC sysroot 启动使用：创建或复用根目录，并取得其 file handle。
+ */
+
+lsa_ret_t lsa_bootstrap_root(
+                const char *path,
+                lsa_file_handle_t *handle,
+                int32_t *mount_id)
+{
+    struct stat st;
+    lsa_ret_t err;
+
+    if ((path == NULL) ||
+        (handle == NULL) ||
+        (mount_id == NULL)) {
+        return lsa_error(FS_OP_GETHANDLE, EINVAL);
+    }
+
+    if ((mkdir(path, FS_MODE_DIR_DEFAULT & FS_PERM_MASK) < 0) &&
+        (errno != EEXIST)) {
+        return lsa_error(FS_OP_MKDIR, errno);
+    }
+
+    if (stat(path, &st) < 0) {
+        return lsa_error(FS_OP_GETATTR, errno);
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        return lsa_error(FS_OP_GETHANDLE, ENOTDIR);
+    }
+
+    err = lsa_name_to_handle_at(AT_FDCWD, path, handle, mount_id, 0);
+    return err;
 }

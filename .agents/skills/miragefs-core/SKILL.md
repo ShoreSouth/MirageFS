@@ -296,6 +296,48 @@ if (fs_failed(err)) {
 ```
 
 Never bridge `0`/`-1` to `fs_error_t` — if a called function already returns `fs_error_t`, propagate it directly. Wrapping with a new error code loses the original component attribution.
+### Resource Cleanup and `goto` Convention
+
+For functions that acquire multiple resources in stages, prefer one exit
+path and `goto` cleanup labels. Typical examples are module `init`,
+`create`, `open`, and any function that owns rollback responsibility.
+
+Rules:
+
+1. Keep one `fs_error_t err` and return it at the final `out:` label.
+2. On failure, jump to the label that releases already-acquired resources.
+3. Cleanup labels release resources in reverse acquisition order.
+4. Label names should describe the resource boundary, for example
+   `err_nspool`, `err_fsid`, `err_sysroot`, then `out`.
+5. Do not force this style onto tiny validation/query helpers that do not
+   acquire resources; early return is acceptable there.
+
+Preferred pattern:
+
+```c
+fs_error_t xxx_init(void)
+{
+    fs_error_t err;
+
+    err = first_init();
+    if (fs_failed(err)) {
+        goto out;
+    }
+
+    err = second_init();
+    if (fs_failed(err)) {
+        goto err_first;
+    }
+
+    goto out;
+
+err_first:
+    first_deinit();
+
+out:
+    return err;
+}
+```
 
 ---
 
