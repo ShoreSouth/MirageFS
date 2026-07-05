@@ -48,11 +48,20 @@ LSA 新增启动专用接口：
                     lsa_file_handle_t *handle,
                     int32_t *mount_id);
 
+    lsa_ret_t lsa_open_by_handle_id(
+                    int32_t mount_id,
+                    const lsa_file_handle_t *handle,
+                    int flags,
+                    int *fd);
+
+    lsa_ret_t lsa_release_mount(int32_t mount_id);
+
 该接口做三件事：
 
 1. 创建 sysroot 目录，若目录已存在则复用；
 2. 校验目标确实是目录；
-3. 通过 lsa_name_to_handle_at() 取得 lsa_file_handle_t 与 mount id。
+3. 通过 lsa_name_to_handle_at() 取得 lsa_file_handle_t 与 mount id；
+4. 打开并注册 mount fd，供后续 lsa_open_by_handle_id() 在 LSA 内部使用。
 
 这个接口只服务启动边界，不改变其他 LSA API 的 handle 优先原则。
 
@@ -79,7 +88,7 @@ FSC 当前初始化顺序为：
 后续重构 fsmgr_create 时，不建议在对外 args 中出现 dirfd 或路径字段。更合适的方向是：
 
 - 创建文件系统时由 FSC 内部取得 sysroot 的 obj_handle_t；
-- 通过 LSA 的 handle 打开能力获得必要的底层 fd；
+- 通过 LSA 的 `lsa_open_by_handle_id()` 获得临时底层 fd；
 - 在 sysroot 下创建文件系统根目录；
 - 为新文件系统根目录分配 FUID，并写入 fstable 映射；
 - 对外返回 FUID，后续业务通过 FUID 查询 meta/runtime/handle。

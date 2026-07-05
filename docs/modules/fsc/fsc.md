@@ -172,6 +172,8 @@ fsc_init()
     │
     ├── fs_sub_register(FS_MODULE_FSC, fsc_sub_name)
     │
+    ├── fsc_sysroot_init()
+    │
     ├── fsid_init()
     │
     ├── nspool_init()
@@ -186,7 +188,8 @@ fsc_deinit()
     │
     ├── fsmgr_deinit()
     ├── nspool_deinit()
-    └── fsid_deinit()
+    ├── fsid_deinit()
+    └── fsc_sysroot_deinit()
 ```
 
 这样可以保证：
@@ -210,7 +213,9 @@ fsmgr_lookup_fsid()
 
 fsmgr_destroy()
 
-fsmgr_get_root()
+fsmgr_get_root_fuid()
+
+fsmgr_get_root_handle()
 ```
 
 这条链路覆盖：
@@ -218,9 +223,12 @@ fsmgr_get_root()
 * FSID 分配
 * Namespace 分配
 * Namespace 初始化
+* sysroot 下真实根目录创建
+* 根目录 FUID 输出
 * FSTable 注册
 * lookup
 * destroy
+* 后端根目录删除
 * 内存回收
 
 Mount、Policy、rename 检查等属于后续增量功能。
@@ -235,6 +243,9 @@ Mount、Policy、rename 检查等属于后续增量功能。
 fsmgr_create()
     │
     ├── fsid_alloc()
+    ├── fuid_make(root)
+    ├── lsa_mkdir(sysroot/name)
+    ├── lsa_name_to_handle_at(sysroot/name)
     ├── nspool_alloc()
     ├── fsc_namespace_init()
     └── fstable_insert()
@@ -244,7 +255,8 @@ fsmgr_create()
 
 * `fsmgr` 管理 namespace 生命周期
 * `fstable` 只持有索引引用
-* 调用者拿到的是借用指针
+* `fsmgr_create()` 对外输出 root FUID
+* lookup 返回的 namespace 是借用指针
 * 调用者不得释放 `fsc_namespace_t`
 
 销毁时：
@@ -252,6 +264,7 @@ fsmgr_create()
 ```text
 fsmgr_destroy()
     │
+    ├── lsa_rmdir(sysroot/name)
     ├── fstable_remove()
     ├── fsid_free()
     └── nspool_free()

@@ -15,6 +15,60 @@ typedef struct lsa_linux_file_handle {
 
 } lsa_linux_file_handle_t;
 
+#define LSA_MOUNT_SLOT_NR 32U
+
+typedef struct lsa_mount_slot {
+
+    bool used;
+    int32_t mount_id;
+    int mount_fd;
+
+} lsa_mount_slot_t;
+
+static lsa_mount_slot_t g_lsa_mounts[LSA_MOUNT_SLOT_NR];
+
+static lsa_mount_slot_t *lsa_mount_find(int32_t mount_id)
+{
+    uint32_t i;
+
+    for (i = 0U; i < LSA_MOUNT_SLOT_NR; i++) {
+        if (g_lsa_mounts[i].used &&
+            (g_lsa_mounts[i].mount_id == mount_id)) {
+            return &g_lsa_mounts[i];
+        }
+    }
+
+    return NULL;
+}
+
+static lsa_ret_t lsa_mount_register(int32_t mount_id, int mount_fd)
+{
+    lsa_mount_slot_t *slot;
+    uint32_t i;
+
+    if (mount_fd < 0) {
+        return lsa_error(FS_OP_OPENHANDLE, EINVAL);
+    }
+
+    slot = lsa_mount_find(mount_id);
+    if (slot != NULL) {
+        (void)close(slot->mount_fd);
+        slot->mount_fd = mount_fd;
+        return FS_OK;
+    }
+
+    for (i = 0U; i < LSA_MOUNT_SLOT_NR; i++) {
+        if (!g_lsa_mounts[i].used) {
+            g_lsa_mounts[i].used = true;
+            g_lsa_mounts[i].mount_id = mount_id;
+            g_lsa_mounts[i].mount_fd = mount_fd;
+            return FS_OK;
+        }
+    }
+
+    return lsa_error(FS_OP_OPENHANDLE, ENOSPC);
+}
+
 /*
  * ============================================================
  * name_to_handle_at
@@ -133,6 +187,42 @@ lsa_ret_t lsa_open_by_handle_at(
     return FS_OK;
 }
 
+lsa_ret_t lsa_open_by_handle_id(
+                int32_t mount_id,
+                const lsa_file_handle_t *handle,
+                int flags,
+                int *fd)
+{
+    lsa_mount_slot_t *slot;
+
+    FS_LOG_DUMP_INFO("enter: mount_id=%d, flags=%d",
+                     mount_id, flags);
+
+    slot = lsa_mount_find(mount_id);
+    if (slot == NULL) {
+        FS_LOG_DUMP_ERROR("open_by_handle_id failed: mount not found, "
+                          "mount_id=%d", mount_id);
+        return lsa_error(FS_OP_OPENHANDLE, ENOENT);
+    }
+
+    return lsa_open_by_handle_at(slot->mount_fd, handle, flags, fd);
+}
+
+lsa_ret_t lsa_release_mount(
+                int32_t mount_id)
+{
+    lsa_mount_slot_t *slot;
+
+    slot = lsa_mount_find(mount_id);
+    if (slot == NULL) {
+        return FS_OK;
+    }
+
+    (void)close(slot->mount_fd);
+    memset(slot, 0, sizeof(*slot));
+
+    return FS_OK;
+}
 /*
  * ============================================================
  * sysroot bootstrap
@@ -148,6 +238,7 @@ lsa_ret_t lsa_bootstrap_root(
 {
     struct stat st;
     lsa_ret_t err;
+    int mount_fd;
 
     if ((path == NULL) ||
         (handle == NULL) ||
@@ -169,5 +260,20 @@ lsa_ret_t lsa_bootstrap_root(
     }
 
     err = lsa_name_to_handle_at(AT_FDCWD, path, handle, mount_id, 0);
-    return err;
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    mount_fd = open(path, O_PATH | O_DIRECTORY);
+    if (mount_fd < 0) {
+        return lsa_error(FS_OP_OPENHANDLE, errno);
+    }
+
+    err = lsa_mount_register(*mount_id, mount_fd);
+    if (fs_failed(err)) {
+        (void)close(mount_fd);
+        return err;
+    }
+
+    return FS_OK;
 }

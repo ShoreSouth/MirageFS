@@ -746,3 +746,26 @@ EOF 不视为错误，调用方通过 `actual` 判断实际读取字节数。
 目录迭代器 `lsa_dir_iter_open()` 中传入的 `dirfd` 为借用句柄，iterator
 不会接管 fd 所有权；`lsa_dir_iter_close()` 只释放 iterator 和内部缓冲区，
 调用方仍负责关闭 `dirfd`。
+
+## Handle Mount Registry
+
+FSC sysroot 启动后，LSA 会在内部保存 `mount_id -> mount_fd` 的注册关系。
+
+相关接口：
+
+```c
+lsa_ret_t lsa_open_by_handle_id(
+                int32_t mount_id,
+                const lsa_file_handle_t *handle,
+                int flags,
+                int *fd);
+
+lsa_ret_t lsa_release_mount(int32_t mount_id);
+```
+
+设计约束：
+
+- mount fd 只保存在 LSA 内部；
+- FSC 及其上层模块只传递 mount id + file handle；
+- 临时 fd 由调用方在 LSA 边界内打开，并在使用后关闭；
+- sysroot deinit 时调用 `lsa_release_mount()` 释放注册资源。

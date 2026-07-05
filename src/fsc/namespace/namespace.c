@@ -13,21 +13,23 @@ fs_error_t fsc_namespace_init(
                 fsc_namespace_t *ns,
                 fsc_fsid_t fsid,
                 const char *name,
-                const obj_handle_t *root)
+                const fuid_t *root_fuid,
+                const obj_handle_t *root_handle)
 {
     fs_error_t err;
     size_t len;
 
-    FS_LOG_DUMP_INFO("enter: ns=%p, fsid=%llu, name=%p, root=%p",
+    FS_LOG_DUMP_INFO("enter: ns=%p, fsid=%llu, name=%p",
                      (void *)ns,
                      (unsigned long long)fsid,
-                     (const void *)name,
-                     (const void *)root);
+                     (const void *)name);
 
-    if (ns == NULL) {
+    if ((ns == NULL) ||
+        (root_fuid == NULL) ||
+        (root_handle == NULL)) {
         err = fsc_error(FSC_SUB_NAMESPACE, FS_ERRNO_EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: ns is NULL, err=%s (0x%x)",
-                          fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("param check failed: null pointer, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
         return err;
     }
 
@@ -45,6 +47,13 @@ fs_error_t fsc_namespace_init(
         return err;
     }
 
+    if (!fuid_is_valid(root_fuid) || !fuid_is_dir(root_fuid)) {
+        err = fsc_error(FSC_SUB_NAMESPACE, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: invalid root fuid, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
     memset(ns, 0, sizeof(*ns));
 
     ns->fsid = fsid;
@@ -53,9 +62,8 @@ fs_error_t fsc_namespace_init(
     memcpy(ns->name, name, len);
     ns->name[len] = '\0';
 
-    if (root != NULL) {
-        memcpy(&ns->root, root, sizeof(ns->root));
-    }
+    ns->root_fuid = *root_fuid;
+    ns->root_handle = *root_handle;
 
     fs_atomic32_init(&ns->refcnt, 0);
     ns->state = FSC_NAMESPACE_STATE_INIT;
@@ -90,11 +98,11 @@ bool fsc_namespace_is_valid(
 {
     bool valid;
 
-    FS_LOG_DUMP_INFO("enter: ns=%p", (const void *)ns);
-
     valid = (ns != NULL) &&
             fsid_is_valid(ns->fsid) &&
             fsc_namespace_name_is_valid(ns->name) &&
+            fuid_is_valid(&ns->root_fuid) &&
+            fuid_is_dir(&ns->root_fuid) &&
             (fsc_namespace_state(ns) != FSC_NAMESPACE_STATE_INVALID);
 
     FS_LOG_DUMP_INFO("exit: %s", valid ? "true" : "false");
@@ -106,15 +114,13 @@ bool fsc_namespace_name_is_valid(
 {
     size_t len;
 
-    FS_LOG_DUMP_INFO("enter: name=%p", (const void *)name);
-
     if (name == NULL) {
         FS_LOG_DUMP_INFO("exit: false");
         return false;
     }
 
     len = strlen(name);
-    if ((len == 0) || (len >= FSC_NAMESPACE_NAME_MAX)) {
+    if ((len == 0U) || (len >= FSC_NAMESPACE_NAME_MAX)) {
         FS_LOG_DUMP_INFO("exit: false");
         return false;
     }
@@ -138,9 +144,6 @@ bool fsc_namespace_state_can_transit(
                 fsc_namespace_state_t to)
 {
     bool allowed;
-
-    FS_LOG_DUMP_INFO("enter: from=%u, to=%u",
-                     (unsigned int)from, (unsigned int)to);
 
     allowed = false;
 
@@ -167,9 +170,6 @@ fs_error_t fsc_namespace_change_state(
     fs_error_t err;
     fsc_namespace_state_t old_state;
 
-    FS_LOG_DUMP_INFO("enter: ns=%p, to=%u",
-                     (void *)ns, (unsigned int)state);
-
     if (ns == NULL) {
         err = fsc_error(FSC_SUB_NAMESPACE, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: ns is NULL, err=%s (0x%x)",
@@ -180,8 +180,8 @@ fs_error_t fsc_namespace_change_state(
     old_state = fsc_namespace_state(ns);
     if (!fsc_namespace_state_can_transit(old_state, state)) {
         err = fsc_error(FSC_SUB_NAMESPACE, FS_ERRNO_EINVAL);
-        FS_LOG_DUMP_ERROR("state change failed: invalid transit, "
-                          "from=%u, to=%u, err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("state change failed: from=%u, to=%u, "
+                          "err=%s (0x%x)",
                           (unsigned int)old_state,
                           (unsigned int)state,
                           fs_error_str(err), err);
@@ -209,10 +209,11 @@ void fsc_namespace_dump(
         return;
     }
 
-    FS_LOG_DUMP_INFO("namespace: fsid=%llu, name=%s, state=%u, refcnt=%d",
+    FS_LOG_DUMP_INFO("namespace: fsid=%llu, name=%s, root=%s, "
+                     "state=%u, refcnt=%d",
                      (unsigned long long)ns->fsid,
                      ns->name,
+                     fuid_to_str(&ns->root_fuid),
                      (unsigned int)fsc_namespace_state(ns),
                      fs_atomic32_load(&ns->refcnt));
-
 }

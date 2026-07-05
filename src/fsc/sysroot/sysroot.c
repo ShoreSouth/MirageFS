@@ -170,6 +170,7 @@ void fsc_sysroot_deinit(void)
 {
     if (g_sysroot.state == FSC_SYSROOT_STATE_ACTIVE) {
         g_sysroot.state = FSC_SYSROOT_STATE_DELETING;
+        (void)lsa_release_mount(g_sysroot.root_handle.mount_id);
     }
 
     if (g_sysroot.lock_inited) {

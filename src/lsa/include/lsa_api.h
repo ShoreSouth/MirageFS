@@ -132,6 +132,23 @@ lsa_ret_t lsa_open_by_handle_at(
                 int *fd);
 
 /*
+ * 通过 LSA 内部维护的 mount id 打开 file handle。
+ *
+ * 非 LSA 模块不应保存 mount fd。启动阶段由 lsa_bootstrap_root()
+ * 注册 mount id 与 mount fd 的映射，后续上层只携带 mount id + handle，
+ * 由本函数在 LSA 内部解析并临时打开对象。
+ */
+lsa_ret_t lsa_open_by_handle_id(
+                int32_t mount_id,
+                const lsa_file_handle_t *handle,
+                int flags,
+                int *fd);
+
+/* 释放 LSA 内部为指定 mount id 保存的 mount fd。 */
+lsa_ret_t lsa_release_mount(
+                int32_t mount_id);
+
+/*
  * 通过路径启动全局唯一的 FSC sysroot。
  *
  * 这是系统根锚点的窄边界例外，只应在启动阶段使用。

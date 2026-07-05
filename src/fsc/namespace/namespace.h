@@ -5,6 +5,7 @@
 
 #include "common/fs_common.h"
 #include "fsc/fsid/fsid.h"
+#include "object/fuid/fuid.h"
 #include "object/objmeta/objmeta.h"
 
 /*
@@ -13,8 +14,15 @@
  * ============================================================
  */
 
-#define FSC_NAMESPACE_NAME_MAX 64U /* Namespace 名称最大长度（含结尾 '\0'） */
-#define FSC_NAMESPACE_SIZE     128U /* fsc_namespace_t 固定大小，便于 pool 管理 */
+#define FSC_NAMESPACE_NAME_MAX 64U /* 名称最大长度，包含结尾 '\0' */
+#define FSC_NAMESPACE_SIZE     192U /* 固定大小，便于 pool 管理 */
+
+/*
+ * 文件系统根目录在本 filesystem 内部使用保留 object id。
+ * 当前阶段每个 filesystem 只有一个根对象，因此 gen 固定为 1。
+ */
+#define FSC_NAMESPACE_ROOT_OBJECT_ID ((ObjectId_t)1ULL)
+#define FSC_NAMESPACE_ROOT_GEN       ((GenId_t)1U)
 
 /*
  * ============================================================
@@ -22,29 +30,10 @@
  * ============================================================
  */
 
-/*
- * FSC Namespace 生命周期状态。
- *
- * Namespace 是 FSC 的运行时对象，代表一个 filesystem instance
- * 在 MirageFS 内部的控制平面入口。状态由 fsmgr 驱动：
- *
- *      INIT
- *        |
- *        v
- *      ACTIVE
- *        |
- *        v
- *      DELETING
- *        |
- *        v
- *      nspool_free()
- *
- * INVALID 仅作为查询失败 / 未初始化的哨兵值，不应存入有效对象。
- */
 typedef enum fsc_namespace_state {
 
     FSC_NAMESPACE_STATE_INVALID = 0, /* 无效或不存在 */
-    FSC_NAMESPACE_STATE_INIT,        /* 已分配并初始化，尚未对外可见 */
+    FSC_NAMESPACE_STATE_INIT,        /* 已初始化，尚未对外可见 */
     FSC_NAMESPACE_STATE_ACTIVE,      /* 已注册到 fstable，可被 lookup */
     FSC_NAMESPACE_STATE_DELETING,    /* 正在销毁，阻止新的外部使用 */
 
@@ -59,30 +48,31 @@ typedef enum fsc_namespace_state {
 /*
  * fsc_namespace_t
  *
- * FSC 的 Namespace Runtime Object。
+ * FSC 的 Namespace Runtime Object，描述一个 filesystem instance 的
+ * 控制面状态。
  *
- * 它描述一个 filesystem instance 在控制平面的运行时状态：
+ *   fsid        : 文件系统身份，由 FSID 分配器生成。
+ *   name        : namespace 名称，也是 sysroot 下的根目录名。
+ *   root_fuid   : 文件系统根目录对象的 FUID，对外查询优先使用它。
+ *   root_handle : 根目录后端 handle，仅作为内部/对象层定位信息保存。
+ *   refcnt      : 预留给后续 acquire/release 模型。
+ *   state       : 生命周期状态，见 fsc_namespace_state_t。
  *
- *   fsid    : 文件系统身份。FSC 分配，Object/FUID 继承该身份。
- *   name    : namespace 名称，用于 fstable 的 name 索引。
- *   root    : root object 的后端 handle。当前阶段仅保存，不解释语义。
- *   refcnt  : 预留给后续 acquire/release 模型，当前 create/destroy 链路要求为 0。
- *   state   : 生命周期状态，见 fsc_namespace_state_t。
- *
- * 所有 fsc_namespace_t 实例必须由 nspool_alloc() 分配，
- * 由 nspool_free() 释放；fstable 只持有索引引用，不拥有对象内存。
+ * 注意：结构体不保存 fd/path。需要访问后端时，调用方应通过 FUID
+ * 找到元数据，再由 LSA 在边界内打开临时 fd。
  */
 typedef struct fsc_namespace {
 
-    fsc_fsid_t      fsid; /* 文件系统身份 */
-    char            name[FSC_NAMESPACE_NAME_MAX]; /* namespace 名称 */
+    fsc_fsid_t      fsid;
+    char            name[FSC_NAMESPACE_NAME_MAX];
 
-    obj_handle_t    root; /* root object 的 backend handle */
+    fuid_t          root_fuid;
+    obj_handle_t    root_handle;
 
-    fs_atomic32_t   refcnt; /* 引用计数，后续 acquire/release 使用 */
-    uint32_t        state;  /* fsc_namespace_state_t */
+    fs_atomic32_t   refcnt;
+    uint32_t        state;
 
-    uint8_t         reserved[24]; /* 预留字段，保持结构体大小稳定 */
+    uint8_t         reserved[24];
 
 } fsc_namespace_t;
 
@@ -98,31 +88,17 @@ _Static_assert(sizeof(fsc_namespace_t) == FSC_NAMESPACE_SIZE,
 /*
  * 初始化 Namespace Runtime Object。
  *
- * 本函数只填充对象字段，不把对象注册进 fstable。
- * 对外可见性由 fsmgr 在 fstable_insert() 成功后切换为 ACTIVE。
- *
- * 参数：
- *      [OUT] ns       : 目标 namespace，由 nspool_alloc() 分配
- *      [IN]  fsid     : FSC 分配的 filesystem id
- *      [IN]  name     : namespace 名称，长度必须小于 FSC_NAMESPACE_NAME_MAX
- *      [IN]  root     : root object backend handle，可为 NULL
- *
- * 返回：
- *      FS_OK          : 成功
- *      fs_error_t     : 参数非法等失败
+ * 本函数只填充对象字段，不注册到 fstable，也不创建后端目录。
+ * 后端目录创建由 fsmgr_create() 在调用本函数前完成。
  */
 fs_error_t fsc_namespace_init(
                 fsc_namespace_t *ns,
                 fsc_fsid_t fsid,
                 const char *name,
-                const obj_handle_t *root);
+                const fuid_t *root_fuid,
+                const obj_handle_t *root_handle);
 
-/*
- * 重置 Namespace Runtime Object。
- *
- * 参数：
- *      [OUT] ns       : 目标 namespace，内容将被清零
- */
+/* 清空 Namespace Runtime Object。 */
 void fsc_namespace_deinit(
                 fsc_namespace_t *ns);
 
@@ -132,58 +108,19 @@ void fsc_namespace_deinit(
  * ============================================================
  */
 
-/*
- * 判断 namespace 是否是有效运行时对象。
- *
- * 参数：
- *      [IN] ns        : 待检查 namespace
- */
 bool fsc_namespace_is_valid(
                 const fsc_namespace_t *ns);
 
-/*
- * 判断 namespace 名称是否合法。
- *
- * 参数：
- *      [IN] name      : 待检查名称
- */
 bool fsc_namespace_name_is_valid(
                 const char *name);
 
-/*
- * 读取 namespace 生命周期状态。
- *
- * 参数：
- *      [IN] ns        : 目标 namespace
- */
 fsc_namespace_state_t fsc_namespace_state(
                 const fsc_namespace_t *ns);
 
-/*
- * 判断 namespace 生命周期状态是否允许迁移。
- *
- * 当前仅允许：
- *      INIT   -> ACTIVE
- *      ACTIVE -> DELETING
- *
- * 参数：
- *      [IN] from      : 当前状态
- *      [IN] to        : 目标状态
- */
 bool fsc_namespace_state_can_transit(
                 fsc_namespace_state_t from,
                 fsc_namespace_state_t to);
 
-/*
- * 切换 namespace 生命周期状态。
- *
- * 这是 namespace 状态修改的唯一公共入口。
- * 调用方应通过本函数推进状态机，避免直接改写 ns->state。
- *
- * 参数：
- *      [IN/OUT] ns    : 目标 namespace
- *      [IN]     state : 新状态
- */
 fs_error_t fsc_namespace_change_state(
                 fsc_namespace_t *ns,
                 fsc_namespace_state_t state);
@@ -194,11 +131,6 @@ fs_error_t fsc_namespace_change_state(
  * ============================================================
  */
 
-/*
- * 打印 namespace 的完整运行时状态。
- *
- * 参数：
- *      [IN] ns        : 待打印 namespace
- */
+/* 单行打印 namespace 快照，避免 dump 路径刷屏。 */
 void fsc_namespace_dump(
                 const fsc_namespace_t *ns);

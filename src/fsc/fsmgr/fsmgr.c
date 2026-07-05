@@ -1,8 +1,15 @@
 #include "fsc/fsmgr/fsmgr.h"
+
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+
 #include "fsc/fsc_error.h"
 #include "fsc/fsmgr/fsmgr_internal.h"
 #include "fsc/fstable/fstable.h"
 #include "fsc/nspool/nspool.h"
+#include "fsc/sysroot/sysroot.h"
+#include "lsa/include/lsa_api.h"
 
 /*
  * ============================================================
@@ -27,6 +34,156 @@ static void fsmgr_reclaim_namespace(
     }
 }
 
+static fs_error_t fsmgr_lsa_handle_from_obj(
+                lsa_file_handle_t *out,
+                const obj_handle_t *handle)
+{
+    if ((out == NULL) || (handle == NULL)) {
+        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EINVAL);
+    }
+
+    if (LSA_HANDLE_MAX_SIZE < handle->len) {
+        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EOVERFLOW);
+    }
+
+    memset(out, 0, sizeof(*out));
+
+    out->handle_bytes = handle->len;
+    out->handle_type = (int32_t)handle->type;
+    memcpy(out->data, handle->data, handle->len);
+
+    return FS_OK;
+}
+
+static fs_error_t fsmgr_obj_handle_from_lsa(
+                obj_handle_t *out,
+                const lsa_file_handle_t *handle,
+                int32_t mount_id)
+{
+    if ((out == NULL) || (handle == NULL)) {
+        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EINVAL);
+    }
+
+    if (OBJMETA_MAX_HANDLE_SIZE < handle->handle_bytes) {
+        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EOVERFLOW);
+    }
+
+    if ((handle->handle_type < 0) ||
+        (UINT16_MAX < (uint32_t)handle->handle_type)) {
+        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EOVERFLOW);
+    }
+
+    memset(out, 0, sizeof(*out));
+
+    out->mount_id = mount_id;
+    out->type = (uint16_t)handle->handle_type;
+    out->len = (uint16_t)handle->handle_bytes;
+    memcpy(out->data, handle->data, handle->handle_bytes);
+
+    return FS_OK;
+}
+
+static fs_error_t fsmgr_open_sysroot(
+                int *fd_out)
+{
+    fs_error_t err;
+    obj_handle_t root_handle;
+    lsa_file_handle_t lsa_handle;
+
+    if (fd_out == NULL) {
+        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EINVAL);
+    }
+
+    err = fsc_sysroot_get_handle(&root_handle);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    err = fsmgr_lsa_handle_from_obj(&lsa_handle, &root_handle);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    return lsa_open_by_handle_id(root_handle.mount_id,
+                                 &lsa_handle,
+                                 O_PATH | O_DIRECTORY,
+                                 fd_out);
+}
+
+static fs_error_t fsmgr_create_root_dir(
+                const char *name,
+                obj_handle_t *handle_out)
+{
+    fs_error_t err;
+    lsa_file_handle_t lsa_handle;
+    int32_t mount_id;
+    int sysroot_fd;
+
+    sysroot_fd = -1;
+
+    err = fsmgr_open_sysroot(&sysroot_fd);
+    if (fs_failed(err)) {
+        goto out;
+    }
+
+    err = lsa_mkdir(sysroot_fd,
+                    name,
+                    FS_FLAG_NONE,
+                    FS_MODE_DIR_DEFAULT & FS_PERM_MASK);
+    if (fs_failed(err)) {
+        goto out;
+    }
+
+    memset(&lsa_handle, 0, sizeof(lsa_handle));
+    mount_id = 0;
+
+    err = lsa_name_to_handle_at(sysroot_fd,
+                                name,
+                                &lsa_handle,
+                                &mount_id,
+                                0);
+    if (fs_failed(err)) {
+        (void)lsa_rmdir(sysroot_fd, name, FS_FLAG_NONE);
+        goto out;
+    }
+
+    err = fsmgr_obj_handle_from_lsa(handle_out, &lsa_handle, mount_id);
+    if (fs_failed(err)) {
+        (void)lsa_rmdir(sysroot_fd, name, FS_FLAG_NONE);
+        goto out;
+    }
+
+out:
+    if (sysroot_fd >= 0) {
+        (void)lsa_close(sysroot_fd);
+    }
+
+    return err;
+}
+
+static fs_error_t fsmgr_remove_root_dir(
+                const char *name)
+{
+    fs_error_t err;
+    int sysroot_fd;
+
+    sysroot_fd = -1;
+
+    err = fsmgr_open_sysroot(&sysroot_fd);
+    if (fs_failed(err)) {
+        goto out;
+    }
+
+    err = lsa_rmdir(sysroot_fd, name, FS_FLAG_NONE);
+
+out:
+    if (sysroot_fd >= 0) {
+        (void)lsa_close(sysroot_fd);
+    }
+
+    return err;
+}
+
 /*
  * ============================================================
  * lifecycle
@@ -43,21 +200,26 @@ fs_error_t fsmgr_init(void)
     if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("fstable_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
-        return err;
+        goto out;
     }
 
     err = fs_mutex_init(&g_fsmgr.lock, "fsmgr", 0);
     if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("fs_mutex_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
-        fstable_deinit(&g_fsmgr.table, NULL);
-        return err;
+        goto err_table;
     }
 
     fs_atomic32_init(&g_fsmgr.namespace_count, 0);
 
     FS_LOG_DUMP_INFO("exit: ok");
-    return FS_OK;
+    goto out;
+
+err_table:
+    fstable_deinit(&g_fsmgr.table, NULL);
+
+out:
+    return err;
 }
 
 void fsmgr_deinit(void)
@@ -77,90 +239,121 @@ void fsmgr_deinit(void)
  * ============================================================
  */
 
-fsc_namespace_t *fsmgr_create(
+fs_error_t fsmgr_create(
                 const char *name,
-                const obj_handle_t *root)
+                fuid_t *root_out)
 {
     fs_error_t err;
     fsc_fsid_t fsid;
+    fuid_t root_fuid;
+    obj_handle_t root_handle;
     fsc_namespace_t *ns;
+    bool dir_created;
 
-    FS_LOG_DUMP_INFO("enter: name=%p, root=%p",
-                     (const void *)name, (const void *)root);
+    fsid = FSID_INVALID;
+    ns = NULL;
+    dir_created = false;
 
-    if (!fsc_namespace_name_is_valid(name)) {
+    if (root_out != NULL) {
+        fuid_set_invalid(root_out);
+    }
+
+    if ((root_out == NULL) || !fsc_namespace_name_is_valid(name)) {
         err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: invalid name, err=%s (0x%x)",
-                          fs_error_str(err), err);
-        return NULL;
+        FS_LOG_DUMP_ERROR("param check failed: invalid create args, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        goto out;
     }
 
     fs_mutex_lock(&g_fsmgr.lock);
 
     if (fstable_exists_name(&g_fsmgr.table, name)) {
-        fs_mutex_unlock(&g_fsmgr.lock);
         err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_EEXIST);
-        FS_LOG_DUMP_ERROR("create failed: namespace already exists, "
-                          "name=%s, err=%s (0x%x)",
-                          name, fs_error_str(err), err);
-        return NULL;
+        FS_LOG_DUMP_ERROR("create failed: namespace exists, name=%s, "
+                          "err=%s (0x%x)", name, fs_error_str(err), err);
+        goto unlock;
     }
 
     err = fsid_alloc(&fsid);
     if (fs_failed(err)) {
-        fs_mutex_unlock(&g_fsmgr.lock);
         FS_LOG_DUMP_ERROR("fsid_alloc failed, err=%s (0x%x)",
                           fs_error_str(err), err);
-        return NULL;
+        goto unlock;
     }
+
+    root_fuid = fuid_make(fsid,
+                          FSC_NAMESPACE_ROOT_OBJECT_ID,
+                          FSC_NAMESPACE_ROOT_GEN,
+                          FUID_TYPE_DIR);
+
+    err = fsmgr_create_root_dir(name, &root_handle);
+    if (fs_failed(err)) {
+        FS_LOG_DUMP_ERROR("create root dir failed: name=%s, err=%s (0x%x)",
+                          name, fs_error_str(err), err);
+        goto unlock;
+    }
+    dir_created = true;
 
     ns = nspool_alloc();
     if (ns == NULL) {
-        fs_mutex_unlock(&g_fsmgr.lock);
-        (void)fsid_free(fsid);
-        FS_LOG_DUMP_ERROR("nspool_alloc failed");
-        return NULL;
+        err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_ENOMEM);
+        FS_LOG_DUMP_ERROR("nspool_alloc failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        goto unlock;
     }
 
-    err = fsc_namespace_init(ns, fsid, name, root);
+    err = fsc_namespace_init(ns,
+                             fsid,
+                             name,
+                             &root_fuid,
+                             &root_handle);
     if (fs_failed(err)) {
-        fs_mutex_unlock(&g_fsmgr.lock);
-        nspool_free(ns);
-        (void)fsid_free(fsid);
         FS_LOG_DUMP_ERROR("fsc_namespace_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
-        return NULL;
+        goto unlock;
     }
 
     err = fstable_insert(&g_fsmgr.table, ns);
     if (fs_failed(err)) {
-        fs_mutex_unlock(&g_fsmgr.lock);
-        nspool_free(ns);
-        (void)fsid_free(fsid);
         FS_LOG_DUMP_ERROR("fstable_insert failed, err=%s (0x%x)",
                           fs_error_str(err), err);
-        return NULL;
+        goto unlock;
     }
 
     err = fsc_namespace_change_state(ns, FSC_NAMESPACE_STATE_ACTIVE);
     if (fs_failed(err)) {
         (void)fstable_remove(&g_fsmgr.table, fsid, NULL);
-        fs_mutex_unlock(&g_fsmgr.lock);
-        nspool_free(ns);
-        (void)fsid_free(fsid);
         FS_LOG_DUMP_ERROR("fsc_namespace_change_state failed, "
-                          "err=%s (0x%x)",
-                          fs_error_str(err), err);
-        return NULL;
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        goto unlock;
     }
 
     fs_atomic32_inc(&g_fsmgr.namespace_count);
+    *root_out = root_fuid;
+    ns = NULL;
+    fsid = FSID_INVALID;
+    dir_created = false;
+
+unlock:
+    if (fs_failed(err)) {
+        if (ns != NULL) {
+            nspool_free(ns);
+        }
+
+        if (dir_created) {
+            (void)fsmgr_remove_root_dir(name);
+        }
+
+        if (fsid != FSID_INVALID) {
+            (void)fsid_free(fsid);
+        }
+    }
 
     fs_mutex_unlock(&g_fsmgr.lock);
 
-    FS_LOG_DUMP_INFO("exit: ns=%p, fsid=%llu",
-                     (void *)ns, (unsigned long long)fsid);
-    return ns;
+out:
+    FS_LOG_DUMP_INFO("exit: err=%s (0x%x)", fs_error_str(err), err);
+    return err;
 }
 
 fs_error_t fsmgr_destroy(
@@ -169,58 +362,57 @@ fs_error_t fsmgr_destroy(
     fs_error_t err;
     fsc_namespace_t *ns;
 
-    FS_LOG_DUMP_INFO("enter: fsid=%llu",
-                     (unsigned long long)fsid);
-
     fs_mutex_lock(&g_fsmgr.lock);
 
     ns = fstable_lookup_fsid(&g_fsmgr.table, fsid);
     if (ns == NULL) {
-        fs_mutex_unlock(&g_fsmgr.lock);
         err = fsc_error(FSC_SUB_DESTROY, FS_ERRNO_ENOENT);
-        FS_LOG_DUMP_ERROR("destroy failed: namespace not found, "
-                          "fsid=%llu, err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("destroy failed: namespace not found, fsid=%llu, "
+                          "err=%s (0x%x)",
                           (unsigned long long)fsid,
                           fs_error_str(err), err);
-        return err;
+        goto unlock;
     }
 
     if (fs_atomic32_load(&ns->refcnt) != 0) {
-        fs_mutex_unlock(&g_fsmgr.lock);
         err = fsc_error(FSC_SUB_DESTROY, FS_ERRNO_EBUSY);
-        FS_LOG_DUMP_ERROR("destroy failed: namespace is busy, "
-                          "fsid=%llu, err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("destroy failed: namespace busy, fsid=%llu, "
+                          "err=%s (0x%x)",
                           (unsigned long long)fsid,
                           fs_error_str(err), err);
-        return err;
+        goto unlock;
+    }
+
+    err = fsmgr_remove_root_dir(ns->name);
+    if (fs_failed(err)) {
+        FS_LOG_DUMP_ERROR("remove root dir failed: name=%s, err=%s (0x%x)",
+                          ns->name, fs_error_str(err), err);
+        goto unlock;
     }
 
     err = fsc_namespace_change_state(ns, FSC_NAMESPACE_STATE_DELETING);
     if (fs_failed(err)) {
-        fs_mutex_unlock(&g_fsmgr.lock);
         FS_LOG_DUMP_ERROR("fsc_namespace_change_state failed, "
-                          "err=%s (0x%x)",
-                          fs_error_str(err), err);
-        return err;
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        goto unlock;
     }
 
     err = fstable_remove(&g_fsmgr.table, fsid, &ns);
     if (fs_failed(err)) {
-        fs_mutex_unlock(&g_fsmgr.lock);
         FS_LOG_DUMP_ERROR("fstable_remove failed, err=%s (0x%x)",
                           fs_error_str(err), err);
-        return err;
+        goto unlock;
     }
 
     fs_atomic32_dec(&g_fsmgr.namespace_count);
-
-    fs_mutex_unlock(&g_fsmgr.lock);
-
     (void)fsid_free(fsid);
     nspool_free(ns);
 
-    FS_LOG_DUMP_INFO("exit: ok");
-    return FS_OK;
+unlock:
+    fs_mutex_unlock(&g_fsmgr.lock);
+
+    FS_LOG_DUMP_INFO("exit: err=%s (0x%x)", fs_error_str(err), err);
+    return err;
 }
 
 /*
@@ -233,8 +425,6 @@ fsc_namespace_t *fsmgr_lookup(
                 const char *name)
 {
     fsc_namespace_t *ns;
-
-    FS_LOG_DUMP_INFO("enter: name=%p", (const void *)name);
 
     fs_mutex_lock(&g_fsmgr.lock);
 
@@ -254,9 +444,6 @@ fsc_namespace_t *fsmgr_lookup_fsid(
                 fsc_fsid_t fsid)
 {
     fsc_namespace_t *ns;
-
-    FS_LOG_DUMP_INFO("enter: fsid=%llu",
-                     (unsigned long long)fsid);
 
     fs_mutex_lock(&g_fsmgr.lock);
 
@@ -283,22 +470,64 @@ bool fsmgr_exists(
     return exists;
 }
 
-const obj_handle_t *fsmgr_get_root(
-                fsc_fsid_t fsid)
+fs_error_t fsmgr_get_root_fuid(
+                fsc_fsid_t fsid,
+                fuid_t *root_out)
 {
+    fs_error_t err;
     fsc_namespace_t *ns;
 
-    FS_LOG_DUMP_INFO("enter: fsid=%llu",
-                     (unsigned long long)fsid);
-
-    ns = fsmgr_lookup_fsid(fsid);
-    if (ns == NULL) {
-        FS_LOG_DUMP_INFO("exit: not found");
-        return NULL;
+    if (root_out == NULL) {
+        return fsc_error(FSC_SUB_LOOKUP, FS_ERRNO_EINVAL);
     }
 
-    FS_LOG_DUMP_INFO("exit: root=%p", (const void *)&ns->root);
-    return &ns->root;
+    fuid_set_invalid(root_out);
+    err = FS_OK;
+
+    fs_mutex_lock(&g_fsmgr.lock);
+
+    ns = fstable_lookup_fsid(&g_fsmgr.table, fsid);
+    if ((ns == NULL) ||
+        (fsc_namespace_state(ns) != FSC_NAMESPACE_STATE_ACTIVE)) {
+        err = fsc_error(FSC_SUB_LOOKUP, FS_ERRNO_ENOENT);
+        goto unlock;
+    }
+
+    *root_out = ns->root_fuid;
+
+unlock:
+    fs_mutex_unlock(&g_fsmgr.lock);
+    return err;
+}
+
+fs_error_t fsmgr_get_root_handle(
+                fsc_fsid_t fsid,
+                obj_handle_t *handle_out)
+{
+    fs_error_t err;
+    fsc_namespace_t *ns;
+
+    if (handle_out == NULL) {
+        return fsc_error(FSC_SUB_LOOKUP, FS_ERRNO_EINVAL);
+    }
+
+    memset(handle_out, 0, sizeof(*handle_out));
+    err = FS_OK;
+
+    fs_mutex_lock(&g_fsmgr.lock);
+
+    ns = fstable_lookup_fsid(&g_fsmgr.table, fsid);
+    if ((ns == NULL) ||
+        (fsc_namespace_state(ns) != FSC_NAMESPACE_STATE_ACTIVE)) {
+        err = fsc_error(FSC_SUB_LOOKUP, FS_ERRNO_ENOENT);
+        goto unlock;
+    }
+
+    *handle_out = ns->root_handle;
+
+unlock:
+    fs_mutex_unlock(&g_fsmgr.lock);
+    return err;
 }
 
 /*
