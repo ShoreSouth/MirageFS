@@ -161,11 +161,12 @@ sysroot 是项目系统根目录，位于所有 filesystem root 之上。
 FSMgr 创建文件系统时，不接收外部 dirfd，而是：
 
 1. 从 sysroot 子模块获取 sysroot 的 `obj_handle_t`；
-2. 将其转换为 LSA file handle；
+2. 通过 `objmeta_handle_to_lsa()` 转换为 LSA file handle；
 3. 调用 `lsa_open_by_handle_id()` 获取临时目录 fd；
 4. 在该 fd 下调用 `lsa_mkdir()` 创建 filesystem root；
 5. 调用 `lsa_name_to_handle_at()` 获取新根目录 handle；
-6. 关闭临时 fd。
+6. 通过 `objmeta_handle_from_lsa()` 转回 `obj_handle_t`；
+7. 关闭临时 fd。
 
 mount fd 由 LSA 内部注册表保存，FSC 只持有 mount id + handle。
 

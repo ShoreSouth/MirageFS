@@ -167,6 +167,32 @@ ObjMeta 不负责：
 - 权限管理
 
 
+
+---
+
+## LSA / OBJECT Handle 转换
+
+`lsa_file_handle_t` 和 `obj_handle_t` 字段接近，但语义层级不同：
+
+- `lsa_file_handle_t` 是 LSA 对 Linux `file_handle` 的直接封装；
+- `obj_handle_t` 是 Object 层保存的 backend locator，额外携带 `mount_id`。
+
+因此二者不合并为一个结构体，而是在 ObjMeta 子模块收敛转换函数：
+
+```c
+fs_error_t objmeta_handle_from_lsa(
+                obj_handle_t *out,
+                const lsa_file_handle_t *handle,
+                int32_t mount_id);
+
+fs_error_t objmeta_handle_to_lsa(
+                lsa_file_handle_t *out,
+                const obj_handle_t *handle);
+```
+
+这样 FSC、VFS 等业务模块不需要重复手写字段拷贝和长度检查，也不会把
+LSA 的 fd/path 语义扩散到上层。
+
 ---
 
 ## 4. obj_handle_t — Linux Backend Handle

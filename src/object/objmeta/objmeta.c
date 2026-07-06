@@ -26,6 +26,89 @@ static bool objmeta_handle_valid(
  * 对外接口
  * ============================================================ */
 
+fs_error_t objmeta_handle_from_lsa(
+                obj_handle_t *out,
+                const lsa_file_handle_t *handle,
+                int32_t mount_id)
+{
+    fs_error_t err;
+
+    if ((out == NULL) || (handle == NULL)) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: null pointer, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    if (OBJMETA_MAX_HANDLE_SIZE < handle->handle_bytes) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EOVERFLOW);
+        FS_LOG_DUMP_ERROR("handle convert failed: too large, "
+                          "bytes=%u, err=%s (0x%x)",
+                          handle->handle_bytes,
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    if ((handle->handle_type < 0) ||
+        (UINT16_MAX < (uint32_t)handle->handle_type)) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EOVERFLOW);
+        FS_LOG_DUMP_ERROR("handle convert failed: invalid type=%d, "
+                          "err=%s (0x%x)",
+                          handle->handle_type,
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    memset(out, 0, sizeof(*out));
+
+    out->mount_id = mount_id;
+    out->type = (uint16_t)handle->handle_type;
+    out->len = (uint16_t)handle->handle_bytes;
+    memcpy(out->data, handle->data, handle->handle_bytes);
+
+    return FS_OK;
+}
+
+fs_error_t objmeta_handle_to_lsa(
+                lsa_file_handle_t *out,
+                const obj_handle_t *handle)
+{
+    fs_error_t err;
+
+    if ((out == NULL) || (handle == NULL)) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: null pointer, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    if (!objmeta_handle_valid(handle->len)) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
+        FS_LOG_DUMP_ERROR("handle convert failed: invalid len=%u, "
+                          "err=%s (0x%x)",
+                          (unsigned int)handle->len,
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    if (LSA_HANDLE_MAX_SIZE < handle->len) {
+        err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EOVERFLOW);
+        FS_LOG_DUMP_ERROR("handle convert failed: lsa overflow, "
+                          "len=%u, err=%s (0x%x)",
+                          (unsigned int)handle->len,
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    memset(out, 0, sizeof(*out));
+
+    out->handle_bytes = handle->len;
+    out->handle_type = (int32_t)handle->type;
+    memcpy(out->data, handle->data, handle->len);
+
+    return FS_OK;
+}
+
 fs_error_t objmeta_init(
                 obj_meta_t *meta,
                 const fuid_t *fuid,

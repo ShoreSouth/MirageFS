@@ -3,6 +3,33 @@
 #include "fsc/namespace/namespace.h"
 #include "fsc/fsc_error.h"
 
+static bool fsc_namespace_root_fuid_is_valid(
+                fsc_fsid_t fsid,
+                const fuid_t *root_fuid)
+{
+    if (root_fuid == NULL) {
+        return false;
+    }
+
+    if (!fuid_is_valid(root_fuid) || !fuid_is_dir(root_fuid)) {
+        return false;
+    }
+
+    if (root_fuid->fsid != fsid) {
+        return false;
+    }
+
+    if (root_fuid->objectid != FSC_NAMESPACE_ROOT_OBJECT_ID) {
+        return false;
+    }
+
+    if (root_fuid->gen != FSC_NAMESPACE_ROOT_GEN) {
+        return false;
+    }
+
+    return true;
+}
+
 /*
  * ============================================================
  * lifecycle
@@ -47,7 +74,7 @@ fs_error_t fsc_namespace_init(
         return err;
     }
 
-    if (!fuid_is_valid(root_fuid) || !fuid_is_dir(root_fuid)) {
+    if (!fsc_namespace_root_fuid_is_valid(fsid, root_fuid)) {
         err = fsc_error(FSC_SUB_NAMESPACE, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: invalid root fuid, "
                           "err=%s (0x%x)", fs_error_str(err), err);
@@ -101,8 +128,8 @@ bool fsc_namespace_is_valid(
     valid = (ns != NULL) &&
             fsid_is_valid(ns->fsid) &&
             fsc_namespace_name_is_valid(ns->name) &&
-            fuid_is_valid(&ns->root_fuid) &&
-            fuid_is_dir(&ns->root_fuid) &&
+            fsc_namespace_root_fuid_is_valid(ns->fsid,
+                                             &ns->root_fuid) &&
             (fsc_namespace_state(ns) != FSC_NAMESPACE_STATE_INVALID);
 
     FS_LOG_DUMP_INFO("exit: %s", valid ? "true" : "false");

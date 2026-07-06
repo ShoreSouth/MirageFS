@@ -92,6 +92,22 @@ FSID 来自 `fsid_alloc()`。因此根目录 FUID 形如：
 
 后续普通对象的 object id 分配不应复用这个保留值。
 
+`fsc_namespace_t` 同时保存 `fsid` 和 `root_fuid`，这是刻意保留的
+语义冗余：
+
+- `fsid` 是 namespace 控制面的主索引；
+- `root_fuid` 是根目录对象的完整身份，未来可承载 qtree、snapshot、
+  shard 等视图信息。
+
+初始化和有效性检查必须保证：
+
+```text
+ns->fsid == ns->root_fuid.fsid
+ns->root_fuid.type == FUID_TYPE_DIR
+ns->root_fuid.objectid == FSC_NAMESPACE_ROOT_OBJECT_ID
+ns->root_fuid.gen == FSC_NAMESPACE_ROOT_GEN
+```
+
 ## 5. 生命周期状态
 
 当前状态：

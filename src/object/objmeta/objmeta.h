@@ -29,6 +29,7 @@
 #include "common/fs_common.h"
 #include "object/fuid/fuid.h"
 #include "object/objkey/objkey.h"
+#include "lsa/include/lsa_api.h"
 
 /* ============================================================
  * 常量定义
@@ -131,6 +132,27 @@ _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
 fs_error_t objmeta_init(
                 obj_meta_t *meta,
                 const fuid_t *fuid,
+                const obj_handle_t *handle);
+
+/*
+ * 将 LSA 返回的 file handle 转换为 OBJECT 层通用 backend handle。
+ *
+ * 该函数收敛 LSA/OBJECT 边界转换，避免 FSC、VFS 等业务模块重复
+ * 手写字段拷贝和长度检查。
+ */
+fs_error_t objmeta_handle_from_lsa(
+                obj_handle_t *out,
+                const lsa_file_handle_t *handle,
+                int32_t mount_id);
+
+/*
+ * 将 OBJECT 层 backend handle 转回 LSA file handle。
+ *
+ * 调用方仍需要单独传递 handle->mount_id，因为 LSA 的 file handle
+ * 本身不包含 mount id。
+ */
+fs_error_t objmeta_handle_to_lsa(
+                lsa_file_handle_t *out,
                 const obj_handle_t *handle);
 
 /*

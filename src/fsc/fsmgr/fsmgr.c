@@ -34,55 +34,6 @@ static void fsmgr_reclaim_namespace(
     }
 }
 
-static fs_error_t fsmgr_lsa_handle_from_obj(
-                lsa_file_handle_t *out,
-                const obj_handle_t *handle)
-{
-    if ((out == NULL) || (handle == NULL)) {
-        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EINVAL);
-    }
-
-    if (LSA_HANDLE_MAX_SIZE < handle->len) {
-        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EOVERFLOW);
-    }
-
-    memset(out, 0, sizeof(*out));
-
-    out->handle_bytes = handle->len;
-    out->handle_type = (int32_t)handle->type;
-    memcpy(out->data, handle->data, handle->len);
-
-    return FS_OK;
-}
-
-static fs_error_t fsmgr_obj_handle_from_lsa(
-                obj_handle_t *out,
-                const lsa_file_handle_t *handle,
-                int32_t mount_id)
-{
-    if ((out == NULL) || (handle == NULL)) {
-        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EINVAL);
-    }
-
-    if (OBJMETA_MAX_HANDLE_SIZE < handle->handle_bytes) {
-        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EOVERFLOW);
-    }
-
-    if ((handle->handle_type < 0) ||
-        (UINT16_MAX < (uint32_t)handle->handle_type)) {
-        return fsc_error(FSC_SUB_CREATE, FS_ERRNO_EOVERFLOW);
-    }
-
-    memset(out, 0, sizeof(*out));
-
-    out->mount_id = mount_id;
-    out->type = (uint16_t)handle->handle_type;
-    out->len = (uint16_t)handle->handle_bytes;
-    memcpy(out->data, handle->data, handle->handle_bytes);
-
-    return FS_OK;
-}
-
 static fs_error_t fsmgr_open_sysroot(
                 int *fd_out)
 {
@@ -99,7 +50,7 @@ static fs_error_t fsmgr_open_sysroot(
         return err;
     }
 
-    err = fsmgr_lsa_handle_from_obj(&lsa_handle, &root_handle);
+    err = objmeta_handle_to_lsa(&lsa_handle, &root_handle);
     if (fs_failed(err)) {
         return err;
     }
@@ -147,7 +98,7 @@ static fs_error_t fsmgr_create_root_dir(
         goto out;
     }
 
-    err = fsmgr_obj_handle_from_lsa(handle_out, &lsa_handle, mount_id);
+    err = objmeta_handle_from_lsa(handle_out, &lsa_handle, mount_id);
     if (fs_failed(err)) {
         (void)lsa_rmdir(sysroot_fd, name, FS_FLAG_NONE);
         goto out;
