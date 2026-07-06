@@ -19,10 +19,6 @@ static bool fsc_namespace_root_fuid_is_valid(
         return false;
     }
 
-    if (root_fuid->objectid != FSC_NAMESPACE_ROOT_OBJECT_ID) {
-        return false;
-    }
-
     if (root_fuid->gen != FSC_NAMESPACE_ROOT_GEN) {
         return false;
     }

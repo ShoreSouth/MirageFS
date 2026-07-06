@@ -8,6 +8,7 @@
 #include "common/fs_common.h"
 #include "config/fs_config.h"
 #include "fsc/fsc_init.h"
+#include "fops/include/fops.h"
 #include "lsa/include/lsa_api.h"
 #include "object/object_init.h"
 
@@ -55,6 +56,14 @@ int main(void)
         return 1;
     }
 
+    err = fops_init();
+    if (fs_failed(err)) {
+        fsc_deinit();
+        object_deinit();
+        FS_TRACE_END();
+        return 1;
+    }
+
     /*
      * 打印配置
      */
@@ -63,6 +72,7 @@ int main(void)
     /*
      * 模块销毁（逆序）
      */
+    fops_deinit();
     fsc_deinit();
     object_deinit();
 

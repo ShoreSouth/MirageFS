@@ -21,9 +21,11 @@
     _(DELETE,   "DELETE")        \
                                  \
     _(LOOKUP,   "LOOKUP")        \
+    _(ALLOC,    "ALLOC")         \
                                  \
     _(INSERT,   "INSERT")        \
     _(REMOVE,   "REMOVE")        \
+    _(HANDLE,   "HANDLE")        \
                                  \
     _(GET,      "GET")           \
     _(PUT,      "PUT")           \

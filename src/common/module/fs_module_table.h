@@ -19,7 +19,7 @@
     _(CACHE,   "CACHE")             \
                                     \
     _(FSC,     "FSC")               \
-    _(VFS,     "VFS")               \
+    _(FOPS,    "FOPS")              \
                                     \
     _(LSA,     "LSA")               \
     _(SERVER,  "SERVER")            \

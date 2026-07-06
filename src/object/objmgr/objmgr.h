@@ -78,6 +78,9 @@ obj_meta_t *objmgr_create(
                 const fuid_t *fuid,
                 const obj_handle_t *handle);
 
+fs_error_t objmgr_alloc_objectid(
+                ObjectId_t *out_objectid);
+
 /*
  * 删除对象。
  *
@@ -150,6 +153,9 @@ bool objmgr_exists(
  */
 obj_meta_t *objmgr_acquire(
                 const fuid_t *fuid);
+
+obj_meta_t *objmgr_acquire_by_handle(
+                const obj_handle_t *handle);
 
 /*
  * 释放对象引用。

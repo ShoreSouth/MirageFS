@@ -259,6 +259,62 @@ obj_meta_t *objmgr_acquire(
  * ============================================================
  */
 
+
+obj_meta_t *objmgr_acquire_by_handle(
+                const obj_handle_t *handle)
+{
+    obj_runtime_t *rt;
+    fs_error_t err;
+
+    FS_LOG_DUMP_INFO("enter: handle=%p", (const void *)handle);
+
+    if (handle == NULL) {
+        FS_LOG_DUMP_INFO("exit: handle is NULL");
+        return NULL;
+    }
+
+    fs_mutex_lock(
+            &g_objmgr.lock);
+
+    rt = objmgr_lookup_handle_locked(
+                    handle);
+
+    if (rt == NULL) {
+
+        fs_mutex_unlock(
+                &g_objmgr.lock);
+
+        FS_LOG_DUMP_INFO(
+                "exit: object not found");
+
+        return NULL;
+    }
+
+    err = objmgr_ref_get_locked(
+                    rt);
+
+    if (err != FS_OK) {
+
+        fs_mutex_unlock(
+                &g_objmgr.lock);
+
+        FS_LOG_DUMP_INFO(
+                "exit: acquire failed");
+
+        return NULL;
+    }
+
+    fs_mutex_unlock(
+            &g_objmgr.lock);
+
+    FS_LOG_DUMP_INFO(
+            "exit: rt=%p, meta=%p",
+            (void *)rt,
+            (void *)&rt->meta);
+
+    return &rt->meta;
+}
+
 void objmgr_release(
                 obj_meta_t *meta)
 {

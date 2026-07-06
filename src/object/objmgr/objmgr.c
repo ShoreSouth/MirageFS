@@ -14,6 +14,43 @@
 
 obj_manager_t g_objmgr;
 
+
+/*
+ * ============================================================
+ * objectid allocator
+ * ============================================================
+ */
+
+fs_error_t objmgr_alloc_objectid(
+                ObjectId_t *out_objectid)
+{
+    int64_t value;
+    fs_error_t err;
+
+    FS_LOG_DUMP_INFO("enter: out_objectid=%p", (void *)out_objectid);
+
+    if (out_objectid == NULL) {
+        err = obj_error(OBJ_SUB_ALLOC, EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: out_objectid is NULL, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    value = fs_atomic64_inc(&g_objmgr.next_objectid);
+    if (value <= 0) {
+        err = obj_error(OBJ_SUB_ALLOC, EOVERFLOW);
+        FS_LOG_DUMP_ERROR("objectid allocation overflow, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    *out_objectid = (ObjectId_t)value;
+
+    FS_LOG_DUMP_INFO("exit: objectid=%llu",
+                     (unsigned long long)*out_objectid);
+    return FS_OK;
+}
+
 /*
  * ============================================================
  * 初始化 / 销毁
@@ -35,18 +72,30 @@ fs_error_t objmgr_init(void)
         return ret;
     }
 
-    ret = fs_mutex_init(&g_objmgr.lock,
-                        "objmgr",
-                        0);
+    ret = objmgr_handle_index_init(&g_objmgr.handle_table,
+                                   FS_HASH_DEFAULT_BUCKET_NR);
     if (fs_failed(ret)) {
-        FS_LOG_DUMP_ERROR("fs_mutex_init failed, err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("objmgr_handle_index_init failed, err=%s (0x%x)",
                           fs_error_str(ret), ret);
         objtable_destroy(&g_objmgr.table);
         FS_LOG_DUMP_INFO("exit: failed");
         return ret;
     }
 
+    ret = fs_mutex_init(&g_objmgr.lock,
+                        "objmgr",
+                        0);
+    if (fs_failed(ret)) {
+        FS_LOG_DUMP_ERROR("fs_mutex_init failed, err=%s (0x%x)",
+                          fs_error_str(ret), ret);
+        objmgr_handle_index_deinit(&g_objmgr.handle_table);
+        objtable_destroy(&g_objmgr.table);
+        FS_LOG_DUMP_INFO("exit: failed");
+        return ret;
+    }
+
     fs_atomic32_init(&g_objmgr.object_count, 0);
+    fs_atomic64_init(&g_objmgr.next_objectid, 0);
 
     FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
@@ -58,9 +107,12 @@ void objmgr_deinit(void)
 
     fs_mutex_destroy(&g_objmgr.lock);
 
+    objmgr_handle_index_deinit(&g_objmgr.handle_table);
+
     objtable_destroy(&g_objmgr.table);
 
     fs_atomic32_store(&g_objmgr.object_count, 0);
+    fs_atomic64_store(&g_objmgr.next_objectid, 0);
 
     FS_LOG_DUMP_INFO("exit: done");
 }

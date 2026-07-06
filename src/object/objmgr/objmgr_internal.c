@@ -1,9 +1,225 @@
 #include "object/objmgr/objmgr_internal.h"
 
 #include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "object/obj_error.h"
 #include "object/objpool/objpool.h"
+
+
+/*
+ * ============================================================
+ * Handle Index Helper
+ * ============================================================
+ */
+
+typedef struct objmgr_handle_entry {
+
+    obj_runtime_t *runtime;
+    fs_list_head_t node;
+
+} objmgr_handle_entry_t;
+
+static uint64_t objmgr_handle_hash(
+                const obj_handle_t *handle)
+{
+    uint64_t hash;
+    uint16_t i;
+
+    hash = 1469598103934665603ULL;
+    hash ^= (uint64_t)(uint32_t)handle->mount_id;
+    hash *= 1099511628211ULL;
+    hash ^= (uint64_t)handle->type;
+    hash *= 1099511628211ULL;
+    hash ^= (uint64_t)handle->len;
+    hash *= 1099511628211ULL;
+
+    for (i = 0; i < handle->len; i++) {
+        hash ^= (uint64_t)handle->data[i];
+        hash *= 1099511628211ULL;
+    }
+
+    return hash;
+}
+
+static bool objmgr_handle_equal(
+                const obj_handle_t *lhs,
+                const obj_handle_t *rhs)
+{
+    if ((lhs == NULL) || (rhs == NULL)) {
+        return false;
+    }
+
+    if ((lhs->mount_id != rhs->mount_id) ||
+        (lhs->type != rhs->type) ||
+        (lhs->len != rhs->len)) {
+        return false;
+    }
+
+    return memcmp(lhs->data, rhs->data, lhs->len) == 0;
+}
+
+static uint64_t objmgr_handle_node_hash(
+                const fs_list_head_t *node)
+{
+    const objmgr_handle_entry_t *entry;
+
+    entry = FS_CONTAINER_OF(node, objmgr_handle_entry_t, node);
+    return objmgr_handle_hash(&entry->runtime->meta.handle);
+}
+
+static uint64_t objmgr_handle_key_hash(
+                const void *key)
+{
+    return objmgr_handle_hash((const obj_handle_t *)key);
+}
+
+static bool objmgr_handle_match(
+                const fs_list_head_t *node,
+                const void *key)
+{
+    const objmgr_handle_entry_t *entry;
+
+    entry = FS_CONTAINER_OF(node, objmgr_handle_entry_t, node);
+    return objmgr_handle_equal(&entry->runtime->meta.handle,
+                               (const obj_handle_t *)key);
+}
+
+static objmgr_handle_entry_t *objmgr_find_handle_entry(
+                fs_hash_t *table,
+                const obj_handle_t *handle)
+{
+    fs_list_head_t *node;
+
+    node = fs_hash_lookup(table, handle);
+    if (node == NULL) {
+        return NULL;
+    }
+
+    return FS_CONTAINER_OF(node, objmgr_handle_entry_t, node);
+}
+
+fs_error_t objmgr_handle_index_init(
+                fs_hash_t *table,
+                uint32_t bucket_nr)
+{
+    return fs_hash_init(table,
+                        bucket_nr,
+                        objmgr_handle_node_hash,
+                        objmgr_handle_key_hash,
+                        objmgr_handle_match);
+}
+
+void objmgr_handle_index_deinit(
+                fs_hash_t *table)
+{
+    uint32_t i;
+    fs_list_head_t *pos;
+    fs_list_head_t *next;
+    objmgr_handle_entry_t *entry;
+
+    if (table == NULL) {
+        return;
+    }
+
+    for (i = 0; i < table->bucket_nr; i++) {
+        FS_LIST_FOR_EACH_SAFE(pos, next, &table->buckets[i]) {
+            entry = FS_CONTAINER_OF(pos, objmgr_handle_entry_t, node);
+            fs_hash_remove(table, &entry->node);
+            free(entry);
+        }
+    }
+
+    fs_hash_destroy(table);
+}
+
+obj_runtime_t *objmgr_lookup_handle_locked(
+                const obj_handle_t *handle)
+{
+    objmgr_handle_entry_t *entry;
+
+    FS_LOG_DUMP_INFO("enter: handle=%p", (const void *)handle);
+
+    entry = objmgr_find_handle_entry(&g_objmgr.handle_table, handle);
+    if (entry == NULL) {
+        FS_LOG_DUMP_INFO("exit: not found");
+        return NULL;
+    }
+
+    FS_LOG_DUMP_INFO("exit: rt=%p", (void *)entry->runtime);
+    return entry->runtime;
+}
+
+fs_error_t objmgr_insert_handle_locked(
+                obj_runtime_t *rt)
+{
+    fs_error_t err;
+    objmgr_handle_entry_t *entry;
+
+    FS_LOG_DUMP_INFO("enter: rt=%p", (void *)rt);
+
+    if (rt == NULL) {
+        err = obj_error(OBJ_SUB_HANDLE, EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: rt is NULL, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    if (objmgr_lookup_handle_locked(&rt->meta.handle) != NULL) {
+        err = obj_error(OBJ_SUB_HANDLE, EEXIST);
+        FS_LOG_DUMP_ERROR("handle insert failed: handle exists, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    entry = calloc(1, sizeof(*entry));
+    if (entry == NULL) {
+        err = obj_error(OBJ_SUB_HANDLE, ENOMEM);
+        FS_LOG_DUMP_ERROR("calloc failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    entry->runtime = rt;
+    fs_list_init(&entry->node);
+
+    err = fs_hash_insert(&g_objmgr.handle_table, &entry->node);
+    if (fs_failed(err)) {
+        FS_LOG_DUMP_ERROR("fs_hash_insert failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        free(entry);
+        return err;
+    }
+
+    FS_LOG_DUMP_INFO("exit: ok");
+    return FS_OK;
+}
+
+void objmgr_remove_handle_locked(
+                obj_runtime_t *rt)
+{
+    objmgr_handle_entry_t *entry;
+
+    FS_LOG_DUMP_INFO("enter: rt=%p", (void *)rt);
+
+    if (rt == NULL) {
+        FS_LOG_DUMP_INFO("exit: rt is NULL");
+        return;
+    }
+
+    entry = objmgr_find_handle_entry(&g_objmgr.handle_table,
+                                     &rt->meta.handle);
+    if (entry == NULL) {
+        FS_LOG_DUMP_INFO("exit: not found");
+        return;
+    }
+
+    fs_hash_remove(&g_objmgr.handle_table, &entry->node);
+    free(entry);
+
+    FS_LOG_DUMP_INFO("exit: done");
+}
 
 /*
  * ============================================================
@@ -43,6 +259,14 @@ fs_error_t objmgr_insert_locked(
         return ret;
     }
 
+    ret = objmgr_insert_handle_locked(rt);
+    if (fs_failed(ret)) {
+        (void)objtable_remove(&g_objmgr.table, &rt->meta.key);
+        FS_LOG_DUMP_INFO("exit: failed, err=%s (0x%x)",
+                         fs_error_str(ret), ret);
+        return ret;
+    }
+
     fs_atomic32_inc(
                 &g_objmgr.object_count);
 
@@ -55,8 +279,14 @@ fs_error_t objmgr_remove_locked(
                 const obj_key_t *key)
 {
     fs_error_t ret;
+    obj_runtime_t *rt;
 
     FS_LOG_DUMP_INFO("enter: key=%p", (const void *)key);
+
+    rt = objmgr_lookup_locked(key);
+    if (rt != NULL) {
+        objmgr_remove_handle_locked(rt);
+    }
 
     ret = objtable_remove(
                 &g_objmgr.table,

@@ -42,6 +42,7 @@ typedef struct obj_manager
 {
 
     obj_table_t table; /* 全局对象索引 */
+    fs_hash_t handle_table; /* backend handle index */
 
     /*
      * 当前采用一级全局锁保护所有对象。
@@ -54,6 +55,7 @@ typedef struct obj_manager
     fs_mutex_t lock; /* 全局互斥锁 */
 
     fs_atomic32_t object_count; /* 当前对象数量 */
+    fs_atomic64_t next_objectid; /* global objectid allocator */
 
 } obj_manager_t;
 
@@ -81,6 +83,22 @@ extern obj_manager_t g_objmgr;
  */
 obj_runtime_t *objmgr_lookup_locked(
                 const obj_key_t *key);
+
+fs_error_t objmgr_handle_index_init(
+                fs_hash_t *table,
+                uint32_t bucket_nr);
+
+void objmgr_handle_index_deinit(
+                fs_hash_t *table);
+
+obj_runtime_t *objmgr_lookup_handle_locked(
+                const obj_handle_t *handle);
+
+fs_error_t objmgr_insert_handle_locked(
+                obj_runtime_t *rt);
+
+void objmgr_remove_handle_locked(
+                obj_runtime_t *rt);
 
 /*
  * 插入对象。

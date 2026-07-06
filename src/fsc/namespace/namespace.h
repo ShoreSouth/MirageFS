@@ -21,7 +21,6 @@
  * 文件系统根目录在本 filesystem 内部使用保留 object id。
  * 当前阶段每个 filesystem 只有一个根对象，因此 gen 固定为 1。
  */
-#define FSC_NAMESPACE_ROOT_OBJECT_ID ((ObjectId_t)1ULL)
 #define FSC_NAMESPACE_ROOT_GEN       ((GenId_t)1U)
 
 /*

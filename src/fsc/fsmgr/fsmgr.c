@@ -10,6 +10,7 @@
 #include "fsc/nspool/nspool.h"
 #include "fsc/sysroot/sysroot.h"
 #include "lsa/include/lsa_api.h"
+#include "object/objmgr/objmgr.h"
 
 /*
  * ============================================================
@@ -29,6 +30,7 @@ static void fsmgr_reclaim_namespace(
                 fsc_namespace_t *ns)
 {
     if (ns != NULL) {
+        (void)objmgr_delete(&ns->root_fuid);
         (void)fsid_free(ns->fsid);
         nspool_free(ns);
     }
@@ -197,13 +199,17 @@ fs_error_t fsmgr_create(
     fs_error_t err;
     fsc_fsid_t fsid;
     fuid_t root_fuid;
+    ObjectId_t root_objectid;
     obj_handle_t root_handle;
     fsc_namespace_t *ns;
     bool dir_created;
+    bool object_registered;
 
     fsid = FSID_INVALID;
+    root_objectid = FUID_INVALID_OBJECTID;
     ns = NULL;
     dir_created = false;
+    object_registered = false;
 
     if (root_out != NULL) {
         fuid_set_invalid(root_out);
@@ -232,8 +238,15 @@ fs_error_t fsmgr_create(
         goto unlock;
     }
 
+    err = objmgr_alloc_objectid(&root_objectid);
+    if (fs_failed(err)) {
+        FS_LOG_DUMP_ERROR("objmgr_alloc_objectid failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        goto unlock;
+    }
+
     root_fuid = fuid_make(fsid,
-                          FSC_NAMESPACE_ROOT_OBJECT_ID,
+                          root_objectid,
                           FSC_NAMESPACE_ROOT_GEN,
                           FUID_TYPE_DIR);
 
@@ -252,6 +265,15 @@ fs_error_t fsmgr_create(
                           fs_error_str(err), err);
         goto unlock;
     }
+
+    if (objmgr_create(&root_fuid, &root_handle) == NULL) {
+        err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_EIO);
+        FS_LOG_DUMP_ERROR("objmgr_create root failed: name=%s, "
+                          "err=%s (0x%x)",
+                          name, fs_error_str(err), err);
+        goto unlock;
+    }
+    object_registered = true;
 
     err = fsc_namespace_init(ns,
                              fsid,
@@ -289,6 +311,10 @@ unlock:
     if (fs_failed(err)) {
         if (ns != NULL) {
             nspool_free(ns);
+        }
+
+        if (object_registered) {
+            (void)objmgr_delete(&root_fuid);
         }
 
         if (dir_created) {
@@ -338,6 +364,15 @@ fs_error_t fsmgr_destroy(
     if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("remove root dir failed: name=%s, err=%s (0x%x)",
                           ns->name, fs_error_str(err), err);
+        goto unlock;
+    }
+
+    err = objmgr_delete(&ns->root_fuid);
+    if (fs_failed(err)) {
+        FS_LOG_DUMP_ERROR("objmgr_delete root failed: fsid=%llu, "
+                          "err=%s (0x%x)",
+                          (unsigned long long)fsid,
+                          fs_error_str(err), err);
         goto unlock;
     }
 
