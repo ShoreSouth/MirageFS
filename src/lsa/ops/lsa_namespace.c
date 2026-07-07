@@ -1,10 +1,45 @@
+#include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <sys/stat.h>
 #include <sys/sysmacros.h>
+#include <unistd.h>
 
 #include "common/fs_common.h"
 #include "lsa/internal/lsa_internal.h"
 #include "lsa/internal/lsa_error.h"
+
+static lsa_ret_t lsa_validate_known_flags(fs_flags_t flags,
+                                          fs_flags_t known,
+                                          fs_op_t op)
+{
+    lsa_ret_t err;
+
+    if ((flags & ~known) != 0U) {
+        err = lsa_error(op, EINVAL);
+        FS_LOG_DUMP_ERROR("flag check failed: flags=0x%x known=0x%x, "
+                          "err=%s (0x%x)",
+                          flags, known, fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}
+
+static lsa_ret_t lsa_validate_type_flags(fs_flags_t flags, fs_op_t op)
+{
+    lsa_ret_t err;
+
+    if (fs_flag_test(flags, FS_FLAG_DIRECTORY) &&
+        fs_flag_test(flags, FS_FLAG_REGULAR)) {
+        err = lsa_error(op, EINVAL);
+        FS_LOG_DUMP_ERROR("flag check failed: DIRECTORY conflicts with "
+                          "REGULAR, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}
 
 /* ============================================================
  * lookup
@@ -20,6 +55,7 @@ lsa_ret_t lsa_lookup(
     int open_flags;
     int newfd;
     lsa_ret_t err;
+    struct stat st;
 
     FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, flags=0x%x",
                      dirfd, name ? name : "(null)", flags);
@@ -33,22 +69,55 @@ lsa_ret_t lsa_lookup(
         return err;
     }
 
-    open_flags = O_PATH;
+    err = lsa_validate_known_flags(flags,
+                                   FS_FLAG_NOFOLLOW |
+                                   FS_FLAG_DIRECTORY |
+                                   FS_FLAG_REGULAR,
+                                   FS_OP_LOOKUP);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    err = lsa_validate_type_flags(flags, FS_OP_LOOKUP);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    open_flags = O_PATH | O_CLOEXEC;
 
     if (fs_flag_test(flags, FS_FLAG_NOFOLLOW)) {
         open_flags |= O_NOFOLLOW;
     }
+    if (fs_flag_test(flags, FS_FLAG_DIRECTORY)) {
+        open_flags |= O_DIRECTORY;
+    }
 
-    newfd = openat(
-                    dirfd,
-                    name,
-                    open_flags);
-
+    newfd = openat(dirfd, name, open_flags);
     if (newfd < 0) {
         err = lsa_error(FS_OP_LOOKUP, errno);
         FS_LOG_DUMP_ERROR("lookup failed: name=%s, err=%s (0x%x)",
                           name, fs_error_str(err), err);
         return err;
+    }
+
+    if (fs_flag_test(flags, FS_FLAG_REGULAR)) {
+        if (fstat(newfd, &st) < 0) {
+            err = lsa_error(FS_OP_LOOKUP, errno);
+            (void)close(newfd);
+            FS_LOG_DUMP_ERROR("lookup fstat failed: name=%s, "
+                              "err=%s (0x%x)",
+                              name, fs_error_str(err), err);
+            return err;
+        }
+
+        if (!S_ISREG(st.st_mode)) {
+            err = lsa_error(FS_OP_LOOKUP, S_ISDIR(st.st_mode) ? EISDIR : EINVAL);
+            (void)close(newfd);
+            FS_LOG_DUMP_ERROR("lookup type check failed: name=%s, "
+                              "err=%s (0x%x)",
+                              name, fs_error_str(err), err);
+            return err;
+        }
     }
 
     *fd = newfd;
@@ -85,20 +154,53 @@ lsa_ret_t lsa_create(
         return err;
     }
 
-    open_flags = O_CREAT | O_RDWR;
-
-    if (fs_flag_test(flags, FS_FLAG_REPLACE)) {
-        open_flags |= O_TRUNC;
-    } else {
-        open_flags |= O_EXCL;
+    err = lsa_validate_known_flags(flags,
+                                   FS_FLAG_REPLACE |
+                                   FS_FLAG_EXCLUSIVE |
+                                   FS_FLAG_NOFOLLOW |
+                                   FS_FLAG_SYNC |
+                                   FS_FLAG_DIRECT |
+                                   FS_FLAG_REGULAR |
+                                   FS_FLAG_TRUNCATE |
+                                   FS_FLAG_APPEND,
+                                   FS_OP_CREATE);
+    if (fs_failed(err)) {
+        return err;
     }
 
-    newfd = openat(
-                    dirfd,
-                    name,
-                    open_flags,
-                    mode);
+    if (fs_flag_test(flags, FS_FLAG_REPLACE) &&
+        fs_flag_test(flags, FS_FLAG_EXCLUSIVE)) {
+        err = lsa_error(FS_OP_CREATE, EINVAL);
+        FS_LOG_DUMP_ERROR("flag check failed: REPLACE conflicts with "
+                          "EXCLUSIVE, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
 
+    open_flags = O_CREAT | O_RDWR | O_CLOEXEC;
+
+    if (!fs_flag_test(flags, FS_FLAG_REPLACE)) {
+        open_flags |= O_EXCL;
+    }
+    if (fs_flag_test(flags, FS_FLAG_TRUNCATE)) {
+        open_flags |= O_TRUNC;
+    }
+    if (fs_flag_test(flags, FS_FLAG_NOFOLLOW)) {
+        open_flags |= O_NOFOLLOW;
+    }
+    if (fs_flag_test(flags, FS_FLAG_SYNC)) {
+        open_flags |= O_SYNC;
+    }
+#ifdef O_DIRECT
+    if (fs_flag_test(flags, FS_FLAG_DIRECT)) {
+        open_flags |= O_DIRECT;
+    }
+#endif
+    if (fs_flag_test(flags, FS_FLAG_APPEND)) {
+        open_flags |= O_APPEND;
+    }
+
+    newfd = openat(dirfd, name, open_flags, mode);
     if (newfd < 0) {
         err = lsa_error(FS_OP_CREATE, errno);
         FS_LOG_DUMP_ERROR("create failed: name=%s, err=%s (0x%x)",
@@ -125,10 +227,8 @@ lsa_ret_t lsa_mkdir(
 {
     lsa_ret_t err;
 
-    (void)flags;
-
-    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, mode=%o",
-                     dirfd, name ? name : "(null)", mode);
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, flags=0x%x, mode=%o",
+                     dirfd, name ? name : "(null)", flags, mode);
 
     if (name == NULL) {
         err = lsa_error(FS_OP_MKDIR, EINVAL);
@@ -137,10 +237,14 @@ lsa_ret_t lsa_mkdir(
         return err;
     }
 
-    if (mkdirat(
-                dirfd,
-                name,
-                mode) < 0) {
+    err = lsa_validate_known_flags(flags,
+                                   FS_FLAG_EXCLUSIVE | FS_FLAG_DIRECTORY,
+                                   FS_OP_MKDIR);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    if (mkdirat(dirfd, name, mode) < 0) {
         err = lsa_error(FS_OP_MKDIR, errno);
         FS_LOG_DUMP_ERROR("mkdir failed: name=%s, err=%s (0x%x)",
                           name, fs_error_str(err), err);
@@ -162,11 +266,10 @@ lsa_ret_t lsa_unlink(
                 fs_flags_t flags)
 {
     lsa_ret_t err;
+    struct stat st;
 
-    (void)flags;
-
-    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s",
-                     dirfd, name ? name : "(null)");
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, flags=0x%x",
+                     dirfd, name ? name : "(null)", flags);
 
     if (name == NULL) {
         err = lsa_error(FS_OP_UNLINK, EINVAL);
@@ -175,10 +278,29 @@ lsa_ret_t lsa_unlink(
         return err;
     }
 
-    if (unlinkat(
-                dirfd,
-                name,
-                0) < 0) {
+    err = lsa_validate_known_flags(flags,
+                                   FS_FLAG_NOFOLLOW | FS_FLAG_REGULAR,
+                                   FS_OP_UNLINK);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    if (fs_flag_test(flags, FS_FLAG_REGULAR)) {
+        err = lsa_fstatat(dirfd, name, flags & FS_FLAG_NOFOLLOW, &st);
+        if (fs_failed(err)) {
+            return err;
+        }
+        if (!S_ISREG(st.st_mode)) {
+            err = lsa_error(FS_OP_UNLINK,
+                            S_ISDIR(st.st_mode) ? EISDIR : EINVAL);
+            FS_LOG_DUMP_ERROR("unlink type check failed: name=%s, "
+                              "err=%s (0x%x)",
+                              name, fs_error_str(err), err);
+            return err;
+        }
+    }
+
+    if (unlinkat(dirfd, name, 0) < 0) {
         err = lsa_error(FS_OP_UNLINK, errno);
         FS_LOG_DUMP_ERROR("unlink failed: name=%s, err=%s (0x%x)",
                           name, fs_error_str(err), err);
@@ -201,10 +323,8 @@ lsa_ret_t lsa_rmdir(
 {
     lsa_ret_t err;
 
-    (void)flags;
-
-    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s",
-                     dirfd, name ? name : "(null)");
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, flags=0x%x",
+                     dirfd, name ? name : "(null)", flags);
 
     if (name == NULL) {
         err = lsa_error(FS_OP_RMDIR, EINVAL);
@@ -213,10 +333,12 @@ lsa_ret_t lsa_rmdir(
         return err;
     }
 
-    if (unlinkat(
-                dirfd,
-                name,
-                AT_REMOVEDIR) < 0) {
+    err = lsa_validate_known_flags(flags, FS_FLAG_DIRECTORY, FS_OP_RMDIR);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    if (unlinkat(dirfd, name, AT_REMOVEDIR) < 0) {
         err = lsa_error(FS_OP_RMDIR, errno);
         FS_LOG_DUMP_ERROR("rmdir failed: name=%s, err=%s (0x%x)",
                           name, fs_error_str(err), err);
@@ -257,14 +379,9 @@ lsa_ret_t lsa_rename(
         return err;
     }
 
-    if (renameat(
-                old_dirfd,
-                old_name,
-                new_dirfd,
-                new_name) < 0) {
+    if (renameat(old_dirfd, old_name, new_dirfd, new_name) < 0) {
         err = lsa_error(FS_OP_RENAME, errno);
-        FS_LOG_DUMP_ERROR("rename failed: old_name=%s, new_name=%s, "
-                          "err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("rename failed: old=%s new=%s, err=%s (0x%x)",
                           old_name, new_name, fs_error_str(err), err);
         return err;
     }
@@ -303,15 +420,9 @@ lsa_ret_t lsa_link(
         return err;
     }
 
-    if (linkat(
-                old_dirfd,
-                old_name,
-                new_dirfd,
-                new_name,
-                0) < 0) {
+    if (linkat(old_dirfd, old_name, new_dirfd, new_name, 0) < 0) {
         err = lsa_error(FS_OP_LINK, errno);
-        FS_LOG_DUMP_ERROR("link failed: old_name=%s, new_name=%s, "
-                          "err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("link failed: old=%s new=%s, err=%s (0x%x)",
                           old_name, new_name, fs_error_str(err), err);
         return err;
     }
@@ -337,7 +448,8 @@ lsa_ret_t lsa_symlink(
 
     FS_LOG_DUMP_INFO("enter: target=%s, dirfd=%d, name=%s",
                      target ? target : "(null)",
-                     dirfd, name ? name : "(null)");
+                     dirfd,
+                     name ? name : "(null)");
 
     if (target == NULL ||
         name == NULL) {
@@ -348,52 +460,15 @@ lsa_ret_t lsa_symlink(
         return err;
     }
 
-    if (symlinkat(
-                target,
-                dirfd,
-                name) < 0) {
+    if (symlinkat(target, dirfd, name) < 0) {
         err = lsa_error(FS_OP_SYMLINK, errno);
-        FS_LOG_DUMP_ERROR("symlink failed: target=%s, name=%s, "
-                          "err=%s (0x%x)",
-                          target, name, fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("symlink failed: name=%s, err=%s (0x%x)",
+                          name, fs_error_str(err), err);
         return err;
     }
 
     FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
-}
-
-/* ============================================================
- * mknod helper
- * ============================================================
- */
-
-static fs_error_t lsa_mknod_mode(
-                fs_type_t type,
-                mode_t perm,
-                mode_t *mode)
-{
-    switch (type) {
-
-    case FS_TYPE_FIFO:
-
-        *mode = S_IFIFO | perm;
-        return FS_OK;
-
-    case FS_TYPE_BLK:
-
-        *mode = S_IFBLK | perm;
-        return FS_OK;
-
-    case FS_TYPE_CHR:
-
-        *mode = S_IFCHR | perm;
-        return FS_OK;
-
-    default:
-
-        return lsa_error(FS_OP_MKNOD, EINVAL);
-    }
 }
 
 /* ============================================================
@@ -405,71 +480,56 @@ lsa_ret_t lsa_mknod(
                 int dirfd,
                 const char *name,
                 fs_type_t type,
-                mode_t perm,
+                mode_t mode,
                 const lsa_device_t *device)
 {
-    mode_t mode;
-    dev_t dev;
     lsa_ret_t err;
+    mode_t node_mode;
+    dev_t dev;
 
-    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, type=%u, perm=%o",
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, type=%u, mode=%o",
                      dirfd, name ? name : "(null)",
-                     (uint32_t)type, perm);
+                     (unsigned int)type, mode);
 
     if (name == NULL) {
         err = lsa_error(FS_OP_MKNOD, EINVAL);
-        FS_LOG_DUMP_ERROR("mknod: invalid argument (name is NULL), "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("mknod: invalid argument, err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
-    err = lsa_mknod_mode(type, perm, &mode);
-    if (fs_failed(err)) {
-        FS_LOG_DUMP_ERROR("mknod: invalid type=%u, err=%s (0x%x)",
-                          (uint32_t)type, fs_error_str(err), err);
-        return err;
-    }
-
+    node_mode = mode & FS_PERM_MASK;
     dev = 0;
 
     switch (type) {
-
-    case FS_TYPE_BLK:
-    case FS_TYPE_CHR:
-
-        if (device == NULL) {
-            err = lsa_error(FS_OP_MKNOD, EINVAL);
-            FS_LOG_DUMP_ERROR("mknod: device required for blk/chr, "
-                              "err=%s (0x%x)", fs_error_str(err), err);
-            return err;
-        }
-
-        dev = makedev(
-                    device->major_id,
-                    device->minor_id);
-
-        break;
-
     case FS_TYPE_FIFO:
-
+        node_mode |= S_IFIFO;
         break;
-
+    case FS_TYPE_BLK:
+        if (device == NULL) {
+            return lsa_error(FS_OP_MKNOD, EINVAL);
+        }
+        node_mode |= S_IFBLK;
+        dev = makedev(device->major_id, device->minor_id);
+        break;
+    case FS_TYPE_CHR:
+        if (device == NULL) {
+            return lsa_error(FS_OP_MKNOD, EINVAL);
+        }
+        node_mode |= S_IFCHR;
+        dev = makedev(device->major_id, device->minor_id);
+        break;
     default:
-
         err = lsa_error(FS_OP_MKNOD, EINVAL);
-        FS_LOG_DUMP_ERROR("mknod: invalid type=%u, err=%s (0x%x)",
-                          (uint32_t)type, fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("mknod: unsupported type=%u, err=%s (0x%x)",
+                          (unsigned int)type, fs_error_str(err), err);
         return err;
     }
 
-    if (mknodat(
-                dirfd,
-                name,
-                mode,
-                dev) < 0) {
+    if (mknodat(dirfd, name, node_mode, dev) < 0) {
         err = lsa_error(FS_OP_MKNOD, errno);
-        FS_LOG_DUMP_ERROR("mknod failed: name=%s, type=%u, err=%s (0x%x)",
-                          name, (uint32_t)type, fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("mknod failed: name=%s, err=%s (0x%x)",
+                          name, fs_error_str(err), err);
         return err;
     }
 

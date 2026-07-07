@@ -74,40 +74,31 @@ typedef struct fsc_namespace {
 FSC_NAMESPACE_SIZE == 192
 ```
 
-## 4. 根对象身份
+## 4. Root Object Identity
 
-每个 filesystem root 使用保留 object id：
-
-```text
-objectid = FSC_NAMESPACE_ROOT_OBJECT_ID
-.gen     = FSC_NAMESPACE_ROOT_GEN
-.type    = FUID_TYPE_DIR
-```
-
-FSID 来自 `fsid_alloc()`。因此根目录 FUID 形如：
+Each filesystem root FUID is allocated the same way as other MirageFS objects:
 
 ```text
-(fsid, objectid=1, gen=1, type=dir)
+fsid     = fsid_alloc()
+objectid = ObjMgr key allocator
+gen      = ObjMgr key allocator generation
+type     = FUID_TYPE_DIR
 ```
 
-后续普通对象的 object id 分配不应复用这个保留值。
+The root does not use a reserved `objectid` or a fixed generation. ObjMgr owns `objectid/gen` allocation and reclaim; FSC owns namespace lifecycle and keeps the resulting `root_fuid` as the entry point for that filesystem.
 
-`fsc_namespace_t` 同时保存 `fsid` 和 `root_fuid`，这是刻意保留的
-语义冗余：
+`fsc_namespace_t` intentionally stores both `fsid` and `root_fuid`:
 
-- `fsid` 是 namespace 控制面的主索引；
-- `root_fuid` 是根目录对象的完整身份，未来可承载 qtree、snapshot、
-  shard 等视图信息。
+- `fsid` is the namespace control-plane index.
+- `root_fuid` is the complete root-directory object identity and can carry qtree, snapshot, shard, and future view fields.
 
-初始化和有效性检查必须保证：
+Initialization and validity checks must guarantee:
 
 ```text
 ns->fsid == ns->root_fuid.fsid
 ns->root_fuid.type == FUID_TYPE_DIR
-ns->root_fuid.objectid == FSC_NAMESPACE_ROOT_OBJECT_ID
-ns->root_fuid.gen == FSC_NAMESPACE_ROOT_GEN
+fuid_is_valid(&ns->root_fuid)
 ```
-
 ## 5. 生命周期状态
 
 当前状态：

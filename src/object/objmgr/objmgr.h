@@ -5,6 +5,7 @@
 #include "common/fs_common.h"
 #include "object/fuid/fuid.h"
 #include "object/objruntime/objruntime.h"
+#include "object/objkey/objkey.h"
 
 /*
  * ============================================================
@@ -78,8 +79,31 @@ obj_meta_t *objmgr_create(
                 const fuid_t *fuid,
                 const obj_handle_t *handle);
 
-fs_error_t objmgr_alloc_objectid(
-                ObjectId_t *out_objectid);
+/*
+ * Allocate an object key from the ObjMgr key allocator.
+ *
+ * Parameters:
+ *      [OUT] out_key : allocated key (objectid slot + generation)
+ *
+ * Return:
+ *      FS_OK       : success
+ *      fs_error_t  : invalid argument or no free key slot
+ */
+fs_error_t objmgr_alloc_key(
+                obj_key_t *out_key);
+
+/*
+ * Free an object key that was allocated but never registered.
+ *
+ * Normal registered objects return their key during final runtime reclaim;
+ * callers use this only when allocation succeeds but object registration does
+ * not happen.
+ *
+ * Parameters:
+ *      [IN] key : key to release
+ */
+fs_error_t objmgr_free_key(
+                const obj_key_t *key);
 
 /*
  * 删除对象。

@@ -6,6 +6,9 @@
 #include "object/objkey/objkey.h"
 #include "object/objtable/objtable.h"
 
+#define OBJMGR_KEY_MAX_SLOTS 65536U
+#define OBJMGR_KEY_GENERATION_INIT 1U
+
 /*
  * ============================================================
  * objmgr internal
@@ -55,7 +58,11 @@ typedef struct obj_manager
     fs_mutex_t lock; /* 全局互斥锁 */
 
     fs_atomic32_t object_count; /* 当前对象数量 */
-    fs_atomic64_t next_objectid; /* global objectid allocator */
+    fs_mutex_t key_lock; /* protects key allocator */
+    uint32_t key_free_count; /* free key slots */
+    uint64_t key_free_stack[OBJMGR_KEY_MAX_SLOTS]; /* free objectid stack */
+    uint32_t key_generation[OBJMGR_KEY_MAX_SLOTS + 1U]; /* slot generation */
+    uint8_t key_allocated[OBJMGR_KEY_MAX_SLOTS + 1U]; /* allocation bitmap */
 
 } obj_manager_t;
 
@@ -99,6 +106,9 @@ fs_error_t objmgr_insert_handle_locked(
 
 void objmgr_remove_handle_locked(
                 obj_runtime_t *rt);
+
+void objmgr_free_key_locked(
+                const obj_key_t *key);
 
 /*
  * 插入对象。

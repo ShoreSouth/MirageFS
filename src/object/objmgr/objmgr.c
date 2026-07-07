@@ -2,6 +2,7 @@
 #include "object/objmgr/objmgr_internal.h"
 
 #include <errno.h>
+#include <string.h>
 
 #include "object/obj_error.h"
 #include "object/objpool/objpool.h"
@@ -21,33 +22,106 @@ obj_manager_t g_objmgr;
  * ============================================================
  */
 
-fs_error_t objmgr_alloc_objectid(
-                ObjectId_t *out_objectid)
+static void objmgr_key_allocator_reset(void)
 {
-    int64_t value;
+    uint64_t i;
+
+    memset(g_objmgr.key_free_stack, 0, sizeof(g_objmgr.key_free_stack));
+    memset(g_objmgr.key_allocated, 0, sizeof(g_objmgr.key_allocated));
+
+    for (i = 1U; i <= OBJMGR_KEY_MAX_SLOTS; i++) {
+        g_objmgr.key_generation[i] = OBJMGR_KEY_GENERATION_INIT;
+        g_objmgr.key_free_stack[i - 1U] =
+                (uint64_t)(OBJMGR_KEY_MAX_SLOTS - i + 1U);
+    }
+
+    g_objmgr.key_free_count = OBJMGR_KEY_MAX_SLOTS;
+}
+
+static bool objmgr_key_slot_is_valid(ObjectId_t objectid)
+{
+    return (objectid != 0U) &&
+           (objectid <= (ObjectId_t)OBJMGR_KEY_MAX_SLOTS);
+}
+
+fs_error_t objmgr_alloc_key(
+                obj_key_t *out_key)
+{
     fs_error_t err;
+    ObjectId_t objectid;
+    GenId_t gen;
 
-    FS_LOG_DUMP_INFO("enter: out_objectid=%p", (void *)out_objectid);
+    FS_LOG_DUMP_INFO("enter: out_key=%p", (void *)out_key);
 
-    if (out_objectid == NULL) {
+    if (out_key == NULL) {
         err = obj_error(OBJ_SUB_ALLOC, EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: out_objectid is NULL, "
+        FS_LOG_DUMP_ERROR("param check failed: out_key is NULL, "
                           "err=%s (0x%x)", fs_error_str(err), err);
         return err;
     }
 
-    value = fs_atomic64_inc(&g_objmgr.next_objectid);
-    if (value <= 0) {
-        err = obj_error(OBJ_SUB_ALLOC, EOVERFLOW);
-        FS_LOG_DUMP_ERROR("objectid allocation overflow, err=%s (0x%x)",
+    memset(out_key, 0, sizeof(*out_key));
+
+    fs_mutex_lock(&g_objmgr.key_lock);
+
+    if (g_objmgr.key_free_count == 0U) {
+        fs_mutex_unlock(&g_objmgr.key_lock);
+        err = obj_error(OBJ_SUB_ALLOC, ENOSPC);
+        FS_LOG_DUMP_ERROR("allocate key failed: no free slot, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    g_objmgr.key_free_count--;
+    objectid = (ObjectId_t)
+            g_objmgr.key_free_stack[g_objmgr.key_free_count];
+    gen = (GenId_t)g_objmgr.key_generation[objectid];
+    g_objmgr.key_allocated[objectid] = 1U;
+
+    fs_mutex_unlock(&g_objmgr.key_lock);
+
+    *out_key = objkey_make(objectid, gen);
+
+    FS_LOG_DUMP_INFO("exit: objectid=%llu gen=%u",
+                     (unsigned long long)out_key->objectid,
+                     (unsigned int)out_key->gen);
+    return FS_OK;
+}
+
+fs_error_t objmgr_free_key(
+                const obj_key_t *key)
+{
+    fs_error_t err;
+
+    FS_LOG_DUMP_INFO("enter: key=%p", (const void *)key);
+
+    if ((key == NULL) || !objkey_is_valid(key) ||
+        !objmgr_key_slot_is_valid(key->objectid)) {
+        err = obj_error(OBJ_SUB_ALLOC, EINVAL);
+        FS_LOG_DUMP_ERROR("free key failed: invalid key, err=%s (0x%x)",
                           fs_error_str(err), err);
         return err;
     }
 
-    *out_objectid = (ObjectId_t)value;
+    fs_mutex_lock(&g_objmgr.key_lock);
 
-    FS_LOG_DUMP_INFO("exit: objectid=%llu",
-                     (unsigned long long)*out_objectid);
+    if ((g_objmgr.key_allocated[key->objectid] == 0U) ||
+        (g_objmgr.key_generation[key->objectid] != key->gen)) {
+        fs_mutex_unlock(&g_objmgr.key_lock);
+        err = obj_error(OBJ_SUB_ALLOC, EINVAL);
+        FS_LOG_DUMP_ERROR("free key failed: stale or unallocated key, "
+                          "objectid=%llu gen=%u, err=%s (0x%x)",
+                          (unsigned long long)key->objectid,
+                          (unsigned int)key->gen,
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    objmgr_free_key_locked(key);
+
+    fs_mutex_unlock(&g_objmgr.key_lock);
+
+    FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
 
@@ -82,11 +156,11 @@ fs_error_t objmgr_init(void)
         return ret;
     }
 
-    ret = fs_mutex_init(&g_objmgr.lock,
-                        "objmgr",
+    ret = fs_mutex_init(&g_objmgr.key_lock,
+                        "objmgr_key",
                         0);
     if (fs_failed(ret)) {
-        FS_LOG_DUMP_ERROR("fs_mutex_init failed, err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("fs_mutex_init key_lock failed, err=%s (0x%x)",
                           fs_error_str(ret), ret);
         objmgr_handle_index_deinit(&g_objmgr.handle_table);
         objtable_destroy(&g_objmgr.table);
@@ -94,8 +168,22 @@ fs_error_t objmgr_init(void)
         return ret;
     }
 
+    objmgr_key_allocator_reset();
+
+    ret = fs_mutex_init(&g_objmgr.lock,
+                        "objmgr",
+                        0);
+    if (fs_failed(ret)) {
+        FS_LOG_DUMP_ERROR("fs_mutex_init failed, err=%s (0x%x)",
+                          fs_error_str(ret), ret);
+        fs_mutex_destroy(&g_objmgr.key_lock);
+        objmgr_handle_index_deinit(&g_objmgr.handle_table);
+        objtable_destroy(&g_objmgr.table);
+        FS_LOG_DUMP_INFO("exit: failed");
+        return ret;
+    }
+
     fs_atomic32_init(&g_objmgr.object_count, 0);
-    fs_atomic64_init(&g_objmgr.next_objectid, 0);
 
     FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
@@ -106,13 +194,14 @@ void objmgr_deinit(void)
     FS_LOG_DUMP_INFO("enter");
 
     fs_mutex_destroy(&g_objmgr.lock);
+    fs_mutex_destroy(&g_objmgr.key_lock);
 
     objmgr_handle_index_deinit(&g_objmgr.handle_table);
 
     objtable_destroy(&g_objmgr.table);
 
     fs_atomic32_store(&g_objmgr.object_count, 0);
-    fs_atomic64_store(&g_objmgr.next_objectid, 0);
+    objmgr_key_allocator_reset();
 
     FS_LOG_DUMP_INFO("exit: done");
 }

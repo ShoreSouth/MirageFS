@@ -199,14 +199,14 @@ fs_error_t fsmgr_create(
     fs_error_t err;
     fsc_fsid_t fsid;
     fuid_t root_fuid;
-    ObjectId_t root_objectid;
+    obj_key_t root_key;
     obj_handle_t root_handle;
     fsc_namespace_t *ns;
     bool dir_created;
     bool object_registered;
 
     fsid = FSID_INVALID;
-    root_objectid = FUID_INVALID_OBJECTID;
+    memset(&root_key, 0, sizeof(root_key));
     ns = NULL;
     dir_created = false;
     object_registered = false;
@@ -238,16 +238,16 @@ fs_error_t fsmgr_create(
         goto unlock;
     }
 
-    err = objmgr_alloc_objectid(&root_objectid);
+    err = objmgr_alloc_key(&root_key);
     if (fs_failed(err)) {
-        FS_LOG_DUMP_ERROR("objmgr_alloc_objectid failed, err=%s (0x%x)",
+        FS_LOG_DUMP_ERROR("objmgr_alloc_key failed, err=%s (0x%x)",
                           fs_error_str(err), err);
         goto unlock;
     }
 
     root_fuid = fuid_make(fsid,
-                          root_objectid,
-                          FSC_NAMESPACE_ROOT_GEN,
+                          root_key.objectid,
+                          root_key.gen,
                           FUID_TYPE_DIR);
 
     err = fsmgr_create_root_dir(name, &root_handle);
@@ -315,6 +315,8 @@ unlock:
 
         if (object_registered) {
             (void)objmgr_delete(&root_fuid);
+        } else if (objkey_is_valid(&root_key)) {
+            (void)objmgr_free_key(&root_key);
         }
 
         if (dir_created) {

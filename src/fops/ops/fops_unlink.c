@@ -8,33 +8,38 @@
 #include "lsa/include/lsa_api.h"
 #include "object/objmgr/objmgr.h"
 
-fs_error_t fops_unlink(const fuid_t *parent_fuid, const char *name)
+fs_error_t fops_unlink(const fuid_t *parent_fuid,
+                       const char *name,
+                       fs_flags_t flags)
 {
     fs_error_t err;
-    fuid_t child_fuid;
+    fops_object_result_t child;
     obj_meta_t *parent_meta;
     int parent_fd;
 
+    FS_LOG_DUMP_INFO("enter: parent=%p name=%s flags=0x%x",
+                     (const void *)parent_fuid,
+                     name ? name : "(null)",
+                     flags);
+
     parent_meta = NULL;
     parent_fd = -1;
-    fuid_set_invalid(&child_fuid);
 
-    if (parent_fuid == NULL) {
-        err = fops_error(FS_OP_UNLINK, EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: parent is NULL, "
-                          "err=%s (0x%x)", fs_error_str(err), err);
-        goto out;
-    }
-
-    err = fops_lookup(parent_fuid, name, &child_fuid);
+    err = fops_validate_unlink_flags(flags, FS_OP_UNLINK);
     if (fs_failed(err)) {
         goto out;
     }
 
-    if (fuid_is_dir(&child_fuid)) {
-        err = fops_error(FS_OP_UNLINK, EISDIR);
-        FS_LOG_DUMP_ERROR("unlink failed: target is dir, err=%s (0x%x)",
-                          fs_error_str(err), err);
+    err = fops_validate_name(name, FS_OP_UNLINK, false);
+    if (fs_failed(err)) {
+        goto out;
+    }
+
+    err = fops_lookup_plus(parent_fuid,
+                           name,
+                           flags | FS_FLAG_REGULAR,
+                           &child);
+    if (fs_failed(err)) {
         goto out;
     }
 
@@ -47,14 +52,15 @@ fs_error_t fops_unlink(const fuid_t *parent_fuid, const char *name)
         goto out;
     }
 
-    err = lsa_unlink(parent_fd, name, FS_FLAG_NONE);
+    err = lsa_unlink(parent_fd, name, flags | FS_FLAG_REGULAR);
     if (fs_failed(err)) {
         goto out;
     }
 
-    err = objmgr_delete(&child_fuid);
+    err = objmgr_delete(&child.fuid);
 
 out:
     fops_close_object(parent_meta, parent_fd);
+    FS_LOG_DUMP_INFO("exit: err=%s (0x%x)", fs_error_str(err), err);
     return err;
 }

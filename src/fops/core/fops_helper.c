@@ -9,7 +9,43 @@
 #include "lsa/include/lsa_api.h"
 #include "object/objmgr/objmgr.h"
 
-fs_error_t fops_validate_name(const char *name, fs_op_t sub)
+static fs_error_t fops_validate_known_flags(fs_flags_t flags,
+                                            fs_flags_t known,
+                                            fs_op_t sub)
+{
+    fs_error_t err;
+
+    if ((flags & ~known) != 0U) {
+        err = fops_error(sub, EINVAL);
+        FS_LOG_DUMP_ERROR("flag check failed: flags=0x%x known=0x%x, "
+                          "err=%s (0x%x)",
+                          flags, known, fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}
+
+static fs_error_t fops_validate_type_flag_pair(fs_flags_t flags,
+                                               fs_op_t sub)
+{
+    fs_error_t err;
+
+    if (fs_flag_test(flags, FS_FLAG_DIRECTORY) &&
+        fs_flag_test(flags, FS_FLAG_REGULAR)) {
+        err = fops_error(sub, EINVAL);
+        FS_LOG_DUMP_ERROR("flag check failed: DIRECTORY conflicts with "
+                          "REGULAR, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}
+
+fs_error_t fops_validate_name(const char *name,
+                              fs_op_t sub,
+                              bool allow_dot_names)
 {
     fs_error_t err;
     size_t len;
@@ -30,16 +66,208 @@ fs_error_t fops_validate_name(const char *name, fs_op_t sub)
         return err;
     }
 
-    if ((strcmp(name, ".") == 0) ||
-        (strcmp(name, "..") == 0) ||
-        (strchr(name, '/') != NULL)) {
+    if (strchr(name, '/') != NULL) {
         err = fops_error(sub, EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: invalid name=%s, "
+        FS_LOG_DUMP_ERROR("param check failed: slash in name=%s, "
                           "err=%s (0x%x)",
                           name, fs_error_str(err), err);
         return err;
     }
 
+    if (!allow_dot_names &&
+        ((strcmp(name, ".") == 0) || (strcmp(name, "..") == 0))) {
+        err = fops_error(sub, EINVAL);
+        FS_LOG_DUMP_ERROR("param check failed: dot name is not allowed, "
+                          "name=%s, err=%s (0x%x)",
+                          name, fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}
+
+fs_error_t fops_validate_lookup_flags(fs_flags_t flags, fs_op_t sub)
+{
+    fs_error_t err;
+    const fs_flags_t known = FS_FLAG_NOFOLLOW |
+                             FS_FLAG_DIRECTORY |
+                             FS_FLAG_REGULAR;
+
+    err = fops_validate_known_flags(flags, known, sub);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    return fops_validate_type_flag_pair(flags, sub);
+}
+
+fs_error_t fops_validate_create_flags(fs_flags_t flags, fs_op_t sub)
+{
+    fs_error_t err;
+    const fs_flags_t known = FS_FLAG_REPLACE |
+                             FS_FLAG_EXCLUSIVE |
+                             FS_FLAG_NOFOLLOW |
+                             FS_FLAG_SYNC |
+                             FS_FLAG_DIRECT |
+                             FS_FLAG_REGULAR |
+                             FS_FLAG_TRUNCATE |
+                             FS_FLAG_APPEND;
+
+    err = fops_validate_known_flags(flags, known, sub);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    if (fs_flag_test(flags, FS_FLAG_REPLACE) &&
+        fs_flag_test(flags, FS_FLAG_EXCLUSIVE)) {
+        err = fops_error(sub, EINVAL);
+        FS_LOG_DUMP_ERROR("flag check failed: REPLACE conflicts with "
+                          "EXCLUSIVE, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}
+
+fs_error_t fops_validate_mkdir_flags(fs_flags_t flags, fs_op_t sub)
+{
+    const fs_flags_t known = FS_FLAG_EXCLUSIVE | FS_FLAG_DIRECTORY;
+
+    return fops_validate_known_flags(flags, known, sub);
+}
+
+fs_error_t fops_validate_getattr_flags(fs_flags_t flags, fs_op_t sub)
+{
+    fs_error_t err;
+    const fs_flags_t known = FS_FLAG_DIRECTORY | FS_FLAG_REGULAR;
+
+    err = fops_validate_known_flags(flags, known, sub);
+    if (fs_failed(err)) {
+        return err;
+    }
+
+    return fops_validate_type_flag_pair(flags, sub);
+}
+
+fs_error_t fops_validate_readdir_flags(fs_flags_t flags, fs_op_t sub)
+{
+    return fops_validate_known_flags(flags, FS_FLAG_DIRECTORY, sub);
+}
+
+fs_error_t fops_validate_unlink_flags(fs_flags_t flags, fs_op_t sub)
+{
+    const fs_flags_t known = FS_FLAG_NOFOLLOW | FS_FLAG_REGULAR;
+
+    return fops_validate_known_flags(flags, known, sub);
+}
+
+fs_error_t fops_validate_rmdir_flags(fs_flags_t flags, fs_op_t sub)
+{
+    return fops_validate_known_flags(flags, FS_FLAG_DIRECTORY, sub);
+}
+
+fs_error_t fops_check_type_flags(fs_type_t type,
+                                 fs_flags_t flags,
+                                 fs_op_t sub)
+{
+    fs_error_t err;
+
+    if (fs_flag_test(flags, FS_FLAG_DIRECTORY) && (type != FS_TYPE_DIR)) {
+        err = fops_error(sub, ENOTDIR);
+        FS_LOG_DUMP_ERROR("type check failed: expected directory, type=%u, "
+                          "err=%s (0x%x)",
+                          (unsigned int)type, fs_error_str(err), err);
+        return err;
+    }
+
+    if (fs_flag_test(flags, FS_FLAG_REGULAR) && (type != FS_TYPE_REG)) {
+        err = fops_error(sub, (type == FS_TYPE_DIR) ? EISDIR : EINVAL);
+        FS_LOG_DUMP_ERROR("type check failed: expected regular, type=%u, "
+                          "err=%s (0x%x)",
+                          (unsigned int)type, fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}
+
+mode_t fops_create_mode(const fops_create_attr_t *attr,
+                        mode_t default_mode)
+{
+    if ((attr != NULL) &&
+        ((attr->valid_mask & FOPS_CREATE_ATTR_MODE) != 0U)) {
+        return attr->mode & FS_PERM_MASK;
+    }
+
+    return default_mode & FS_PERM_MASK;
+}
+
+fs_error_t fops_validate_create_attr(const fops_create_attr_t *attr,
+                                     uint32_t supported_mask,
+                                     fs_op_t sub)
+{
+    fs_error_t err;
+
+    if (attr == NULL) {
+        return FS_OK;
+    }
+
+    if ((attr->valid_mask & ~supported_mask) != 0U) {
+        err = fops_error(sub, EINVAL);
+        FS_LOG_DUMP_ERROR("create attr check failed: valid_mask=0x%x "
+                          "supported=0x%x, err=%s (0x%x)",
+                          attr->valid_mask,
+                          supported_mask,
+                          fs_error_str(err),
+                          err);
+        return err;
+    }
+
+    return FS_OK;
+}
+
+fs_error_t fops_apply_create_attr(int fd,
+                                  const fops_create_attr_t *attr,
+                                  bool allow_size,
+                                  fs_op_t sub)
+{
+    fs_error_t err;
+    uid_t uid;
+    gid_t gid;
+
+    if (attr == NULL) {
+        return FS_OK;
+    }
+
+    if (((attr->valid_mask & FOPS_CREATE_ATTR_SIZE) != 0U) &&
+        !allow_size) {
+        err = fops_error(sub, EINVAL);
+        FS_LOG_DUMP_ERROR("create attr check failed: size is unsupported, "
+                          "err=%s (0x%x)", fs_error_str(err), err);
+        return err;
+    }
+
+    if (((attr->valid_mask & FOPS_CREATE_ATTR_UID) != 0U) ||
+        ((attr->valid_mask & FOPS_CREATE_ATTR_GID) != 0U)) {
+        uid = ((attr->valid_mask & FOPS_CREATE_ATTR_UID) != 0U) ?
+                attr->uid : (uid_t)-1;
+        gid = ((attr->valid_mask & FOPS_CREATE_ATTR_GID) != 0U) ?
+                attr->gid : (gid_t)-1;
+        err = lsa_fchown(fd, uid, gid);
+        if (fs_failed(err)) {
+            return err;
+        }
+    }
+
+    if ((attr->valid_mask & FOPS_CREATE_ATTR_SIZE) != 0U) {
+        err = lsa_ftruncate(fd, (off_t)attr->size);
+        if (fs_failed(err)) {
+            return err;
+        }
+    }
+
+    (void)sub;
     return FS_OK;
 }
 
@@ -174,7 +402,7 @@ fs_error_t fops_fuid_from_handle(const fuid_t *parent_fuid,
 {
     fs_error_t err;
     obj_meta_t *meta;
-    ObjectId_t objectid;
+    obj_key_t key;
     fuid_t child_fuid;
 
     if ((parent_fuid == NULL) || (handle == NULL) || (out_fuid == NULL)) {
@@ -195,16 +423,17 @@ fs_error_t fops_fuid_from_handle(const fuid_t *parent_fuid,
         return FS_OK;
     }
 
-    err = objmgr_alloc_objectid(&objectid);
+    err = objmgr_alloc_key(&key);
     if (fs_failed(err)) {
         return err;
     }
 
     child_fuid = fops_make_child_fuid(parent_fuid,
-                                      objectid,
-                                      FOPS_OBJECT_GEN_DEFAULT,
+                                      key.objectid,
+                                      key.gen,
                                       type);
     if (objmgr_create(&child_fuid, handle) == NULL) {
+        (void)objmgr_free_key(&key);
         err = fops_error(sub, EIO);
         FS_LOG_DUMP_ERROR("objmgr_create failed, err=%s (0x%x)",
                           fs_error_str(err), err);

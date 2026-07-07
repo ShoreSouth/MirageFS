@@ -11,46 +11,33 @@
 
 typedef uint32_t fs_flags_t;
 
-/*
- * ============================================================
- * Generic
- * ============================================================
- */
-
+/* no extra operation constraint */
 #define FS_FLAG_NONE           0U
 
 /*
- * ============================================================
- * Constraint
- * ============================================================
+ * Creation constraints.
+ *
+ * REPLACE means an existing regular file may be reused.
+ * EXCLUSIVE means the target must not exist.
+ * These two flags conflict with each other.
  */
-
-/* replace existing object */
 #define FS_FLAG_REPLACE        (1U << 0)
-
-/* object must not exist */
 #define FS_FLAG_EXCLUSIVE      (1U << 1)
 
-/* do not follow symlink */
+/* do not follow a symlink at the final path component */
 #define FS_FLAG_NOFOLLOW       (1U << 2)
 
-/*
- * ============================================================
- * IO
- * ============================================================
- */
-
-/* sync write */
+/* write/open synchronization and direct-io hints */
 #define FS_FLAG_SYNC           (1U << 3)
-
-/* direct io */
 #define FS_FLAG_DIRECT         (1U << 4)
 
-/*
- * ============================================================
- * Helper
- * ============================================================
- */
+/* result type constraints for lookup/open/delete style operations */
+#define FS_FLAG_DIRECTORY      (1U << 5)
+#define FS_FLAG_REGULAR        (1U << 6)
+
+/* creation/open modifiers */
+#define FS_FLAG_TRUNCATE       (1U << 7)
+#define FS_FLAG_APPEND         (1U << 8)
 
 static inline bool fs_flag_test(
                     fs_flags_t flags,

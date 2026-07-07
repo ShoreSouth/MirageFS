@@ -221,6 +221,32 @@ void objmgr_remove_handle_locked(
     FS_LOG_DUMP_INFO("exit: done");
 }
 
+
+void objmgr_free_key_locked(
+                const obj_key_t *key)
+{
+    uint32_t next_generation;
+
+    if ((key == NULL) ||
+        (key->objectid == 0U) ||
+        (key->objectid > (ObjectId_t)OBJMGR_KEY_MAX_SLOTS)) {
+        return;
+    }
+
+    g_objmgr.key_allocated[key->objectid] = 0U;
+
+    next_generation = key->gen + 1U;
+    if (next_generation == 0U) {
+        next_generation = OBJMGR_KEY_GENERATION_INIT;
+    }
+    g_objmgr.key_generation[key->objectid] = next_generation;
+
+    if (g_objmgr.key_free_count < OBJMGR_KEY_MAX_SLOTS) {
+        g_objmgr.key_free_stack[g_objmgr.key_free_count] = key->objectid;
+        g_objmgr.key_free_count++;
+    }
+}
+
 /*
  * ============================================================
  * ObjTable Helper
@@ -553,6 +579,10 @@ void objmgr_reclaim_locked(
 
     (void)objmgr_remove_locked(
                 &rt->meta.key);
+
+    fs_mutex_lock(&g_objmgr.key_lock);
+    objmgr_free_key_locked(&rt->meta.key);
+    fs_mutex_unlock(&g_objmgr.key_lock);
 
     objmeta_reset(&rt->meta);
 

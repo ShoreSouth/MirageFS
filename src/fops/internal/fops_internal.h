@@ -9,15 +9,52 @@
 #include "lsa/include/lsa_api.h"
 #include "object/objmeta/objmeta.h"
 
-#define FOPS_OBJECT_GEN_DEFAULT ((GenId_t)1U)
-
 typedef struct fops_context {
     uint32_t inited;
 } fops_context_t;
 
 extern fops_context_t g_fops_ctx;
 
-fs_error_t fops_validate_name(const char *name, fs_op_t sub);
+fs_error_t fops_validate_name(const char *name,
+                              fs_op_t sub,
+                              bool allow_dot_names);
+
+fs_error_t fops_validate_lookup_flags(fs_flags_t flags,
+                                      fs_op_t sub);
+
+fs_error_t fops_validate_create_flags(fs_flags_t flags,
+                                      fs_op_t sub);
+
+fs_error_t fops_validate_mkdir_flags(fs_flags_t flags,
+                                     fs_op_t sub);
+
+fs_error_t fops_validate_getattr_flags(fs_flags_t flags,
+                                       fs_op_t sub);
+
+fs_error_t fops_validate_readdir_flags(fs_flags_t flags,
+                                       fs_op_t sub);
+
+fs_error_t fops_validate_unlink_flags(fs_flags_t flags,
+                                      fs_op_t sub);
+
+fs_error_t fops_validate_rmdir_flags(fs_flags_t flags,
+                                     fs_op_t sub);
+
+fs_error_t fops_check_type_flags(fs_type_t type,
+                                 fs_flags_t flags,
+                                 fs_op_t sub);
+
+mode_t fops_create_mode(const fops_create_attr_t *attr,
+                        mode_t default_mode);
+
+fs_error_t fops_validate_create_attr(const fops_create_attr_t *attr,
+                                     uint32_t supported_mask,
+                                     fs_op_t sub);
+
+fs_error_t fops_apply_create_attr(int fd,
+                                  const fops_create_attr_t *attr,
+                                  bool allow_size,
+                                  fs_op_t sub);
 
 fs_error_t fops_open_object(const fuid_t *fuid,
                             int flags,
