@@ -320,6 +320,10 @@ lsa_ret_t lsa_fchown(
                 uid_t uid,
                 gid_t gid);
 
+lsa_ret_t lsa_faccess(
+                int fd,
+                int mode);
+
 /*
  * ============================================================
  * Directory Iterator API

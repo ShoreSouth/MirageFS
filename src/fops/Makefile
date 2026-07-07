@@ -11,5 +11,10 @@ SRC += ops/fops_getattr.c
 SRC += ops/fops_readdir.c
 SRC += ops/fops_unlink.c
 SRC += ops/fops_rmdir.c
+SRC += ops/fops_namespace_extra.c
+SRC += ops/fops_file.c
+SRC += ops/fops_attr_extra.c
+SRC += ops/fops_xattr.c
+SRC += ops/fops_fs.c
 
 include ../../build/build.mk

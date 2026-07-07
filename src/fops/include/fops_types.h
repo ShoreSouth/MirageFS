@@ -2,9 +2,12 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/statfs.h>
 
 #include "common/fs_common.h"
 #include "object/fuid/fuid.h"
+
+typedef struct fops_file fops_file_t;
 
 #define FOPS_READDIR_MAX_BATCH 1024U
 
@@ -52,6 +55,33 @@ typedef struct fops_create_attr {
     uint64_t size;       /* valid for regular file create only */
 
 } fops_create_attr_t;
+
+#define FOPS_SETATTR_MODE  FOPS_CREATE_ATTR_MODE
+#define FOPS_SETATTR_UID   FOPS_CREATE_ATTR_UID
+#define FOPS_SETATTR_GID   FOPS_CREATE_ATTR_GID
+#define FOPS_SETATTR_SIZE  FOPS_CREATE_ATTR_SIZE
+
+/* Attribute update request. valid_mask controls which fields are applied. */
+typedef struct fops_setattr {
+
+    uint32_t valid_mask; /* FOPS_SETATTR_* */
+
+    mode_t mode;         /* permission bits when FOPS_SETATTR_MODE is set */
+    uid_t uid;           /* owner uid when FOPS_SETATTR_UID is set */
+    gid_t gid;           /* owner gid when FOPS_SETATTR_GID is set */
+    uint64_t size;       /* regular-file size when FOPS_SETATTR_SIZE is set */
+
+} fops_setattr_t;
+
+/* Device identifier for mknod. Valid for block/character devices. */
+typedef struct fops_device {
+
+    uint32_t major_id;
+    uint32_t minor_id;
+
+} fops_device_t;
+
+typedef struct statfs fops_statfs_t;
 
 /* Directory entry without attributes. */
 typedef struct fops_dirent {

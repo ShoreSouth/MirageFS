@@ -13,6 +13,13 @@ typedef struct fops_context {
     uint32_t inited;
 } fops_context_t;
 
+struct fops_file {
+    obj_meta_t *meta;
+    int fd;
+    fuid_t fuid;
+    fs_flags_t flags;
+};
+
 extern fops_context_t g_fops_ctx;
 
 fs_error_t fops_validate_name(const char *name,
@@ -39,6 +46,20 @@ fs_error_t fops_validate_unlink_flags(fs_flags_t flags,
 
 fs_error_t fops_validate_rmdir_flags(fs_flags_t flags,
                                      fs_op_t sub);
+
+fs_error_t fops_validate_open_flags(fs_flags_t flags,
+                                    fs_op_t sub);
+
+fs_error_t fops_validate_setattr_flags(fs_flags_t flags,
+                                       fs_op_t sub);
+
+fs_error_t fops_validate_xattr_flags(fs_flags_t flags,
+                                     fs_op_t sub);
+
+int fops_linux_open_flags(fs_flags_t flags);
+
+fs_error_t fops_file_check(const fops_file_t *file,
+                           fs_op_t sub);
 
 fs_error_t fops_check_type_flags(fs_type_t type,
                                  fs_flags_t flags,

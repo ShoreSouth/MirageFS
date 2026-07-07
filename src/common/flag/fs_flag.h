@@ -39,6 +39,10 @@ typedef uint32_t fs_flags_t;
 #define FS_FLAG_TRUNCATE       (1U << 7)
 #define FS_FLAG_APPEND         (1U << 8)
 
+/* open/access direction flags */
+#define FS_FLAG_READ           (1U << 9)
+#define FS_FLAG_WRITE          (1U << 10)
+
 static inline bool fs_flag_test(
                     fs_flags_t flags,
                     fs_flags_t flag)

@@ -6,6 +6,7 @@
 
 #include "common/fs_common.h"
 #include "fops/include/fops_types.h"
+#include "object/objmeta/objmeta.h"
 
 /*
  * Initialize FOPS module state and register FOPS sub-error names.
@@ -200,3 +201,215 @@ fs_error_t fops_unlink(const fuid_t *parent_fuid,
 fs_error_t fops_rmdir(const fuid_t *parent_fuid,
                       const char *name,
                       fs_flags_t flags);
+
+/*
+ * Rename one child between parent directories.
+ *
+ * Parameters:
+ *      [IN] old_parent_fuid : source parent directory FUID
+ *      [IN] old_name        : source child name
+ *      [IN] new_parent_fuid : destination parent directory FUID
+ *      [IN] new_name        : destination child name
+ *      [IN] flags           : FS_FLAG_REPLACE / EXCLUSIVE / NONE
+ */
+fs_error_t fops_rename(const fuid_t *old_parent_fuid,
+                       const char *old_name,
+                       const fuid_t *new_parent_fuid,
+                       const char *new_name,
+                       fs_flags_t flags);
+
+/*
+ * Create a hard link and return the linked object's FUID.
+ *
+ * Parameters:
+ *      [IN]  old_parent_fuid : source parent directory FUID
+ *      [IN]  old_name        : existing regular-file name
+ *      [IN]  new_parent_fuid : destination parent directory FUID
+ *      [IN]  new_name        : new link name; must not exist
+ *      [IN]  flags           : FS_FLAG_EXCLUSIVE / NONE
+ *      [OUT] out_fuid        : linked object FUID
+ */
+fs_error_t fops_link(const fuid_t *old_parent_fuid,
+                     const char *old_name,
+                     const fuid_t *new_parent_fuid,
+                     const char *new_name,
+                     fs_flags_t flags,
+                     fuid_t *out_fuid);
+
+/* Same as fops_link(), but also returns post-link attributes. */
+fs_error_t fops_link_plus(const fuid_t *old_parent_fuid,
+                          const char *old_name,
+                          const fuid_t *new_parent_fuid,
+                          const char *new_name,
+                          fs_flags_t flags,
+                          fops_object_result_t *out);
+
+/*
+ * Create a symbolic link and return its FUID.
+ *
+ * Parameters:
+ *      [IN]  parent_fuid : parent directory FUID
+ *      [IN]  name        : symlink name; must not exist
+ *      [IN]  target      : symlink payload
+ *      [IN]  flags       : FS_FLAG_EXCLUSIVE / NONE
+ *      [OUT] out_fuid    : symlink FUID
+ */
+fs_error_t fops_symlink(const fuid_t *parent_fuid,
+                        const char *name,
+                        const char *target,
+                        fs_flags_t flags,
+                        fuid_t *out_fuid);
+
+/* Same as fops_symlink(), but also returns symlink attributes. */
+fs_error_t fops_symlink_plus(const fuid_t *parent_fuid,
+                             const char *name,
+                             const char *target,
+                             fs_flags_t flags,
+                             fops_object_result_t *out);
+
+/*
+ * Create a special object and return its FUID.
+ *
+ * Parameters:
+ *      [IN]  parent_fuid : parent directory FUID
+ *      [IN]  name        : new object name; must not exist
+ *      [IN]  type        : FS_TYPE_FIFO / BLK / CHR
+ *      [IN]  attr        : create-time attributes; currently MODE is supported
+ *      [IN]  device      : required for BLK/CHR, ignored for FIFO
+ *      [IN]  flags       : FS_FLAG_EXCLUSIVE / NONE
+ *      [OUT] out_fuid    : created object FUID
+ */
+fs_error_t fops_mknod(const fuid_t *parent_fuid,
+                      const char *name,
+                      fs_type_t type,
+                      const fops_create_attr_t *attr,
+                      const fops_device_t *device,
+                      fs_flags_t flags,
+                      fuid_t *out_fuid);
+
+/* Same as fops_mknod(), but also returns post-create attributes. */
+fs_error_t fops_mknod_plus(const fuid_t *parent_fuid,
+                           const char *name,
+                           fs_type_t type,
+                           const fops_create_attr_t *attr,
+                           const fops_device_t *device,
+                           fs_flags_t flags,
+                           fops_object_result_t *out);
+
+/*
+ * Update object attributes.
+ *
+ * Parameters:
+ *      [IN] fuid  : target object FUID
+ *      [IN] attr  : attribute update request
+ *      [IN] flags : FS_FLAG_DIRECTORY / REGULAR / NONE type constraint
+ */
+fs_error_t fops_setattr(const fuid_t *fuid,
+                        const fops_setattr_t *attr,
+                        fs_flags_t flags);
+
+/*
+ * Check access for an object using R_OK/W_OK/X_OK/F_OK style mask.
+ *
+ * Parameters:
+ *      [IN] fuid  : target object FUID
+ *      [IN] mask  : POSIX access mask
+ *      [IN] flags : FS_FLAG_DIRECTORY / REGULAR / NONE type constraint
+ */
+fs_error_t fops_access(const fuid_t *fuid,
+                       int mask,
+                       fs_flags_t flags);
+
+/*
+ * Copy the backend object handle registered for a FUID.
+ *
+ * Parameters:
+ *      [IN]  fuid       : target object FUID
+ *      [OUT] out_handle : backend handle copy
+ */
+fs_error_t fops_gethandle(const fuid_t *fuid,
+                          obj_handle_t *out_handle);
+
+/*
+ * Open an object and return an opaque FOPS file handle.
+ *
+ * Parameters:
+ *      [IN]  fuid     : target object FUID
+ *      [IN]  flags    : READ / WRITE / APPEND / TRUNCATE / SYNC / DIRECT /
+ *                       DIRECTORY / REGULAR
+ *      [OUT] out_file : opened FOPS file handle; close with fops_close()
+ */
+fs_error_t fops_open(const fuid_t *fuid,
+                     fs_flags_t flags,
+                     fops_file_t **out_file);
+
+/*
+ * Open an already registered backend handle and return a FOPS file handle.
+ *
+ * Parameters:
+ *      [IN]  handle   : backend handle previously registered in ObjMgr
+ *      [IN]  flags    : same as fops_open()
+ *      [OUT] out_file : opened FOPS file handle
+ */
+fs_error_t fops_openhandle(const obj_handle_t *handle,
+                           fs_flags_t flags,
+                           fops_file_t **out_file);
+
+/*
+ * Close a FOPS file handle returned by fops_open/openhandle.
+ *
+ * Parameters:
+ *      [IN/OUT] file : FOPS file handle; invalid after this call
+ */
+fs_error_t fops_close(fops_file_t *file);
+
+fs_error_t fops_read(fops_file_t *file,
+                     void *buf,
+                     size_t size,
+                     size_t *actual);
+
+fs_error_t fops_write(fops_file_t *file,
+                      const void *buf,
+                      size_t size,
+                      size_t *actual);
+
+fs_error_t fops_pread(fops_file_t *file,
+                      void *buf,
+                      size_t size,
+                      off_t offset,
+                      size_t *actual);
+
+fs_error_t fops_pwrite(fops_file_t *file,
+                       const void *buf,
+                       size_t size,
+                       off_t offset,
+                       size_t *actual);
+
+fs_error_t fops_truncate(const fuid_t *fuid,
+                         uint64_t size,
+                         fs_flags_t flags);
+
+fs_error_t fops_getxattr(const fuid_t *fuid,
+                         const char *name,
+                         void *value,
+                         size_t size,
+                         size_t *actual);
+
+fs_error_t fops_setxattr(const fuid_t *fuid,
+                         const char *name,
+                         const void *value,
+                         size_t size,
+                         fs_flags_t flags);
+
+fs_error_t fops_listxattr(const fuid_t *fuid,
+                          char *list,
+                          size_t size,
+                          size_t *actual);
+
+fs_error_t fops_removexattr(const fuid_t *fuid,
+                            const char *name);
+
+fs_error_t fops_statfs(const fuid_t *fuid,
+                       fops_statfs_t *out_statfs);
+
+fs_error_t fops_syncfs(const fuid_t *fuid);

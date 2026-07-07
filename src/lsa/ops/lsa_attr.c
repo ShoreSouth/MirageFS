@@ -134,3 +134,37 @@ lsa_ret_t lsa_fchown(
     FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
+
+/* ============================================================
+ * faccess
+ * ============================================================
+ */
+
+lsa_ret_t lsa_faccess(
+                int fd,
+                int mode)
+{
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, mode=0x%x", fd, mode);
+
+#ifdef AT_EMPTY_PATH
+    if (faccessat(fd, "", mode, AT_EMPTY_PATH) < 0) {
+        err = lsa_error(FS_OP_ACCESS, errno);
+        FS_LOG_DUMP_ERROR("faccess failed: fd=%d, mode=0x%x, "
+                          "err=%s (0x%x)",
+                          fd, mode, fs_error_str(err), err);
+        return err;
+    }
+#else
+    (void)fd;
+    (void)mode;
+    err = lsa_error(FS_OP_ACCESS, ENOSYS);
+    FS_LOG_DUMP_ERROR("faccess unsupported: err=%s (0x%x)",
+                      fs_error_str(err), err);
+    return err;
+#endif
+
+    FS_LOG_DUMP_INFO("exit: ok");
+    return FS_OK;
+}

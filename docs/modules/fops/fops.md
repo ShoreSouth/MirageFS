@@ -118,3 +118,40 @@ Current implementation uses the plus path as the core for lookup/create/mkdir, a
 ## FSC Boundary Note
 
 FSC registers each filesystem root as a normal ObjMgr object so FOPS can operate uniformly on root and non-root directories. FSC still owns namespace lifecycle and `fsid`; ObjMgr only owns runtime object identity and backend handle lookup.
+
+## Completed OP Coverage
+
+FOPS currently exposes one-step APIs for the operation words in `common/op`:
+
+| OP | FOPS API |
+| --- | --- |
+| `LOOKUP` | `fops_lookup`, `fops_lookup_plus` |
+| `CREATE` | `fops_create`, `fops_create_plus` |
+| `MKDIR` | `fops_mkdir`, `fops_mkdir_plus` |
+| `MKNOD` | `fops_mknod`, `fops_mknod_plus` |
+| `UNLINK` | `fops_unlink` |
+| `RMDIR` | `fops_rmdir` |
+| `RENAME` | `fops_rename` |
+| `LINK` | `fops_link`, `fops_link_plus` |
+| `SYMLINK` | `fops_symlink`, `fops_symlink_plus` |
+| `OPEN` / `OPENHANDLE` | `fops_open`, `fops_openhandle` |
+| `CLOSE` | `fops_close` |
+| `GETHANDLE` | `fops_gethandle` |
+| `GETATTR` / `SETATTR` | `fops_getattr`, `fops_setattr` |
+| `ACCESS` | `fops_access` |
+| `READ` / `WRITE` | `fops_read`, `fops_write`, `fops_pread`, `fops_pwrite` |
+| `TRUNCATE` | `fops_truncate` |
+| `GETXATTR` / `SETXATTR` | `fops_getxattr`, `fops_setxattr` |
+| `LISTXATTR` / `REMOVEXATTR` | `fops_listxattr`, `fops_removexattr` |
+| `READDIR` / `READDIRPLUS` | `fops_readdir`, `fops_readdirplus` |
+| `STATFS` / `SYNCFS` | `fops_statfs`, `fops_syncfs` |
+
+`fops_open()` and `fops_openhandle()` return an opaque `fops_file_t`. Callers must release it with `fops_close()`. FOPS does not expose Linux fd ownership to upper layers.
+
+Create-like name operations have conservative replacement semantics:
+
+- `create` supports `REPLACE` because Linux open can atomically reuse an existing regular file.
+- `rename` supports `REPLACE` and removes the overwritten target from ObjMgr after success.
+- `link`, `symlink`, and `mknod` do not support `REPLACE`; callers get `EEXIST` if the target name already exists.
+
+`mknod` currently supports `MODE` from `fops_create_attr_t`. UID/GID/SIZE are rejected for mknod because applying them safely to FIFO/device nodes needs additional LSA path/fd semantics.
