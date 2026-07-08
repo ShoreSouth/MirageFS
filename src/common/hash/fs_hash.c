@@ -1,7 +1,8 @@
+#include "common/hash/fs_hash.h"
+
 #include <stdlib.h>
 #include <string.h>
 
-#include "common/hash/fs_hash.h"
 #include "common/list/fs_list.h"
 #include "common/log/fs_log.h"
 

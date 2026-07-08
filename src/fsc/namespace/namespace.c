@@ -1,6 +1,7 @@
+#include "fsc/namespace/namespace.h"
+
 #include <string.h>
 
-#include "fsc/namespace/namespace.h"
 #include "fsc/fsc_error.h"
 
 static bool fsc_namespace_root_fuid_is_valid(

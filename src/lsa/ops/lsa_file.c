@@ -1,7 +1,8 @@
+#include "lsa/include/lsa_api.h"
+
 #include <unistd.h>
 
 #include "common/fs_common.h"
-#include "lsa/include/lsa_api.h"
 #include "lsa/internal/lsa_internal.h"
 #include "lsa/internal/lsa_error.h"
 

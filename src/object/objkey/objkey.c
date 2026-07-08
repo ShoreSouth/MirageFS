@@ -1,6 +1,6 @@
-#include <assert.h>
-
 #include "object/objkey/objkey.h"
+
+#include <assert.h>
 
 /*
  * ============================================================

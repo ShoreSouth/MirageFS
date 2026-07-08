@@ -1,7 +1,8 @@
+#include "fsc/fstable/fstable.h"
+
 #include <stdlib.h>
 #include <string.h>
 
-#include "fsc/fstable/fstable.h"
 #include "fsc/fsc_error.h"
 
 /*

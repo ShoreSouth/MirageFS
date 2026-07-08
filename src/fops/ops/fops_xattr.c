@@ -1,4 +1,4 @@
-﻿#include "fops/include/fops.h"
+#include "fops/include/fops.h"
 
 #include <errno.h>
 #include <fcntl.h>

@@ -1,3 +1,5 @@
+#include "lsa/include/lsa_api.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>

@@ -3,9 +3,10 @@
  * @brief MirageFS 全局配置管理实现
  */
 
-#include <stdio.h>
-
 #include "fs_config.h"
+
+ #include <stdio.h>
+
 #include "common/fs_common.h"
 
 /* ============================================================

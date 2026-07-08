@@ -88,189 +88,72 @@ fs_error_t fops_validate_name(const char *name,
 
 fs_error_t fops_validate_lookup_flags(fs_flags_t flags, fs_op_t sub)
 {
-    fs_error_t err;
-    const fs_flags_t known = FS_FLAG_NOFOLLOW |
-                             FS_FLAG_DIRECTORY |
-                             FS_FLAG_REGULAR;
-
-    err = fops_validate_known_flags(flags, known, sub);
-    if (fs_failed(err)) {
-        return err;
-    }
-
-    return fops_validate_type_flag_pair(flags, sub);
+    return fops_validate_flags(FS_OP_LOOKUP, flags, sub);
 }
 
 fs_error_t fops_validate_create_flags(fs_flags_t flags, fs_op_t sub)
 {
-    fs_error_t err;
-    const fs_flags_t known = FS_FLAG_REPLACE |
-                             FS_FLAG_EXCLUSIVE |
-                             FS_FLAG_NOFOLLOW |
-                             FS_FLAG_SYNC |
-                             FS_FLAG_DIRECT |
-                             FS_FLAG_REGULAR |
-                             FS_FLAG_TRUNCATE |
-                             FS_FLAG_APPEND;
-
-    err = fops_validate_known_flags(flags, known, sub);
-    if (fs_failed(err)) {
-        return err;
-    }
-
-    if (fs_flag_test(flags, FS_FLAG_REPLACE) &&
-        fs_flag_test(flags, FS_FLAG_EXCLUSIVE)) {
-        err = fops_error(sub, EINVAL);
-        FS_LOG_DUMP_ERROR("flag check failed: REPLACE conflicts with "
-                          "EXCLUSIVE, err=%s (0x%x)",
-                          fs_error_str(err), err);
-        return err;
-    }
-
-    return FS_OK;
+    return fops_validate_flags(FS_OP_CREATE, flags, sub);
 }
 
 fs_error_t fops_validate_mkdir_flags(fs_flags_t flags, fs_op_t sub)
 {
-    const fs_flags_t known = FS_FLAG_EXCLUSIVE | FS_FLAG_DIRECTORY;
-
-    return fops_validate_known_flags(flags, known, sub);
+    return fops_validate_flags(FS_OP_MKDIR, flags, sub);
 }
 
 fs_error_t fops_validate_getattr_flags(fs_flags_t flags, fs_op_t sub)
 {
-    fs_error_t err;
-    const fs_flags_t known = FS_FLAG_DIRECTORY | FS_FLAG_REGULAR;
-
-    err = fops_validate_known_flags(flags, known, sub);
-    if (fs_failed(err)) {
-        return err;
-    }
-
-    return fops_validate_type_flag_pair(flags, sub);
+    return fops_validate_flags(FS_OP_GETATTR, flags, sub);
 }
 
 fs_error_t fops_validate_readdir_flags(fs_flags_t flags, fs_op_t sub)
 {
-    return fops_validate_known_flags(flags, FS_FLAG_DIRECTORY, sub);
+    if (sub == FS_OP_READDIRPLUS) {
+        return fops_validate_flags(FS_OP_READDIRPLUS, flags, sub);
+    }
+
+    return fops_validate_flags(FS_OP_READDIR, flags, sub);
 }
 
 fs_error_t fops_validate_unlink_flags(fs_flags_t flags, fs_op_t sub)
 {
-    const fs_flags_t known = FS_FLAG_NOFOLLOW | FS_FLAG_REGULAR;
-
-    return fops_validate_known_flags(flags, known, sub);
+    return fops_validate_flags(FS_OP_UNLINK, flags, sub);
 }
 
 fs_error_t fops_validate_rmdir_flags(fs_flags_t flags, fs_op_t sub)
 {
-    return fops_validate_known_flags(flags, FS_FLAG_DIRECTORY, sub);
+    return fops_validate_flags(FS_OP_RMDIR, flags, sub);
 }
-
 
 fs_error_t fops_validate_open_flags(fs_flags_t flags, fs_op_t sub)
 {
-    fs_error_t err;
-    const fs_flags_t known = FS_FLAG_READ |
-                             FS_FLAG_WRITE |
-                             FS_FLAG_SYNC |
-                             FS_FLAG_DIRECT |
-                             FS_FLAG_APPEND |
-                             FS_FLAG_TRUNCATE |
-                             FS_FLAG_DIRECTORY |
-                             FS_FLAG_REGULAR;
-
-    err = fops_validate_known_flags(flags, known, sub);
-    if (fs_failed(err)) {
-        return err;
+    if (sub == FS_OP_OPENHANDLE) {
+        return fops_validate_flags(FS_OP_OPENHANDLE, flags, sub);
     }
 
-    return fops_validate_type_flag_pair(flags, sub);
+    return fops_validate_flags(FS_OP_OPEN, flags, sub);
 }
 
 fs_error_t fops_validate_setattr_flags(fs_flags_t flags, fs_op_t sub)
 {
-    fs_error_t err;
-    const fs_flags_t known = FS_FLAG_DIRECTORY | FS_FLAG_REGULAR;
-
-    err = fops_validate_known_flags(flags, known, sub);
-    if (fs_failed(err)) {
-        return err;
-    }
-
-    return fops_validate_type_flag_pair(flags, sub);
+    return fops_validate_flags(FS_OP_SETATTR, flags, sub);
 }
 
 fs_error_t fops_validate_xattr_flags(fs_flags_t flags, fs_op_t sub)
 {
-    fs_error_t err;
-    const fs_flags_t known = FS_FLAG_REPLACE | FS_FLAG_EXCLUSIVE;
-
-    err = fops_validate_known_flags(flags, known, sub);
-    if (fs_failed(err)) {
-        return err;
-    }
-
-    if (fs_flag_test(flags, FS_FLAG_REPLACE) &&
-        fs_flag_test(flags, FS_FLAG_EXCLUSIVE)) {
-        err = fops_error(sub, EINVAL);
-        FS_LOG_DUMP_ERROR("flag check failed: REPLACE conflicts with "
-                          "EXCLUSIVE, err=%s (0x%x)",
-                          fs_error_str(err), err);
-        return err;
-    }
-
-    return FS_OK;
+    return fops_validate_flags(FS_OP_SETXATTR, flags, sub);
 }
 
-int fops_linux_open_flags(fs_flags_t flags)
+fs_error_t fops_validate_replace_flags(fs_flags_t flags,
+                                       fs_op_t sub)
 {
-    int open_flags;
-
-    if (fs_flag_test(flags, FS_FLAG_READ) &&
-        fs_flag_test(flags, FS_FLAG_WRITE)) {
-        open_flags = O_RDWR;
-    } else if (fs_flag_test(flags, FS_FLAG_WRITE)) {
-        open_flags = O_WRONLY;
-    } else {
-        open_flags = O_RDONLY;
-    }
-
-    open_flags |= O_CLOEXEC;
-
-    if (fs_flag_test(flags, FS_FLAG_DIRECTORY)) {
-        open_flags |= O_DIRECTORY;
-    }
-    if (fs_flag_test(flags, FS_FLAG_SYNC)) {
-        open_flags |= O_SYNC;
-    }
-#ifdef O_DIRECT
-    if (fs_flag_test(flags, FS_FLAG_DIRECT)) {
-        open_flags |= O_DIRECT;
-    }
-#endif
-    if (fs_flag_test(flags, FS_FLAG_APPEND)) {
-        open_flags |= O_APPEND;
-    }
-    if (fs_flag_test(flags, FS_FLAG_TRUNCATE)) {
-        open_flags |= O_TRUNC;
-    }
-
-    return open_flags;
+    return fops_validate_flags(sub, flags, sub);
 }
 
-fs_error_t fops_file_check(const fops_file_t *file, fs_op_t sub)
+fs_error_t fops_validate_new_name_flags(fs_flags_t flags,
+                                        fs_op_t sub)
 {
-    fs_error_t err;
-
-    if ((file == NULL) || (file->meta == NULL) || (file->fd < 0)) {
-        err = fops_error(sub, EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: invalid fops file, "
-                          "err=%s (0x%x)", fs_error_str(err), err);
-        return err;
-    }
-
-    return FS_OK;
+    return fops_validate_flags(sub, flags, sub);
 }
 
 fs_error_t fops_check_type_flags(fs_type_t type,
@@ -432,6 +315,27 @@ fs_error_t fops_open_object(const fuid_t *fuid,
     *out_meta = meta;
     *out_fd = fd;
     return FS_OK;
+}
+
+fs_error_t fops_open_parent_dir(const fuid_t *fuid,
+                                obj_meta_t **out_meta,
+                                int *out_fd,
+                                fs_op_t sub)
+{
+    fs_error_t err;
+
+    if ((fuid == NULL) || !fuid_is_dir(fuid)) {
+        err = fops_error(sub, ENOTDIR);
+        FS_LOG_DUMP_ERROR("parent check failed: not dir, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    return fops_open_object(fuid,
+                            O_RDONLY | O_DIRECTORY | O_CLOEXEC,
+                            out_meta,
+                            out_fd,
+                            sub);
 }
 
 void fops_close_object(obj_meta_t *meta, int fd)

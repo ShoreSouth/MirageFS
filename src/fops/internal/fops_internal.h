@@ -22,6 +22,26 @@ struct fops_file {
 
 extern fops_context_t g_fops_ctx;
 
+typedef struct fops_op_spec {
+    fs_op_t op;                 /* 操作字 */
+    const char *name;           /* 操作名，用于日志/调试 */
+    fs_flags_t allowed_flags;   /* 允许出现的 FS_FLAG_* */
+    fs_flags_t conflict_a;      /* 与 conflict_b 冲突的一组 flag */
+    fs_flags_t conflict_b;      /* 与 conflict_a 冲突的一组 flag */
+    bool allow_dot_name;        /* name 是否允许 "." / ".." */
+    bool need_fuid;             /* args->fuid 必须有效 */
+    bool need_parent;           /* args->parent_fuid 必须有效 */
+    bool need_name;             /* args->name 必须非空且合法 */
+} fops_op_spec_t;
+
+const fops_op_spec_t *fops_op_spec_get(fs_op_t op);
+
+fs_error_t fops_validate_flags(fs_op_t op,
+                               fs_flags_t flags,
+                               fs_op_t sub);
+
+fs_error_t fops_validate_args(const fops_args_t *args);
+
 fs_error_t fops_validate_name(const char *name,
                               fs_op_t sub,
                               bool allow_dot_names);
@@ -56,6 +76,12 @@ fs_error_t fops_validate_setattr_flags(fs_flags_t flags,
 fs_error_t fops_validate_xattr_flags(fs_flags_t flags,
                                      fs_op_t sub);
 
+fs_error_t fops_validate_replace_flags(fs_flags_t flags,
+                                       fs_op_t sub);
+
+fs_error_t fops_validate_new_name_flags(fs_flags_t flags,
+                                        fs_op_t sub);
+
 int fops_linux_open_flags(fs_flags_t flags);
 
 fs_error_t fops_file_check(const fops_file_t *file,
@@ -82,6 +108,11 @@ fs_error_t fops_open_object(const fuid_t *fuid,
                             obj_meta_t **out_meta,
                             int *out_fd,
                             fs_op_t sub);
+
+fs_error_t fops_open_parent_dir(const fuid_t *fuid,
+                                obj_meta_t **out_meta,
+                                int *out_fd,
+                                fs_op_t sub);
 
 void fops_close_object(obj_meta_t *meta, int fd);
 

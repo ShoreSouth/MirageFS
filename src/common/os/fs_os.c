@@ -155,10 +155,10 @@ const char* fs_time_str(void)
     struct tm tm_info;
     localtime_r(&sec, &tm_info); // 线程安全的转换
 
-    /* 格式化日期时间部分 */ 
+    /* 格式化日期时间部分 */
     strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_info);
 
-    /* 追加毫秒部分 (.xxx) */ 
+    /* 追加毫秒部分 (.xxx) */
     snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ".%03d", ms);
 
     return buf;

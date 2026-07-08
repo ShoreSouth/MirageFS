@@ -1,11 +1,12 @@
 #include "common/log/fs_log.h"
-#include "common/os/fs_os.h"
-#include "common/path/fs_path.h"
-#include "common/trace/fs_trace.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+
+#include "common/os/fs_os.h"
+#include "common/path/fs_path.h"
+#include "common/trace/fs_trace.h"
 
 /* =========================
  * 全局配置
@@ -61,7 +62,7 @@ static FILE* fs_log_get_fp(void)
     fs_path_join_safe(file_path, sizeof(file_path),
                       dir_path, file_name);
 
-    tls_fp = fopen(file_path, "a"); /* 追加写 */ 
+    tls_fp = fopen(file_path, "a"); /* 追加写 */
 
     if (!tls_fp)
         tls_fp = stderr;
@@ -123,5 +124,5 @@ void fs_log_write(
     va_end(ap);
 
     fprintf(fp, "\n");
-    fflush(fp); 
+    fflush(fp);
 }

@@ -1,3 +1,5 @@
+#include "lsa/include/lsa_api.h"
+
 #include <sys/stat.h>
 #include <unistd.h>
 

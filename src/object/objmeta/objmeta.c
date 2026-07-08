@@ -1,8 +1,9 @@
+#include "object/objmeta/objmeta.h"
+
 #include <string.h>
 
 #include "common/fs_common.h"
 #include "object/obj_error.h"
-#include "object/objmeta/objmeta.h"
 
 /* ============================================================
  * 内部函数

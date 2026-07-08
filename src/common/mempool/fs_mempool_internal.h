@@ -147,7 +147,7 @@ typedef struct fs_mempool {
     fs_mp_stats_t stats; /* 内存池统计 */
 
     fs_mutex_t lock; /* mempool全局锁，当前:整个pool共用一把锁 */
-    
+
 } fs_mempool_t;
 
 /* ============================================================

@@ -1,7 +1,7 @@
+#include "common/atomic/fs_atomic.h"
+
 #include <stdio.h>
 #include <assert.h>
-
-#include "common/atomic/fs_atomic.h"
 
 /*
  * ============================================================

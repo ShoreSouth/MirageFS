@@ -9,33 +9,48 @@
 #include "object/objmeta/objmeta.h"
 
 /*
- * Initialize FOPS module state and register FOPS sub-error names.
+ * 初始化 FOPS 模块状态，并注册 FOPS 子错误名。
  *
- * Return:
- *      FS_OK       : success
- *      fs_error_t  : failure
+ * 返回：
+ *      FS_OK       : 成功
+ *      fs_error_t  : 失败原因
  */
 fs_error_t fops_init(void);
 
 /*
- * Deinitialize FOPS module state.
+ * FOPS 统一调度入口。
  *
- * The caller must ensure no FOPS operation is still running.
+ * 上层可以只依赖本接口完成所有 FOPS OP 调用。args->op 指定操作字，
+ * args 公共字段和 union 分支携带对应 OP 的参数。
+ *
+ * 参数：
+ *      [IN/OUT] args : 统一 OP 参数对象，输出字段也写回该对象引用的缓冲区
+ *
+ * 返回：
+ *      FS_OK       : 成功
+ *      fs_error_t  : 参数错误、flag 不支持或底层操作失败
+ */
+fs_error_t fops_dispatch(fops_args_t *args);
+
+/*
+ * 反初始化 FOPS 模块状态。
+ *
+ * 调用方必须保证没有 FOPS 操作仍在运行。
  */
 void fops_deinit(void);
 
 /*
- * Lookup one name under a parent directory and return the child FUID.
+ * 在父目录下 lookup 一个名字，并返回子对象 FUID。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : single path component; "." and ".." are allowed
+ * 参数：
+ *      [IN]  parent_fuid : 父目录 FUID
+ *      [IN]  name        : 单级路径分量，允许 "." 和 ".."
  *      [IN]  flags       : FS_FLAG_NOFOLLOW / DIRECTORY / REGULAR
- *      [OUT] out_fuid    : resolved child FUID
+ *      [OUT] out_fuid    : 解析出的子对象 FUID
  *
- * Return:
- *      FS_OK       : success
- *      fs_error_t  : invalid argument, type mismatch, or backend error
+ * 返回：
+ *      FS_OK       : 成功
+ *      fs_error_t  : 参数错误、类型不匹配或后端错误
  */
 fs_error_t fops_lookup(const fuid_t *parent_fuid,
                        const char *name,
@@ -43,17 +58,17 @@ fs_error_t fops_lookup(const fuid_t *parent_fuid,
                        fuid_t *out_fuid);
 
 /*
- * Lookup one name and return FUID plus attributes.
+ * lookup 一个名字，并返回 FUID 和属性。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : single path component; "." and ".." are allowed
+ * 参数：
+ *      [IN]  parent_fuid : 父目录 FUID
+ *      [IN]  name        : 单级路径分量，允许 "." 和 ".."
  *      [IN]  flags       : FS_FLAG_NOFOLLOW / DIRECTORY / REGULAR
- *      [OUT] out         : resolved FUID and attribute snapshot
+ *      [OUT] out         : 解析出的 FUID 和属性快照
  *
- * Return:
- *      FS_OK       : success
- *      fs_error_t  : invalid argument, type mismatch, or backend error
+ * 返回：
+ *      FS_OK       : 成功
+ *      fs_error_t  : 参数错误、类型不匹配或后端错误
  */
 fs_error_t fops_lookup_plus(const fuid_t *parent_fuid,
                             const char *name,
@@ -61,19 +76,19 @@ fs_error_t fops_lookup_plus(const fuid_t *parent_fuid,
                             fops_object_result_t *out);
 
 /*
- * Create or reuse a regular file and return its FUID.
+ * 创建或复用普通文件，并返回 FUID。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : new file name; "." and ".." are rejected
- *      [IN]  attr        : create-time attributes, NULL means defaults
+ * 参数：
+ *      [IN]  parent_fuid : 父目录 FUID
+ *      [IN]  name        : 新文件名，拒绝 "." 和 ".."
+ *      [IN]  attr        : 创建时属性，NULL 表示使用默认值
  *      [IN]  flags       : REPLACE / EXCLUSIVE / TRUNCATE / NOFOLLOW /
  *                          SYNC / DIRECT / APPEND / REGULAR
- *      [OUT] out_fuid    : created or reused file FUID
+ *      [OUT] out_fuid    : 创建或复用后的文件 FUID
  *
- * Return:
- *      FS_OK       : success
- *      fs_error_t  : invalid argument, conflict, type mismatch, or backend error
+ * 返回：
+ *      FS_OK       : 成功
+ *      fs_error_t  : 参数错误、flag 冲突、类型不匹配或后端错误
  */
 fs_error_t fops_create(const fuid_t *parent_fuid,
                        const char *name,
@@ -82,14 +97,14 @@ fs_error_t fops_create(const fuid_t *parent_fuid,
                        fuid_t *out_fuid);
 
 /*
- * Create or reuse a regular file and return FUID plus attributes.
+ * 创建或复用普通文件，并返回 FUID 和属性。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : new file name; "." and ".." are rejected
- *      [IN]  attr        : create-time attributes, NULL means defaults
+ * 参数：
+ *      [IN]  parent_fuid : 父目录 FUID
+ *      [IN]  name        : 新文件名，拒绝 "." 和 ".."
+ *      [IN]  attr        : 创建时属性，NULL 表示使用默认值
  *      [IN]  flags       : same as fops_create()
- *      [OUT] out         : created/reused FUID and post-create attributes
+ *      [OUT] out         : 创建/复用后的 FUID 和属性
  */
 fs_error_t fops_create_plus(const fuid_t *parent_fuid,
                             const char *name,
@@ -98,15 +113,15 @@ fs_error_t fops_create_plus(const fuid_t *parent_fuid,
                             fops_object_result_t *out);
 
 /*
- * Create a directory and return its FUID.
+ * 创建目录，并返回 FUID。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : new directory name; "." and ".." are rejected
- *      [IN]  attr        : create-time attributes, NULL means defaults;
+ * 参数：
+ *      [IN]  parent_fuid : 父目录 FUID
+ *      [IN]  name        : 新目录名，拒绝 "." 和 ".."
+ *      [IN]  attr        : 创建时属性，NULL 表示使用默认值;
  *                          SIZE is not supported for mkdir
  *      [IN]  flags       : FS_FLAG_EXCLUSIVE / DIRECTORY / NONE
- *      [OUT] out_fuid    : created directory FUID
+ *      [OUT] out_fuid    : 创建出的目录 FUID
  */
 fs_error_t fops_mkdir(const fuid_t *parent_fuid,
                       const char *name,
@@ -115,14 +130,14 @@ fs_error_t fops_mkdir(const fuid_t *parent_fuid,
                       fuid_t *out_fuid);
 
 /*
- * Create a directory and return FUID plus attributes.
+ * 创建目录，并返回 FUID 和属性。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : new directory name; "." and ".." are rejected
- *      [IN]  attr        : create-time attributes, NULL means defaults
- *      [IN]  flags       : same as fops_mkdir()
- *      [OUT] out         : created directory FUID and post-create attributes
+ * 参数：
+ *      [IN]  parent_fuid : 父目录 FUID
+ *      [IN]  name        : 新目录名，拒绝 "." 和 ".."
+ *      [IN]  attr        : 创建时属性，NULL 表示使用默认值
+ *      [IN]  flags       : 同 fops_mkdir()
+ *      [OUT] out         : 创建出的目录 FUID and post-create attributes
  */
 fs_error_t fops_mkdir_plus(const fuid_t *parent_fuid,
                            const char *name,
@@ -131,27 +146,27 @@ fs_error_t fops_mkdir_plus(const fuid_t *parent_fuid,
                            fops_object_result_t *out);
 
 /*
- * Read attributes for an existing FUID.
+ * 读取已有 FUID 的属性。
  *
- * Parameters:
- *      [IN]  fuid     : object FUID
+ * 参数：
+ *      [IN]  fuid     : 对象 FUID
  *      [IN]  flags    : FS_FLAG_DIRECTORY / REGULAR / NONE
- *      [OUT] out_attr : attribute snapshot
+ *      [OUT] out_attr : 属性快照
  */
 fs_error_t fops_getattr(const fuid_t *fuid,
                         fs_flags_t flags,
                         fops_attr_t *out_attr);
 
 /*
- * Read directory entries without attributes.
+ * 读取目录项，不返回属性。
  *
- * Parameters:
- *      [IN]  dir_fuid     : directory FUID
+ * 参数：
+ *      [IN]  dir_fuid     : 目录 FUID
  *      [IN]  flags        : FS_FLAG_DIRECTORY / NONE
- *      [OUT] entries      : caller-owned entry array
- *      [IN]  entry_cap    : number of elements in entries
- *      [OUT] out_entry_nr : number of entries written
- *      [OUT] out_eof      : true when iterator reached backend EOF
+ *      [OUT] entries      : 调用方提供的目录项数组
+ *      [IN]  entry_cap    : entries 数组容量
+ *      [OUT] out_entry_nr : 实际写入的目录项数量
+ *      [OUT] out_eof      : 迭代器到达后端 EOF 时为 true
  */
 fs_error_t fops_readdir(const fuid_t *dir_fuid,
                         fs_flags_t flags,
@@ -161,15 +176,15 @@ fs_error_t fops_readdir(const fuid_t *dir_fuid,
                         bool *out_eof);
 
 /*
- * Read directory entries with attributes.
+ * 读取目录项，并返回属性。
  *
- * Parameters:
- *      [IN]  dir_fuid     : directory FUID
+ * 参数：
+ *      [IN]  dir_fuid     : 目录 FUID
  *      [IN]  flags        : FS_FLAG_DIRECTORY / NONE
- *      [OUT] entries      : caller-owned entry+attribute array
- *      [IN]  entry_cap    : number of elements in entries
- *      [OUT] out_entry_nr : number of entries written
- *      [OUT] out_eof      : true when iterator reached backend EOF
+ *      [OUT] entries      : 调用方提供的目录项+属性数组
+ *      [IN]  entry_cap    : entries 数组容量
+ *      [OUT] out_entry_nr : 实际写入的目录项数量
+ *      [OUT] out_eof      : 迭代器到达后端 EOF 时为 true
  */
 fs_error_t fops_readdirplus(const fuid_t *dir_fuid,
                             fs_flags_t flags,
@@ -179,11 +194,11 @@ fs_error_t fops_readdirplus(const fuid_t *dir_fuid,
                             bool *out_eof);
 
 /*
- * Remove a non-directory child.
+ * 删除非目录子对象。
  *
- * Parameters:
- *      [IN] parent_fuid : parent directory FUID
- *      [IN] name        : child name; "." and ".." are rejected
+ * 参数：
+ *      [IN] parent_fuid : 父目录 FUID
+ *      [IN] name        : 子对象名，拒绝 "." 和 ".."
  *      [IN] flags       : FS_FLAG_NOFOLLOW / REGULAR / NONE
  */
 fs_error_t fops_unlink(const fuid_t *parent_fuid,
@@ -191,11 +206,11 @@ fs_error_t fops_unlink(const fuid_t *parent_fuid,
                        fs_flags_t flags);
 
 /*
- * Remove an empty directory child.
+ * 删除空目录子对象。
  *
- * Parameters:
- *      [IN] parent_fuid : parent directory FUID
- *      [IN] name        : child name; "." and ".." are rejected
+ * 参数：
+ *      [IN] parent_fuid : 父目录 FUID
+ *      [IN] name        : 子对象名，拒绝 "." 和 ".."
  *      [IN] flags       : FS_FLAG_DIRECTORY / NONE
  */
 fs_error_t fops_rmdir(const fuid_t *parent_fuid,
@@ -203,13 +218,13 @@ fs_error_t fops_rmdir(const fuid_t *parent_fuid,
                       fs_flags_t flags);
 
 /*
- * Rename one child between parent directories.
+ * 在两个父目录之间重命名一个子对象。
  *
- * Parameters:
- *      [IN] old_parent_fuid : source parent directory FUID
- *      [IN] old_name        : source child name
- *      [IN] new_parent_fuid : destination parent directory FUID
- *      [IN] new_name        : destination child name
+ * 参数：
+ *      [IN] old_parent_fuid : source 父目录 FUID
+ *      [IN] old_name        : 源子对象名
+ *      [IN] new_parent_fuid : destination 父目录 FUID
+ *      [IN] new_name        : 目标子对象名
  *      [IN] flags           : FS_FLAG_REPLACE / EXCLUSIVE / NONE
  */
 fs_error_t fops_rename(const fuid_t *old_parent_fuid,
@@ -219,15 +234,15 @@ fs_error_t fops_rename(const fuid_t *old_parent_fuid,
                        fs_flags_t flags);
 
 /*
- * Create a hard link and return the linked object's FUID.
+ * 创建硬链接，并返回被链接对象的 FUID。
  *
- * Parameters:
- *      [IN]  old_parent_fuid : source parent directory FUID
- *      [IN]  old_name        : existing regular-file name
- *      [IN]  new_parent_fuid : destination parent directory FUID
- *      [IN]  new_name        : new link name; must not exist
+ * 参数：
+ *      [IN]  old_parent_fuid : source 父目录 FUID
+ *      [IN]  old_name        : 已有普通文件名
+ *      [IN]  new_parent_fuid : destination 父目录 FUID
+ *      [IN]  new_name        : 新链接名，必须不存在
  *      [IN]  flags           : FS_FLAG_EXCLUSIVE / NONE
- *      [OUT] out_fuid        : linked object FUID
+ *      [OUT] out_fuid        : linked 对象 FUID
  */
 fs_error_t fops_link(const fuid_t *old_parent_fuid,
                      const char *old_name,
@@ -236,7 +251,7 @@ fs_error_t fops_link(const fuid_t *old_parent_fuid,
                      fs_flags_t flags,
                      fuid_t *out_fuid);
 
-/* Same as fops_link(), but also returns post-link attributes. */
+/* 与 fops_link() 相同，但额外返回链接后的属性。 */
 fs_error_t fops_link_plus(const fuid_t *old_parent_fuid,
                           const char *old_name,
                           const fuid_t *new_parent_fuid,
@@ -245,14 +260,14 @@ fs_error_t fops_link_plus(const fuid_t *old_parent_fuid,
                           fops_object_result_t *out);
 
 /*
- * Create a symbolic link and return its FUID.
+ * 创建符号链接，并返回 FUID。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : symlink name; must not exist
- *      [IN]  target      : symlink payload
+ * 参数：
+ *      [IN]  parent_fuid : 父目录 FUID
+ *      [IN]  name        : 符号链接名，必须不存在
+ *      [IN]  target      : 符号链接内容
  *      [IN]  flags       : FS_FLAG_EXCLUSIVE / NONE
- *      [OUT] out_fuid    : symlink FUID
+ *      [OUT] out_fuid    : 符号链接 FUID
  */
 fs_error_t fops_symlink(const fuid_t *parent_fuid,
                         const char *name,
@@ -260,7 +275,7 @@ fs_error_t fops_symlink(const fuid_t *parent_fuid,
                         fs_flags_t flags,
                         fuid_t *out_fuid);
 
-/* Same as fops_symlink(), but also returns symlink attributes. */
+/* 与 fops_symlink() 相同，但额外返回符号链接属性。 */
 fs_error_t fops_symlink_plus(const fuid_t *parent_fuid,
                              const char *name,
                              const char *target,
@@ -268,40 +283,31 @@ fs_error_t fops_symlink_plus(const fuid_t *parent_fuid,
                              fops_object_result_t *out);
 
 /*
- * Create a special object and return its FUID.
+ * 创建特殊对象，并返回 FUID。
  *
- * Parameters:
- *      [IN]  parent_fuid : parent directory FUID
- *      [IN]  name        : new object name; must not exist
- *      [IN]  type        : FS_TYPE_FIFO / BLK / CHR
- *      [IN]  attr        : create-time attributes; currently MODE is supported
- *      [IN]  device      : required for BLK/CHR, ignored for FIFO
- *      [IN]  flags       : FS_FLAG_EXCLUSIVE / NONE
- *      [OUT] out_fuid    : created object FUID
+ * 参数：
+ *      [IN]  req      : mknod 创建请求
+ *      [OUT] out_fuid : created 对象 FUID
  */
-fs_error_t fops_mknod(const fuid_t *parent_fuid,
-                      const char *name,
-                      fs_type_t type,
-                      const fops_create_attr_t *attr,
-                      const fops_device_t *device,
-                      fs_flags_t flags,
+fs_error_t fops_mknod(const fops_mknod_req_t *req,
                       fuid_t *out_fuid);
 
-/* Same as fops_mknod(), but also returns post-create attributes. */
-fs_error_t fops_mknod_plus(const fuid_t *parent_fuid,
-                           const char *name,
-                           fs_type_t type,
-                           const fops_create_attr_t *attr,
-                           const fops_device_t *device,
-                           fs_flags_t flags,
+/*
+ * 与 fops_mknod() 相同，但额外返回创建后的属性。
+ *
+ * 参数：
+ *      [IN]  req : mknod 创建请求
+ *      [OUT] out : 创建成功后的 FUID 和属性
+ */
+fs_error_t fops_mknod_plus(const fops_mknod_req_t *req,
                            fops_object_result_t *out);
 
 /*
- * Update object attributes.
+ * 修改对象属性。
  *
- * Parameters:
- *      [IN] fuid  : target object FUID
- *      [IN] attr  : attribute update request
+ * 参数：
+ *      [IN] fuid  : target 对象 FUID
+ *      [IN] attr  : 属性修改请求
  *      [IN] flags : FS_FLAG_DIRECTORY / REGULAR / NONE type constraint
  */
 fs_error_t fops_setattr(const fuid_t *fuid,
@@ -309,10 +315,10 @@ fs_error_t fops_setattr(const fuid_t *fuid,
                         fs_flags_t flags);
 
 /*
- * Check access for an object using R_OK/W_OK/X_OK/F_OK style mask.
+ * 使用 R_OK/W_OK/X_OK/F_OK 风格的 mask 检查对象访问权限。
  *
- * Parameters:
- *      [IN] fuid  : target object FUID
+ * 参数：
+ *      [IN] fuid  : target 对象 FUID
  *      [IN] mask  : POSIX access mask
  *      [IN] flags : FS_FLAG_DIRECTORY / REGULAR / NONE type constraint
  */
@@ -321,45 +327,45 @@ fs_error_t fops_access(const fuid_t *fuid,
                        fs_flags_t flags);
 
 /*
- * Copy the backend object handle registered for a FUID.
+ * 复制指定 FUID 已注册的后端对象 handle。
  *
- * Parameters:
- *      [IN]  fuid       : target object FUID
- *      [OUT] out_handle : backend handle copy
+ * 参数：
+ *      [IN]  fuid       : target 对象 FUID
+ *      [OUT] out_handle : 后端 handle 副本
  */
 fs_error_t fops_gethandle(const fuid_t *fuid,
                           obj_handle_t *out_handle);
 
 /*
- * Open an object and return an opaque FOPS file handle.
+ * 打开对象，并返回 opaque FOPS 文件句柄。
  *
- * Parameters:
- *      [IN]  fuid     : target object FUID
+ * 参数：
+ *      [IN]  fuid     : target 对象 FUID
  *      [IN]  flags    : READ / WRITE / APPEND / TRUNCATE / SYNC / DIRECT /
  *                       DIRECTORY / REGULAR
- *      [OUT] out_file : opened FOPS file handle; close with fops_close()
+ *      [OUT] out_file : 打开后的 FOPS 文件句柄; close with fops_close()
  */
 fs_error_t fops_open(const fuid_t *fuid,
                      fs_flags_t flags,
                      fops_file_t **out_file);
 
 /*
- * Open an already registered backend handle and return a FOPS file handle.
+ * 打开一个已注册的后端 handle，并返回 FOPS 文件句柄。
  *
- * Parameters:
- *      [IN]  handle   : backend handle previously registered in ObjMgr
- *      [IN]  flags    : same as fops_open()
- *      [OUT] out_file : opened FOPS file handle
+ * 参数：
+ *      [IN]  handle   : 已注册到 ObjMgr 的后端 handle
+ *      [IN]  flags    : 同 fops_open()
+ *      [OUT] out_file : 打开后的 FOPS 文件句柄
  */
 fs_error_t fops_openhandle(const obj_handle_t *handle,
                            fs_flags_t flags,
                            fops_file_t **out_file);
 
 /*
- * Close a FOPS file handle returned by fops_open/openhandle.
+ * 关闭由 fops_open/openhandle 返回的 FOPS 文件句柄。
  *
- * Parameters:
- *      [IN/OUT] file : FOPS file handle; invalid after this call
+ * 参数：
+ *      [IN/OUT] file : FOPS 文件句柄；调用后失效
  */
 fs_error_t fops_close(fops_file_t *file);
 

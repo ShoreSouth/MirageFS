@@ -200,14 +200,14 @@ lsa_ret_t lsa_rename(
                 const char *old_name,
                 int new_dirfd,
                 const char *new_name,
-                fs_flags_t flags);                
+                fs_flags_t flags);
 
 lsa_ret_t lsa_link(
                 int old_dirfd,
                 const char *old_name,
                 int new_dirfd,
                 const char *new_name,
-                fs_flags_t flags);                
+                fs_flags_t flags);
 
 lsa_ret_t lsa_symlink(
                 const char *target,

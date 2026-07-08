@@ -1,3 +1,5 @@
+#include "lsa/include/lsa_api.h"
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <string.h>
@@ -5,7 +7,6 @@
 
 #include "lsa/internal/lsa_internal.h"
 #include "lsa/internal/lsa_error.h"
-#include "lsa/include/lsa_api.h"
 
 typedef struct lsa_linux_file_handle {
 
