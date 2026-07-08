@@ -119,6 +119,7 @@ clean:
 		$(MAKE) -s -C src/$$m clean; \
 	done
 	@rm -rf output
+	@find . -type d -name __pycache__ -prune -exec rm -rf {} +
 	@printf "  $(C_GREEN)✓$(C_RESET) clean done\n"
 
 # ============================================================

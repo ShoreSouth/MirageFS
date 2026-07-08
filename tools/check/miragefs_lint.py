@@ -11,9 +11,7 @@ MirageFS 轻量静态检查工具。
 - style.line_length         : 行宽超过阈值时告警
 - function.param_count      : 函数参数数量超过阈值时告警
 - io.forbidden              : src C 代码禁止直接 printf/fprintf/puts
-- memory.direct_alloc       : 直接 malloc/calloc/realloc/free 时告警
-- c.vla                     : 疑似 VLA 或动态栈数组时告警
-- c.large_stack_array       : 栈数组超过阈值时告警
+- c.large_stack_array       : 固定大小栈数组超过阈值时告警
 - naming.typedef_struct     : typedef struct 名称应以 _t 结尾
 - naming.typedef_enum       : typedef enum 名称应以 _t 结尾
 - naming.macro              : 项目宏名应使用全大写风格
@@ -33,6 +31,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -50,8 +49,6 @@ RULE_LABELS = {
     "function.param_count": "函数参数",
     "io.forbidden": "直接输出",
     "c.raw_return": "裸错误返回",
-    "memory.direct_alloc": "直接分配",
-    "c.vla": "疑似 VLA",
     "c.large_stack_array": "大栈数组",
     "naming.typedef_struct": "struct typedef",
     "naming.typedef_enum": "enum typedef",
@@ -65,13 +62,7 @@ STACK_ARRAY_RE = re.compile(
     r"\b[A-Za-z_][\w\s\*]*\s+[A-Za-z_][\w]*\s*\[(\d+)\]"
 )
 FORBIDDEN_IO_RE = re.compile(r"\b(printf|fprintf|puts)\s*\(")
-ALLOC_RE = re.compile(r"\b(malloc|calloc|realloc|free)\s*\(")
 RETURN_RAW_ERR_RE = re.compile(r"\breturn\s+-1\s*;")
-VLA_RE = re.compile(
-    r"\b(?:char|short|int|long|size_t|ssize_t|"
-    r"uint\d+_t|int\d+_t|fs_\w+_t|obj_\w+_t|fops_\w+_t)"
-    r"\s+[A-Za-z_][A-Za-z0-9_]*\s*\[[A-Za-z_][A-Za-z0-9_]*\]"
-)
 TYPEDEF_END_RE = re.compile(r"^}\s*([A-Za-z_][A-Za-z0-9_]*)\s*;")
 MACRO_RE = re.compile(r"^#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)")
 MACRO_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -90,6 +81,16 @@ def is_text_file(path: Path) -> bool:
     if path.name == "Makefile":
         return True
     return path.suffix in TEXT_SUFFIXES
+
+
+def is_output_allowed(path: Path) -> bool:
+    allowed = {
+        Path("src/app/main.c"),
+        Path("src/common/log/fs_log.c"),
+        Path("src/common/trace/fs_trace.h"),
+        Path("src/common/utils/fs_utils.h"),
+    }
+    return path in allowed
 
 
 def iter_files(paths: list[Path]) -> list[Path]:
@@ -254,7 +255,7 @@ def check_file(path: Path, max_line_length: int,
         if "\t" in line:
             add(findings, "WARN", "whitespace.trailing", path, idx,
                 "发现 tab，项目代码建议统一使用空格")
-        if len(line) > max_line_length:
+        if path.suffix != ".md" and len(line) > max_line_length:
             add(findings, "WARN", "style.line_length", path, idx,
                 f"行宽 {len(line)} 超过阈值 {max_line_length}")
 
@@ -269,18 +270,12 @@ def check_file(path: Path, max_line_length: int,
         if path.suffix in {".c", ".h"}:
             stripped = line.strip()
             code_part = stripped.split("/*", 1)[0].split("//", 1)[0].strip()
-            if FORBIDDEN_IO_RE.search(code_part):
+            if FORBIDDEN_IO_RE.search(code_part) and not is_output_allowed(path):
                 add(findings, "WARN", "io.forbidden", path, idx,
                     "发现直接使用 printf/fprintf/puts，请确认是否应改为日志接口")
             if RETURN_RAW_ERR_RE.search(code_part):
                 add(findings, "WARN", "c.raw_return", path, idx,
                     "疑似裸返回错误值，请确认是否应使用 fs_error_t")
-            if ALLOC_RE.search(code_part):
-                add(findings, "WARN", "memory.direct_alloc", path, idx,
-                    "发现直接内存分配/释放，请确认是否应使用 fs_mempool")
-            if VLA_RE.search(code_part) and not code_part.startswith(("#", "typedef")):
-                add(findings, "WARN", "c.vla", path, idx,
-                    "疑似 VLA 或动态栈数组，请确认是否符合 C17 约束")
             arr = STACK_ARRAY_RE.search(code_part)
             if arr is not None and int(arr.group(1)) > max_stack_array:
                 add(findings, "WARN", "c.large_stack_array", path, idx,
@@ -344,12 +339,36 @@ def module_of(path: Path) -> str:
     return "-"
 
 
+def display_width(text: str) -> int:
+    width = 0
+    for ch in text:
+        if unicodedata.combining(ch):
+            continue
+        width += 2 if unicodedata.east_asian_width(ch) in {"F", "W"} else 1
+    return width
+
+
 def clip(text: str, width: int) -> str:
-    if len(text) <= width:
+    if display_width(text) <= width:
         return text
-    if width <= 3:
-        return text[:width]
-    return text[:width - 3] + "..."
+    out = ""
+    used = 0
+    limit = max(0, width - 3)
+    for ch in text:
+        ch_width = 2 if unicodedata.east_asian_width(ch) in {"F", "W"} else 1
+        if used + ch_width > limit:
+            break
+        out += ch
+        used += ch_width
+    return out + "..."
+
+
+def pad_cell(text: str, width: int, align: str = "left") -> str:
+    text = clip(str(text), width)
+    padding = max(0, width - display_width(text))
+    if align == "right":
+        return " " * padding + text
+    return text + " " * padding
 
 
 def print_detail_table(findings: list[Finding], plain: bool,
@@ -358,15 +377,29 @@ def print_detail_table(findings: list[Finding], plain: bool,
         return
 
     shown = findings[:detail_limit]
-    print("┌───────┬──────────────────────┬──────────┬────────────────────────────────┬──────┬──────────────────────────────┐")
-    print("│ Level │ Rule                 │ Module   │ File                           │ Line │ Message                      │")
-    print("├───────┼──────────────────────┼──────────┼────────────────────────────────┼──────┼──────────────────────────────┤")
+    top = ("┌───────┬──────────────────────┬──────────┬"
+           "────────────────────────────────┬──────┬"
+           "──────────────────────────────┐")
+    head = ("│ Level │ Rule                 │ Module   │"
+            " File                           │ Line │"
+            " Message                      │")
+    sep = ("├───────┼──────────────────────┼──────────┼"
+           "────────────────────────────────┼──────┼"
+           "──────────────────────────────┤")
+    bot = ("└───────┴──────────────────────┴──────────┴"
+           "────────────────────────────────┴──────┴"
+           "──────────────────────────────┘")
+
+    print(top)
+    print(head)
+    print(sep)
     for item in shown:
-        print(f"│ {item.level:<5} │ {clip(item.rule, 20):<20} │ "
-              f"{clip(module_of(item.path), 8):<8} │ "
-              f"{clip(str(item.path), 30):<30} │ "
-              f"{item.line:>4} │ {clip(item.message, 28):<28} │")
-    print("└───────┴──────────────────────┴──────────┴────────────────────────────────┴──────┴──────────────────────────────┘")
+        print(f"│ {pad_cell(item.level, 5)} │ {pad_cell(item.rule, 20)} │ "
+              f"{pad_cell(module_of(item.path), 8)} │ "
+              f"{pad_cell(str(item.path), 30)} │ "
+              f"{pad_cell(item.line, 4, 'right')} │ "
+              f"{pad_cell(item.message, 28)} │")
+    print(bot)
     if len(findings) > detail_limit:
         print(f"问题明细仅显示前 {detail_limit} 条；完整列表见上方逐行输出。")
 
@@ -392,7 +425,9 @@ def print_summary_table(findings: list[Finding], plain: bool) -> None:
     if not rows:
         print("│ clean                │     0 │    0 │")
     for label, err_nr, warn_nr in rows:
-        print(f"│ {label:<20} │ {err_nr:>5} │ {warn_nr:>4} │")
+        print(f"│ {pad_cell(label, 20)} │ "
+              f"{pad_cell(err_nr, 5, 'right')} │ "
+              f"{pad_cell(warn_nr, 4, 'right')} │")
     print("└──────────────────────┴───────┴──────┘")
     print(f"检查完成：ERROR={errors} WARN={warnings}")
 

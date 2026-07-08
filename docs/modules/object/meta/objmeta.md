@@ -33,7 +33,6 @@ obj_meta_t  (key, handle)
 Linux Backend Object
 ```
 
-
 ---
 
 ## 2. 设计目标
@@ -55,7 +54,6 @@ mount_id + file_handle
 进行稳定定位。
 
 ObjMeta 负责建立两者映射关系。
-
 
 ---
 
@@ -84,7 +82,6 @@ parent
 ```
 
 等信息。
-
 
 ---
 
@@ -116,7 +113,6 @@ obj_meta_t 保持轻量，仅描述对象固有属性。
 - KV 持久化方便
 - WAL 记录方便
 
-
 ---
 
 ### 2.4 面向后续扩展
@@ -143,7 +139,6 @@ refcnt 和 state 为 objmgr 生命周期管理准备，objmeta 层仅提供存�
 
 但不影响现有结构设计。
 
-
 ---
 
 ## 3. 模块职责
@@ -165,8 +160,6 @@ ObjMeta 不负责：
 - Snapshot 管理
 - 文件属性缓存
 - 权限管理
-
-
 
 ---
 
@@ -237,7 +230,6 @@ file_handle
 
 唯一定位 Linux 对象。
 
-
 ---
 
 ### 4.1 mount_id
@@ -268,7 +260,6 @@ mount_id=20
 mount_id=30
 ```
 
-
 ---
 
 ### 4.2 file_handle
@@ -297,7 +288,6 @@ open_by_handle_at()
 ```
 
 重新打开对象。
-
 
 ---
 
@@ -335,7 +325,6 @@ typedef struct obj_meta {
 +---------------+
 ```
 
-
 ---
 
 ### 5.3 内存布局
@@ -354,7 +343,6 @@ Offset  Size    Field
 Total = 40 Bytes
 ```
 
-
 ---
 
 ### 5.4 编译期检查
@@ -367,7 +355,6 @@ Total = 40 Bytes
 _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
                "obj_meta_t size invalid");
 ```
-
 
 ---
 
@@ -390,7 +377,6 @@ _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
 
 返回的 file_handle 通常远小于该值。
 
-
 ---
 
 ### 有效性判断
@@ -412,7 +398,6 @@ handle_bytes <= 16
 ```c
 objmeta_handle_valid()
 ```
-
 
 ---
 
@@ -506,7 +491,6 @@ objmgr 将 state 迁移为 ACTIVE → DELETING，递减 refcnt。
 
 对象释放后即不存在，不再保留任何状态。
 
-
 ---
 
 ## 8. 相等性判断
@@ -530,7 +514,6 @@ file_handle 相等
 ```c
 objmeta_equal()
 ```
-
 
 ---
 
@@ -559,7 +542,6 @@ gen      != 0
 ```c
 objmeta_is_valid()
 ```
-
 
 ---
 
@@ -609,7 +591,6 @@ ObjMeta
       Linux Backend Object
 ```
 
-
 ---
 
 ## 11. Debug 支持
@@ -635,7 +616,6 @@ objmeta: objectid=100, gen=1, mount_id=23, handle_type=1, handle_bytes=8, file_h
 - Debug
 - 故障定位
 - 日志分析
-
 
 ---
 
@@ -670,7 +650,6 @@ ObjMeta 是 MirageFS 元数据层中最底层的对象定位模块。
 - 生命周期支撑：提供 refcnt + state 字段供 objmgr 使用
 
 不参与路径解析和目录树管理。
-
 
 ## 8. API 命名与返回类型
 
