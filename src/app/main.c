@@ -10,6 +10,7 @@
 #include "fsc/fsc_init.h"
 #include "fops/include/fops.h"
 #include "lsa/include/lsa_api.h"
+#include "namei/include/namei.h"
 #include "object/object_init.h"
 
 int main(void)
@@ -64,6 +65,15 @@ int main(void)
         return 1;
     }
 
+    err = namei_init();
+    if (fs_failed(err)) {
+        fops_deinit();
+        fsc_deinit();
+        object_deinit();
+        FS_TRACE_END();
+        return 1;
+    }
+
     /*
      * 打印配置
      */
@@ -72,6 +82,7 @@ int main(void)
     /*
      * 模块销毁（逆序）
      */
+    namei_deinit();
     fops_deinit();
     fsc_deinit();
     object_deinit();

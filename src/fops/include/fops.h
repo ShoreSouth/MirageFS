@@ -283,6 +283,24 @@ fs_error_t fops_symlink_plus(const fuid_t *parent_fuid,
                              fops_object_result_t *out);
 
 /*
+ * 读取符号链接内容。
+ *
+ * 参数：
+ *      [IN]  parent_fuid : 符号链接所在父目录 FUID
+ *      [IN]  name        : 符号链接名称
+ *      [IN]  flags       : FS_FLAG_NOFOLLOW / NONE
+ *      [OUT] buf         : 调用方提供的缓冲区
+ *      [IN]  size        : 缓冲区容量
+ *      [OUT] actual      : 实际读取字节数，不含结尾 NUL
+ */
+fs_error_t fops_readlink(const fuid_t *parent_fuid,
+                         const char *name,
+                         fs_flags_t flags,
+                         char *buf,
+                         size_t size,
+                         size_t *actual);
+
+/*
  * 创建特殊对象，并返回 FUID。
  *
  * 参数：

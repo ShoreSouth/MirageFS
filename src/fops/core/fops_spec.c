@@ -38,6 +38,9 @@ static const fops_op_spec_t g_fops_op_specs[] = {
     { FS_OP_SYMLINK, "symlink",
       FS_FLAG_EXCLUSIVE,
       FS_FLAG_NONE, FS_FLAG_NONE, false, false, true, true },
+    { FS_OP_READLINK, "readlink",
+      FS_FLAG_NOFOLLOW,
+      FS_FLAG_NONE, FS_FLAG_NONE, false, false, true, true },
     { FS_OP_OPEN, "open",
       FS_FLAG_READ | FS_FLAG_WRITE | FS_FLAG_SYNC | FS_FLAG_DIRECT |
       FS_FLAG_APPEND | FS_FLAG_TRUNCATE | FS_FLAG_DIRECTORY |

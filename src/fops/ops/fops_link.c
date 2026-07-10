@@ -189,3 +189,61 @@ fs_error_t fops_symlink(const fuid_t *parent_fuid,
     *out_fuid = result.fuid;
     return FS_OK;
 }
+
+fs_error_t fops_readlink(const fuid_t *parent_fuid,
+                         const char *name,
+                         fs_flags_t flags,
+                         char *buf,
+                         size_t size,
+                         size_t *actual)
+{
+    fs_error_t err;
+    obj_meta_t *parent_meta;
+    int parent_fd;
+
+    parent_meta = NULL;
+    parent_fd = -1;
+
+    FS_LOG_DUMP_INFO("enter: parent=%p, name=%s, flags=0x%x, "
+                     "buf=%p, size=%lu",
+                     (void *)parent_fuid,
+                     name ? name : "(null)",
+                     flags,
+                     (void *)buf,
+                     (unsigned long)size);
+
+    if (actual != NULL) {
+        *actual = 0U;
+    }
+    if ((buf == NULL) || (actual == NULL) || (size == 0U)) {
+        err = fops_error(FS_OP_READLINK, EINVAL);
+        goto out;
+    }
+
+    err = fops_validate_flags(FS_OP_READLINK, flags, FS_OP_READLINK);
+    if (fs_failed(err)) {
+        goto out;
+    }
+    err = fops_validate_name(name, FS_OP_READLINK, false);
+    if (fs_failed(err)) {
+        goto out;
+    }
+
+    err = fops_open_parent_dir(parent_fuid, &parent_meta, &parent_fd,
+                               FS_OP_READLINK);
+    if (fs_failed(err)) {
+        goto out;
+    }
+
+    err = lsa_readlink(parent_fd, name, buf, size, actual);
+
+out:
+    fops_close_object(parent_meta, parent_fd);
+    if (fs_failed(err)) {
+        FS_LOG_DUMP_INFO("exit: failed, err=0x%x", err);
+        return err;
+    }
+
+    FS_LOG_DUMP_INFO("exit: ok, actual=%lu", (unsigned long)*actual);
+    return FS_OK;
+}

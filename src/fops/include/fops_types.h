@@ -184,6 +184,12 @@ typedef struct fops_args {
         } symlink;
 
         struct {
+            char *buf;
+            size_t size;
+            size_t *actual;
+        } readlink;
+
+        struct {
             fops_attr_t *out_attr;
         } getattr;
 

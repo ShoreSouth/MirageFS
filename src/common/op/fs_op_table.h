@@ -22,6 +22,7 @@
     _(RENAME,       "RENAME")          \
     _(LINK,         "LINK")            \
     _(SYMLINK,      "SYMLINK")         \
+    _(READLINK,     "READLINK")        \
                                        \
     _(OPEN,         "OPEN")            \
     _(CLOSE,        "CLOSE")           \

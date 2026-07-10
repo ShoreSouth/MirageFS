@@ -215,6 +215,13 @@ lsa_ret_t lsa_symlink(
                 const char *name,
                 fs_flags_t flags);
 
+lsa_ret_t lsa_readlink(
+                int dirfd,
+                const char *name,
+                char *buf,
+                size_t size,
+                size_t *actual);
+
 lsa_ret_t lsa_mknod(
                 int dirfd,
                 const char *name,

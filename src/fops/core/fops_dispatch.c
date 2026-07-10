@@ -85,6 +85,16 @@ static fs_error_t fops_dispatch_symlink(fops_args_t *args)
                              args->u.symlink.out);
 }
 
+static fs_error_t fops_dispatch_readlink(fops_args_t *args)
+{
+    return fops_readlink(args->parent_fuid,
+                         args->name,
+                         args->flags,
+                         args->u.readlink.buf,
+                         args->u.readlink.size,
+                         args->u.readlink.actual);
+}
+
 static fs_error_t fops_dispatch_open(fops_args_t *args)
 {
     return fops_open(args->fuid, args->flags, args->u.open.out_file);
@@ -218,6 +228,7 @@ static fops_dispatch_fn g_fops_ops[FS_OP_MAX] = {
     [FS_OP_RENAME] = fops_dispatch_rename,
     [FS_OP_LINK] = fops_dispatch_link,
     [FS_OP_SYMLINK] = fops_dispatch_symlink,
+    [FS_OP_READLINK] = fops_dispatch_readlink,
     [FS_OP_OPEN] = fops_dispatch_open,
     [FS_OP_CLOSE] = fops_dispatch_close,
     [FS_OP_GETHANDLE] = fops_dispatch_gethandle,

@@ -474,6 +474,51 @@ lsa_ret_t lsa_symlink(
 }
 
 /* ============================================================
+ * readlink
+ * ============================================================ */
+
+lsa_ret_t lsa_readlink(
+                int dirfd,
+                const char *name,
+                char *buf,
+                size_t size,
+                size_t *actual)
+{
+    ssize_t ret;
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: dirfd=%d, name=%s, buf=%p, size=%lu",
+                     dirfd,
+                     name ? name : "(null)",
+                     (void *)buf,
+                     (unsigned long)size);
+
+    if ((name == NULL) || (buf == NULL) || (actual == NULL) ||
+        (size == 0U)) {
+        err = lsa_error(FS_OP_READLINK, EINVAL);
+        FS_LOG_DUMP_ERROR("readlink: invalid argument, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    ret = readlinkat(dirfd, name, buf, size);
+    if (ret < 0) {
+        err = lsa_error(FS_OP_READLINK, errno);
+        FS_LOG_DUMP_ERROR("readlink failed: name=%s, err=%s (0x%x)",
+                          name, fs_error_str(err), err);
+        return err;
+    }
+
+    *actual = (size_t)ret;
+    if ((size_t)ret < size) {
+        buf[ret] = '\0';
+    }
+
+    FS_LOG_DUMP_INFO("exit: ok, actual=%lu", (unsigned long)*actual);
+    return FS_OK;
+}
+
+/* ============================================================
  * mknod
  * ============================================================
  */

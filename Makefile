@@ -14,6 +14,7 @@ MODULES += lsa
 MODULES += object
 MODULES += fsc
 MODULES += fops
+MODULES += namei
 
 # ============================================================
 #  最终程序
@@ -33,6 +34,7 @@ APP_OBJ := $(OBJ_DIR)/main.o
 # ============================================================
 
 LIBS  := $(LIB_DIR)/libconfig.a
+LIBS  += $(LIB_DIR)/libnamei.a
 LIBS  += $(LIB_DIR)/libfops.a
 LIBS  += $(LIB_DIR)/libfsc.a
 LIBS  += $(LIB_DIR)/libobject.a

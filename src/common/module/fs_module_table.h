@@ -20,6 +20,7 @@
                                     \
     _(FSC,     "FSC")               \
     _(FOPS,    "FOPS")              \
+    _(NAMEI,   "NAMEI")             \
                                     \
     _(LSA,     "LSA")               \
     _(SERVER,  "SERVER")            \
