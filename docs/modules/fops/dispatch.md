@@ -1,59 +1,30 @@
-# FOPS Dispatch 统一入口
+﻿# FOPS Dispatch 缁熶竴鍏ュ彛
 
-`fops_dispatch(args)` 是 FOPS 面向上层的统一入口。上层只需要构造 `fops_args_t`，填写 `op`、公共字段和对应 union 分支，再交给 dispatch 执行。
-
-## 调用流程
+`fops_dispatch(args)` 鏄?FOPS 闈㈠悜涓婂眰鐨勭粺涓€鍏ュ彛銆備笂灞傚彧闇€瑕佹瀯閫?`fops_args_t`锛屽～鍐?`op`銆佸叕鍏卞瓧娈靛拰瀵瑰簲 union 鍒嗘敮锛屽啀浜ょ粰 dispatch 鎵ц銆?
+## 璋冪敤娴佺▼
 
 ```text
 fops_dispatch(args)
-  ↓
-fops_validate_args(args)
-  ↓
-查 fops_op_spec_t
-  ↓
-校验 op / flag / 基础指针 / name 规则
-  ↓
-g_fops_ops[op](args)
-  ↓
-调用现有 fops_lookup/create/... 细粒度函数
-```
+  鈫?fops_validate_args(args)
+  鈫?鏌?fops_op_spec_t
+  鈫?鏍￠獙 op / flag / 鍩虹鎸囬拡 / name 瑙勫垯
+  鈫?g_fops_ops[op](args)
+  鈫?璋冪敤鐜版湁 fops_lookup/create/... 缁嗙矑搴﹀嚱鏁?```
 
-该流程把“入口统一”和“实现可维护”分开：外部看到统一函数指针模型，内部仍保留清晰的单 OP 实现。
+璇ユ祦绋嬫妸鈥滃叆鍙ｇ粺涓€鈥濆拰鈥滃疄鐜板彲缁存姢鈥濆垎寮€锛氬閮ㄧ湅鍒扮粺涓€鍑芥暟鎸囬拡妯″瀷锛屽唴閮ㄤ粛淇濈暀娓呮櫚鐨勫崟 OP 瀹炵幇銆?
+## fops_args_t 璁捐鍘熷垯
 
-## fops_args_t 设计原则
+`fops_args_t` 鐨勮璁＄洰鏍囨槸閬垮厤澶栭儴鎺ュ彛闅忕潃 OP 鍙傛暟鑶ㄨ儉鑰屽け鎺с€?
+鍏叡瀛楁閫傚悎鏀惧湪澶栧眰锛?
+- `op`锛氭搷浣滃瓧銆?- `flags`锛歄P flag銆?- `parent_fuid`锛氬ぇ澶氭暟 name-based OP 鐨勭埗鐩綍銆?- `target_fuid`锛氱洿鎺ヤ綔鐢ㄤ簬瀵硅薄鐨?OP銆?- `name`锛氱洰褰曢」鍚嶇О鎴?xattr 鍚嶇О銆?- `out_attr` / `out_fuid` / `out_count` 绛夊父瑙佽緭鍑烘寚閽堛€?
+宸紓杈冨ぇ鐨勫弬鏁版斁鍦?union 鍒嗘敮涓紝渚嬪 create銆乺ename銆乺w銆亁attr銆乻tatfs 绛夈€?
+## OP spec 琛?
+`fops_op_spec_t` 鏄?dispatch 鐨勮鍒欐簮锛岃嚦灏戞弿杩帮細
 
-`fops_args_t` 的设计目标是避免外部接口随着 OP 参数膨胀而失控。
+- OP 鏄惁瀛樺湪瀹炵幇銆?- 鍏佽鐨?flag 闆嗗悎銆?- 浜掓枼 flag 闆嗗悎銆?- 鏄惁闇€瑕?parent/name/target銆?- name 鏄惁鍏佽 `.` 鍜?`..`銆?- 鏄惁闇€瑕佽緭鍏ョ紦鍐插尯銆佽緭鍑虹紦鍐插尯鎴栬姹傜粨鏋勪綋銆?
+杩欐牱鍋氱殑濂藉鏄細鏂板 OP 鏃跺厛琛?spec锛屽啀琛ュ疄鐜帮紱璋冪敤瑙勫垯鍙互闆嗕腑瀹℃煡锛屼笉闇€瑕佹暎钀藉湪姣忎釜 OP 涓弽澶嶅啓鐩稿悓鍒ゆ柇銆?
+## 缁嗙矑搴︽帴鍙?
+淇濈暀 `fops_lookup()`銆乣fops_create()` 绛夌粏绮掑害鎺ュ彛鏄繀瑕佺殑銆傚畠浠敤浜庯細
 
-公共字段适合放在外层：
-
-- `op`：操作字。
-- `flags`：OP flag。
-- `parent_fuid`：大多数 name-based OP 的父目录。
-- `target_fuid`：直接作用于对象的 OP。
-- `name`：目录项名称或 xattr 名称。
-- `out_attr` / `out_fuid` / `out_count` 等常见输出指针。
-
-差异较大的参数放在 union 分支中，例如 create、rename、rw、xattr、statfs 等。
-
-## OP spec 表
-
-`fops_op_spec_t` 是 dispatch 的规则源，至少描述：
-
-- OP 是否存在实现。
-- 允许的 flag 集合。
-- 互斥 flag 集合。
-- 是否需要 parent/name/target。
-- name 是否允许 `.` 和 `..`。
-- 是否需要输入缓冲区、输出缓冲区或请求结构体。
-
-这样做的好处是：新增 OP 时先补 spec，再补实现；调用规则可以集中审查，不需要散落在每个 OP 中反复写相同判断。
-
-## 细粒度接口
-
-保留 `fops_lookup()`、`fops_create()` 等细粒度接口是必要的。它们用于：
-
-- dispatch 内部复用。
-- 单元测试直接覆盖某个 OP。
-- 模块内部轻量调用，避免必须构造完整 args。
-
-约定：细粒度接口也必须遵守同一语义，不允许绕开核心安全检查产生不一致行为。
+- dispatch 鍐呴儴澶嶇敤銆?- 鍗曞厓娴嬭瘯鐩存帴瑕嗙洊鏌愪釜 OP銆?- 妯″潡鍐呴儴杞婚噺璋冪敤锛岄伩鍏嶅繀椤绘瀯閫犲畬鏁?args銆?
+绾﹀畾锛氱粏绮掑害鎺ュ彛涔熷繀椤婚伒瀹堝悓涓€璇箟锛屼笉鍏佽缁曞紑鏍稿績瀹夊叏妫€鏌ヤ骇鐢熶笉涓€鑷磋涓恒€?

@@ -1,29 +1,29 @@
 ---
-
 name: miragefs-core
-description: Core architecture, coding conventions, module boundaries, review standards, and documentation requirements for MirageFS. Use whenever generating, modifying, reviewing, or designing MirageFS code.
+description: MirageFS 核心架构、编码规范、模块边界、评审重点与文档要求。生成、修改、评审或设计 MirageFS 代码时必须使用。
 ---
 
-# MirageFS Core Rules
+# MirageFS 核心规则
 
-## Purpose
+## 目标
 
-MirageFS is a Linux userspace filesystem simulator written in C17.
+MirageFS 是一个使用 C17 编写的 Linux 用户态文件系统模拟器。
 
-This skill defines:
+本 skill 约束以下内容：
 
-* Architecture rules
-* Module boundaries
-* Coding conventions
-* Review standards
-* Documentation requirements
+* 架构边界
+* 模块职责
+* 编码规范
+* 命名规范
+* 错误与日志规范
+* 文档更新要求
+* 代码评审重点
 
-All generated code and design proposals should follow these rules unless explicitly overridden.
+除非用户明确要求覆盖，本文件中的规则优先适用于所有 MirageFS 代码、文档和设计讨论。
 
 ---
 
-
-## WSL Execution Rules
+## WSL 执行规则
 
 本项目在 WSL2 Ubuntu 环境中开发，仓库路径固定为：
 
@@ -31,9 +31,7 @@ All generated code and design proposals should follow these rules unless explici
 /home/shore/work/github/MirageFS
 ```
 
-执行命令时应直接在 WSL bash 环境中运行，工作目录必须是上述路径。
-不要通过 Windows UNC 路径访问仓库，例如 `\\wsl.localhost\...` 或
-`\\wsl$\...`。
+执行命令时应直接在 WSL bash 环境中运行，工作目录必须是上述路径。不要通过 Windows UNC 路径访问仓库，例如 `\\wsl.localhost\...` 或 `\\wsl$\...`。
 
 开始关键任务前可检查：
 
@@ -45,35 +43,39 @@ whoami
 git rev-parse --show-toplevel
 ```
 
-文件修改优先使用 WSL 内部的 `git diff` / `git apply` 或 `python3` 脚本。
-不要在 PowerShell 中构造包含中文注释的大型 here-doc 后再转发给 WSL。
+文件修改优先使用 WSL 内部的 `git diff` / `git apply`，或在必要时使用小脚本做批量机械替换。不要在 PowerShell 中构造包含中文注释的大型 here-doc 后再转发给 WSL。
+
 补丁匹配应基于函数名、结构体字段、英文符号等稳定内容，不依赖中文注释。
-
-# Working Principles
-
-Before writing code:
-
-1. Understand the module responsibility.
-2. Check existing interfaces first.
-3. Reuse existing common facilities whenever possible.
-4. Preserve architectural consistency.
-5. Prefer incremental modification over large-scale rewrites.
-
-When requirements are unclear:
-
-* Ask questions.
-* Explore the existing codebase.
-* Avoid inventing new abstractions prematurely.
 
 ---
 
-# Project Structure
+## 工作原则
 
-Current high-level architecture:
+写代码前必须先理解模块职责和现有接口。
+
+基本原则：
+
+1. 先确认职责归属，再写实现。
+2. 优先复用已有公共设施。
+3. 保持模块边界稳定，不引入向上依赖。
+4. 优先做小步、可验证的修改。
+5. 不为单个场景过早抽象。
+6. 不随意重命名稳定接口。
+
+需求不清时：
+
+* 先探索现有代码和文档。
+* 必要时向用户确认设计边界。
+* 不凭空发明新模块、新术语或新生命周期。
+
+---
+
+## 当前架构
+
+当前高层结构大致如下：
 
 ```text
 src/
-
 ├── common/
 │   ├── log/
 │   ├── error/
@@ -82,7 +84,6 @@ src/
 │   ├── list/
 │   ├── trace/
 │   └── ...
-│
 ├── object/
 │   ├── fuid/
 │   ├── objkey/
@@ -91,158 +92,97 @@ src/
 │   ├── objtable/
 │   ├── objpool/
 │   └── objmgr/
-│
-├── cache/
-├── vfs/
+├── fsc/
+├── fops/
+├── namei/
 ├── lsa/
-└── cli/
+└── app/
 ```
 
-Layer direction:
+依赖方向只能自上而下。上层可以调用下层，下层不能反向依赖上层。
+
+当前主链路：
 
 ```text
-CLI
- ↓
-VFS
- ↓
-CACHE
- ↓
-OBJMETA / FUID
- ↓
-LSA
- ↓
-COMMON
+APP / CLI / SERVER
+        ↓
+      NAMEI
+        ↓
+      FOPS
+        ↓
+  OBJMGR / FSC
+        ↓
+       LSA
+        ↓
+ Linux Kernel
 ```
 
-Dependencies may only flow downward.
-
-Never introduce upward dependencies.
+不得引入反向依赖或跨层捷径。
 
 ---
 
-# Module Responsibility
+## 模块职责
 
-## common
+### common
 
-Provides reusable infrastructure.
+提供通用基础设施，例如日志、错误、锁、链表、哈希、路径、内存池、trace 等。
 
-Examples:
+业务语义不能放进 `common`。
 
-* log
-* error
-* mempool
-* lock
-* list
-* trace
+### object
 
-Business logic must not live here.
+负责 MirageFS 对象身份、元数据、运行时实例和对象表管理。
 
----
+关键概念：
 
-## fuid
+* `fuid_t`：文件系统内对象身份。
+* `obj_key_t`：对象索引键。
+* `obj_meta_t`：对象身份与后端定位信息。
+* `obj_runtime_t`：带生命周期和引用计数的运行时对象实例。
+* `objmgr`：对象生命周期和查找管理。
 
-Provides object identity management.
+`obj_meta_t` 描述对象是什么；`obj_runtime_t` 描述对象实例当前处于什么运行状态。
 
-Responsibilities:
+### fsc
 
-* identifier layout
-* type extraction
-* encoding
-* decoding
+负责文件系统实例、namespace、root、fsid、挂载级上下文等管理。
 
----
+### fops
 
-## objmeta
+负责单步文件操作语义，例如 lookup、create、mkdir、unlink、rename、readlink、readdir 等。
 
-Provides object metadata management.
+正式上层模块必须通过 `fops_dispatch()` 进入 FOPS。细粒度 FOPS API 可以保留给 FOPS 内部、兼容层和 UT 使用，但 NAMEI、SERVER、CLI 等正式调用方不得直接调用 `fops_create_plus()`、`fops_mkdir_plus()`、`fops_readlink()` 这类接口。
 
-Responsibilities:
+### namei
 
-* metadata layout (key + handle)
-* metadata validation
-* metadata conversion
+负责路径解析和 FOPS 参数组织。
 
-obj_meta_t describes **what** an object is — identity and backend locator only.
-Runtime lifecycle state (refcnt, state) belongs to obj_runtime_t.
+NAMEI 可以提供薄封装，让 SERVER / CLI 不必手动拆路径，但 NAMEI 不直接执行底层文件操作，不管理对象生命周期，不管理 namespace 创建/销毁。
 
----
+### lsa
 
-## objruntime
+负责 Linux syscall 和后端文件系统访问封装。
 
-Provides the runtime object instance that all modules reference.
-
-Responsibilities:
-
-* aggregates obj_meta_t + refcnt + state
-* lifecycle state machine (INIT → ACTIVE → DELETING)
-* serves as the shared anchor point for Cache, Storage, Journal modules
-
-obj_runtime_t describes an **object instance** — the runtime carrier for meta + lifecycle.
-obj_meta_t is a member of obj_runtime_t, not the root object itself.
-
-All modules (ObjMgr, Cache, Storage, VFS) reference `obj_runtime_t *`
-as the common handle. Modules that only need metadata access `runtime->meta`.
+LSA 不能包含 VFS/FOPS/NAMEI 的上层语义。
 
 ---
 
-## cache
+## 语言规则
 
-Provides cache infrastructure.
-
-Responsibilities:
-
-* cache entry management
-* cache lifecycle
-* replacement policy
-* cache lookup
-
----
-
-## vfs
-
-Provides filesystem semantics.
-
-Responsibilities:
-
-* create
-* lookup
-* unlink
-* rename
-* readdir
-
----
-
-## lsa
-
-Provides low-level system access.
-
-Responsibilities:
-
-* Linux syscall wrappers
-* filesystem backend operations
-
-Must not contain VFS semantics.
-
----
-
-# Language Rules
-
-Language:
+语言标准：
 
 ```text
 C17
 ```
 
-Supported compilers:
+支持编译器：
 
 ```text
 gcc
 clang
 ```
 
-Avoid compiler-specific extensions unless explicitly required.
-
-Forbidden:
+禁止使用：
 
 ```text
 C++
@@ -250,49 +190,48 @@ Nested Functions
 Variable Length Arrays (VLA)
 ```
 
+除非已有明确理由，不使用编译器私有扩展。
+
 ---
 
-# Naming Rules
+## 错误系统
 
-## Error Code System
+所有模块统一使用 `fs_error_t`。不得把 `0` / `-1` 和 `fs_error_t` 混用。
 
-All modules (including COMMON) use the unified `fs_error_t` system. Never mix `0`/`-1` with `fs_error_t`.
+### 错误布局
 
-### Error Layout (32-bit)
-
-```
+```text
  31 30 | 29 -------- 20 | 19 -------- 8 | 7 -------- 0
 -------------------------------------------------------
 severity|   module id   |   sub error   |    errno
 ```
 
-- **severity** (2-bit): `FS_SEV_INFO`, `FS_SEV_WARN`, `FS_SEV_ERROR`, `FS_SEV_FATAL`
-- **module** (10-bit): First-level module — `FS_MODULE_COMMON`, `FS_MODULE_OBJECT`, `FS_MODULE_LSA`, etc.
-- **sub** (12-bit): Component within the module. For COMMON: `FS_COMMON_SUB_HASH`, `FS_COMMON_SUB_LOCK`, `FS_COMMON_SUB_PATH`, etc. For OBJECT: `OBJ_SUB_INIT`, `OBJ_SUB_INSERT`, etc.
-- **errno** (8-bit): Linux errno value
+字段含义：
 
-### Sub-Error Rules
+* `severity`：`FS_SEV_INFO`、`FS_SEV_WARN`、`FS_SEV_ERROR`、`FS_SEV_FATAL`
+* `module`：一级模块，例如 `FS_MODULE_COMMON`、`FS_MODULE_OBJECT`、`FS_MODULE_LSA`、`FS_MODULE_NAMEI`
+* `sub`：模块内部组件，不一定是子模块
+* `errno`：Linux errno 值
 
-1. **`sub` identifies the internal component**, not necessarily a "sub-module". For example, COMMON's sub values are: HASH, LOCK, PATH, MEMPOOL, ATOMIC, LIST, LOG, OS, TRACE, UTILS, etc.
-2. **Only use `FS_SUB_NONE` (or `FS_COMMON_SUB_NONE`) as a fallback** when the error truly cannot be attributed to any specific component. It must not be the default choice.
-3. **Each module registers its sub-name callback** via `fs_sub_register()` during module init. For example, `object_init()` registers both `FS_MODULE_COMMON` and `FS_MODULE_OBJECT`.
+### sub 错误规则
 
-### Error Constructor Pattern
+1. `sub` 用来标识模块内部组件，例如 HASH、LOCK、PATH、MEMPOOL、LOOKUP、WALK。
+2. 只有在确实无法归因时才使用 `FS_SUB_NONE` 或模块内的 `*_SUB_NONE`。
+3. 每个模块初始化时应通过 `fs_sub_register()` 注册 sub 名称回调。
+4. 如果被调用函数已经返回 `fs_error_t`，直接向上传播，不要重新包装。
 
-Each module provides an error constructor that hardcodes its module ID:
+### 错误构造模式
+
+每个模块提供固定 module id 的错误构造函数：
 
 ```c
-// COMMON module
 fs_error_t fs_common_error(uint32_t sub, int err);
-
-// Object Layer
 fs_error_t obj_error(obj_sub_t sub, int err);
-
-// LSA
 fs_error_t lsa_error(fs_op_t sub, int err);
+fs_error_t namei_error(namei_sub_t sub, int err);
 ```
 
-Usage:
+使用示例：
 
 ```c
 return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
@@ -300,46 +239,33 @@ return obj_error(OBJ_SUB_INSERT, FS_ERRNO_EEXIST);
 return lsa_error(FS_OP_LOOKUP, FS_ERRNO_ENOENT);
 ```
 
-### Error Return Convention
+所有可能失败的函数都应直接返回 `fs_error_t`，不得用 `int` 或 `int32_t` 承载错误语义。
 
-All functions that can fail return `fs_error_t` directly — never `int` or `int32_t`:
-
-```c
-fs_error_t fs_hash_init(fs_hash_t *hash, ...);
-fs_error_t fs_mutex_init(fs_mutex_t *lock, ...);
-fs_error_t objtable_init(obj_table_t *table, uint32_t bucket_nr);
-fs_error_t objmgr_init(void);
-```
-
-Check results with `fs_failed()` / `fs_succeeded()`:
+检查错误时使用：
 
 ```c
-err = fs_hash_init(&table, bucket_nr, ...);
 if (fs_failed(err)) {
-    FS_LOG_DUMP_ERROR("fs_hash_init failed, err=%s (0x%x)",
-                      fs_error_str(err), err);
     return err;
 }
 ```
 
-Never bridge `0`/`-1` to `fs_error_t` — if a called function already returns `fs_error_t`, propagate it directly. Wrapping with a new error code loses the original component attribution.
-### Resource Cleanup and `goto` Convention
+不得使用 `err != 0` 或 `ret == -1` 判断 MirageFS 内部错误。
 
-For functions that acquire multiple resources in stages, prefer one exit
-path and `goto` cleanup labels. Typical examples are module `init`,
-`create`, `open`, and any function that owns rollback responsibility.
+---
 
-Rules:
+## 资源清理与 goto 约定
 
-1. Keep one `fs_error_t err` and return it at the final `out:` label.
-2. On failure, jump to the label that releases already-acquired resources.
-3. Cleanup labels release resources in reverse acquisition order.
-4. Label names should describe the resource boundary, for example
-   `err_nspool`, `err_fsid`, `err_sysroot`, then `out`.
-5. Do not force this style onto tiny validation/query helpers that do not
-   acquire resources; early return is acceptable there.
+当函数分阶段获取多个资源时，优先使用单一出口和 `goto` 清理标签。典型场景包括模块 `init`、`create`、`open`，以及任何拥有回滚责任的函数。
 
-Preferred pattern:
+规则：
+
+1. 使用一个 `fs_error_t err`，最终在 `out:` 返回。
+2. 失败时跳到释放已获取资源的标签。
+3. 清理顺序与获取顺序相反。
+4. 标签名表达资源边界，例如 `err_nspool`、`err_fsid`、`err_sysroot`。
+5. 没有资源所有权的小型校验函数可以早返回。
+
+推荐模式：
 
 ```c
 fs_error_t xxx_init(void)
@@ -368,150 +294,84 @@ out:
 
 ---
 
-## Verb Convention (Public API)
+## 命名规则
 
-All public functions follow a strict verb-based naming convention.
+### 公共 API 动词约定
 
-Format:
+公共函数采用严格的动词命名：
 
 ```text
 <module>_<verb>[_<noun>]()
 ```
 
-The verb set is closed — do not invent new verbs without updating this document.
+动词集合应保持收敛。新增动词前必须先更新本文件。
 
-### Value Object Verbs
+### 值对象动词
 
-For plain-data structs (stack / embedded, no internal heap resources):
+用于无内部堆资源的普通结构体：
 
-| Verb | Signature | Semantics |
-|------|-----------|-----------|
-| `xxx_make` | `T xxx_make(A a, B b)` | Construct a value object, return by value |
-| `xxx_is_valid` | `bool xxx_is_valid(const T *v)` | Return true if all fields are legal |
-| `xxx_equal` | `bool xxx_equal(const T *a, const T *b)` | Return true if identity fields match |
-| `xxx_from_yyy` | `void xxx_from_yyy(T *out, const Y *in)` | Convert / project from another type |
-| `xxx_hash` | `uint64_t xxx_hash(const T *v)` | Hash on identity fields |
+| 动词 | 语义 |
+|------|------|
+| `xxx_make` | 构造值对象并按值返回 |
+| `xxx_is_valid` | 判断字段是否合法 |
+| `xxx_equal` | 判断身份字段是否一致 |
+| `xxx_from_yyy` | 从另一个类型转换或投影 |
+| `xxx_hash` | 按身份字段计算哈希 |
 
-Examples:
+规则：
 
-```c
-/* fuid — file unique identity (value object) */
-fuid_t  fuid_make(Fsid_t fsid, ObjectId_t oid, GenId_t gen, fuid_type_t type);
-bool    fuid_is_valid(const fuid_t *fuid);
-bool    fuid_equal(const fuid_t *a, const fuid_t *b);
-void    fuid_init(fuid_t *fuid);   /* reset to zero / invalid */
+* 合法性判断使用 `is_` 前缀，例如 `fuid_is_valid()`。
+* 值对象构造统一使用 `make`，不使用 `build`、`new`、`construct`。
+* `from_xxx` 使用输出参数形式：`void xxx_from_yyy(T *out, const Y *in)`。
+* 值对象上的 `init` 表示重置为零值或无效值，不表示分配资源。
 
-/* objkey — object index key (value object) */
-obj_key_t  objkey_make(ObjectId_t oid, GenId_t gen);
-bool       objkey_is_valid(const obj_key_t *key);
-bool       objkey_equal(const obj_key_t *lhs, const obj_key_t *rhs);
-void       objkey_from_fuid(obj_key_t *key, const fuid_t *fuid);
+### 运行时对象动词
 
-/* objhandle — backend handle (value object) */
-obj_handle_t  objhandle_make(int32_t mount_id, uint16_t type,
-                             uint16_t len, const uint8_t *data);
-bool          objhandle_valid(const obj_handle_t *h);
-bool          objhandle_equal(const obj_handle_t *a, const obj_handle_t *b);
-void          objhandle_from_fuid(obj_handle_t *h, const fuid_t *fuid);
-```
+用于拥有内部资源的结构体：
 
-Rules:
-- `valid` uses an `is_` prefix — `fuid_is_valid()`, not `fuid_valid()`.
-- `make` is the single verb for value construction — never `build`, `create`, `new`, `construct`.
-- `from_xxx` is output-parameter style: `void xxx_from_yyy(T *out, const Y *in)`.
-- `init` on a value object means "reset to zero / invalid state" (no allocation).
+| 动词 | 语义 |
+|------|------|
+| `xxx_init` | 初始化已分配对象，可分配内部资源 |
+| `xxx_deinit` | 释放内部资源，不释放结构体本身 |
+| `xxx_create` | 分配结构体并初始化 |
+| `xxx_destroy` | 反初始化并释放结构体 |
 
-### Runtime Object Verbs
+规则：
 
-For structs that own internal heap resources (hash tables, pools, caches):
+* 嵌入式成员优先使用 `init / deinit`。
+* 需要堆分配结构体本身时使用 `create / destroy`。
+* 每个 `init` 必须有配对 `deinit`。
+* 每个 `create` 必须有配对 `destroy`。
 
-| Verb | Semantics |
-|------|-----------|
-| `xxx_init` | Initialize an already-allocated object, may allocate internal resources. Caller owns the memory. |
-| `xxx_deinit` | Release internal resources, leave the struct zeroed. Does NOT free the struct itself. |
-| `xxx_create` | Allocate + init. Returns pointer. |
-| `xxx_destroy` | Deinit + free. Nulls the pointer. |
+### CRUD / 操作动词
 
-Guidance:
-- Prefer `init / deinit` when the struct is embedded inside another struct.
-- Use `create / destroy` only when heap allocation of the struct itself is the common case.
-- Every `init` must have a matching `deinit`; every `create` must have a matching `destroy`.
+| 动词 | 语义 |
+|------|------|
+| `xxx_insert` | 插入条目，重复时可失败 |
+| `xxx_remove` | 按键删除条目 |
+| `xxx_lookup` | 查找并返回指针，不改变引用计数 |
+| `xxx_exists` | 判断是否存在 |
+| `xxx_acquire` | 查找并增加引用计数 |
+| `xxx_release` | 减少引用计数 |
+| `xxx_get` | 按键增加引用计数 |
+| `xxx_put` | 按键减少引用计数 |
+| `xxx_count` | 返回条目数量 |
 
-Examples:
+### 调试与工具动词
 
-```c
-/* objtable — embedded hash table (init / deinit) */
-fs_error_t  objtable_init(obj_table_t *table, uint32_t bucket_nr);
-void        objtable_deinit(obj_table_t *table);
+| 动词 | 语义 |
+|------|------|
+| `xxx_dump` | 输出结构体紧凑快照到日志 |
+| `xxx_to_str` | 返回静态字符串表示 |
+| `xxx_type_str` | 返回枚举值名称 |
 
-/* mempool — heap-allocated pool (create / destroy) */
-fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg);
-void          fs_mp_destroy(fs_mempool_t *mp);
+### Getter / Setter
 
-/* objmgr — global singleton (module-level init / deinit) */
-fs_error_t objmgr_init(void);
-void       objmgr_deinit(void);
-```
+* 简单字段访问：`xxx_get_<field>()` / `xxx_set_<field>()`
+* 布尔类型判断：`xxx_is_<type>()`
+* `is_` 只用于子类型判断或合法性判断，不用于普通 getter。
 
-### CRUD / Operation Verbs
-
-For higher-level services (objmgr, vfs, cache):
-
-| Verb | Semantics |
-|------|-----------|
-| `xxx_insert` | Add an entry (may fail if duplicate) |
-| `xxx_remove` | Delete an entry by key |
-| `xxx_lookup` | Find and return pointer (no refcount change) |
-| `xxx_exists` | Return bool — cheaper than lookup |
-| `xxx_acquire` | Lookup + increment refcount |
-| `xxx_release` | Decrement refcount (pair with acquire) |
-| `xxx_get` | Increment refcount by key |
-| `xxx_put` | Decrement refcount by key |
-| `xxx_count` | Return current entry count |
-
-Examples:
-
-```c
-fs_error_t   objtable_insert(obj_table_t *t, const obj_meta_t *meta);
-fs_error_t   objtable_remove(obj_table_t *t, const obj_key_t *key);
-obj_meta_t  *objtable_lookup(obj_table_t *t, const obj_key_t *key);
-bool         objtable_exists(obj_table_t *t, const obj_key_t *key);
-
-obj_meta_t  *objmgr_acquire(fuid_t fuid);
-void         objmgr_release(obj_meta_t *meta);
-```
-
-### Debug / Utility Verbs
-
-| Verb | Semantics |
-|------|-----------|
-| `xxx_dump` | Print a compact one-line struct snapshot to log (important fields, no entry/exit banners) |
-| `xxx_to_str` | Return a static string representation (short, human-readable, no logging side effects) |
-| `xxx_type_str` | Return string name for an enum value |
-
-Examples:
-
-```c
-void         objmeta_dump(const obj_meta_t *meta);
-void         objruntime_dump(const obj_runtime_t *rt);
-const char  *fuid_to_str(const fuid_t *fuid);
-const char  *fuid_type_str(fuid_type_t type);
-```
-
-### Getter / Setter Convention
-
-- Simple field access: `xxx_get_<field>()` / `xxx_set_<field>()`
-- Boolean type checks: `xxx_is_<type>()` — the `is_` prefix is ONLY for subtype checks
-
-Examples:
-
-```c
-fuid_type_t  fuid_get_type(const fuid_t *fuid);    /* getter */
-bool         fuid_is_file(const fuid_t *fuid);     /* subtype check — is_ prefix ok here */
-bool         fuid_is_dir(const fuid_t *fuid);
-```
-
-### Flag Operations
+### flag 操作
 
 ```c
 bool  xxx_flag_test(const T *v, uint16_t flag);
@@ -519,47 +379,57 @@ void  xxx_flag_set(T *v, uint16_t flag);
 void  xxx_flag_clear(T *v, uint16_t flag);
 ```
 
-### Anti-Patterns
+### 禁止模式
 
-Never expose generic names:
+不要暴露无模块前缀的泛名：
 
 ```c
-create()    /* use <module>_create */
-destroy()   /* use <module>_destroy */
-lookup()    /* use <module>_lookup */
-init()      /* use <module>_init */
+create()
+destroy()
+lookup()
+init()
 ```
 
-Never mix verbs for the same operation across modules:
+不要在不同模块为同一语义混用动词：
 
 ```c
-objkey_valid()   /* wrong — use objkey_is_valid() */
-objmeta_reset()  /* wrong — use objmeta_deinit() */
+objkey_valid()   /* 错，应使用 objkey_is_valid() */
+objmeta_reset()  /* 错，应使用 objmeta_deinit() */
 ```
 
 ---
 
-## Internal Functions
+## 内部函数命名
 
-Static functions should also preserve module context.
+`static` 函数也应保留模块上下文，不能为了短而丢语义。
 
-Examples:
+示例：
 
 ```c
-static fs_error_t  cache_do_insert(void);
-static fs_error_t  cache_do_remove(void);
-static bool        objmeta_valid(const obj_meta_t *meta);
+static fs_error_t cache_do_insert(void);
+static fs_error_t cache_do_remove(void);
+static bool       objmeta_is_valid(const obj_meta_t *meta);
 ```
-
-Naming consistency is preferred over shortening.
 
 ---
 
-## Type Naming
+## 局部变量命名
 
-All structures use typedef style.
+局部变量也必须表达用途，不能只表达“临时”状态。
 
-Preferred:
+规则：
+
+1. 禁止使用 `tmp`、`temp`、`foo`、`bar`、`data` 这类语义不明的变量名，除非它们出现在纯示例占位文本中。
+2. 临时缓冲区应按内容命名，例如 `path_buf`、`name_buf`、`target_path`、`parent_path`。
+3. 中间结果应按业务角色命名，例如 `lookup_result`、`parent_result`、`create_attr`。
+4. 循环变量只在极小作用域内可以使用 `i`、`j`；跨越多个分支或参与业务判断时，也应使用语义名。
+5. 不要为了缩短代码牺牲可读性，优先选择和模块概念一致的完整名称。
+
+---
+
+## 类型、枚举和宏命名
+
+结构体使用 typedef 风格，避免匿名结构体。
 
 ```c
 typedef struct fs_mempool {
@@ -570,13 +440,7 @@ typedef struct fs_mempool {
 } fs_mempool_t;
 ```
 
-Avoid anonymous structures.
-
----
-
-## Enum Naming
-
-Preferred:
+枚举使用模块化名称：
 
 ```c
 typedef enum cache_state {
@@ -588,29 +452,27 @@ typedef enum cache_state {
 } cache_state_t;
 ```
 
----
-
-## Macro Naming
-
-Use uppercase.
-
-Examples:
+宏使用全大写：
 
 ```c
 FS_PAGE_SIZE
-
 FS_CACHE_BUCKETS
-
 OBJMETA_MAGIC
 ```
 
 ---
 
-# Include Rules
+## include 规则
 
-Current module header first.
+公共头文件和源文件的 include 顺序：
 
-Example:
+1. 当前模块头文件优先。
+2. 项目头文件在系统头文件之前。
+3. 从模块入口路径 include。
+4. 避免不必要 include。
+5. 能用前置声明时优先使用前置声明。
+
+示例：
 
 ```c
 #include "cache/cache.h"
@@ -623,56 +485,45 @@ Example:
 #include <stdint.h>
 ```
 
-Rules:
-
-1. Current module header first.
-2. Project headers before system headers.
-3. Include from module entry paths.
-4. Avoid unnecessary includes.
-5. Prefer forward declarations where appropriate.
-
 ---
 
-# Const Correctness
+## const 正确性
 
-All pointer parameters that are read but not written must be `const`.
+只读指针参数必须加 `const`。
 
 ```c
-/* good — input pointers are const */
 bool fuid_equal(const fuid_t *a, const fuid_t *b);
 void objkey_from_fuid(obj_key_t *key, const fuid_t *fuid);
-
-/* bad — missing const on read-only pointer */
-bool fuid_equal(fuid_t *a, fuid_t *b);
 ```
 
-Rules:
-- Output / in-out parameters: no const.
-- Input parameters: always const.
-- This lets the caller immediately see which parameters may be mutated.
+规则：
+
+* 输出参数和输入输出参数不加 `const`。
+* 输入指针参数必须加 `const`。
+* 让调用方一眼能看出哪些参数可能被修改。
 
 ---
 
-# Parameter Direction Annotations
+## 参数方向标注
 
-All public API function documentation MUST annotate each parameter with a direction tag.
+公共 API 文档必须为每个参数标注方向。
 
-Use one of three tags:
+可用标注：
 
-| Tag | Meaning |
-|-----|---------|
-| `[IN]` | Read-only input. Callee reads but does not modify. `const` pointers are always `[IN]`. |
-| `[OUT]` | Output only. Callee writes to this parameter. Non-const pointers are usually `[OUT]`. |
-| `[IN/OUT]` | Input and output. Callee reads and may modify. Non-const pointers to mutable state. |
+| 标注 | 含义 |
+|------|------|
+| `[IN]` | 只读输入，callee 不修改 |
+| `[OUT]` | 只写输出 |
+| `[IN/OUT]` | 输入输出，callee 会读取并修改 |
 
-Examples:
+示例：
 
 ```c
 /*
  * 初始化 ObjMeta。
  *
  * 参数：
- *      [OUT] meta      : 目标对象（由 objpool_alloc 分配）
+ *      [OUT] meta      : 目标对象
  *      [IN]  fuid      : MirageFS 对象标识
  *      [IN]  handle    : Linux backend handle
  */
@@ -680,64 +531,34 @@ fs_error_t objmeta_init(
                 obj_meta_t *meta,
                 const fuid_t *fuid,
                 const obj_handle_t *handle);
-
-/*
- * 插入对象。
- *
- * 参数：
- *      [IN/OUT] table  : 对象表
- *      [IN]     meta   : 待插入的元数据
- */
-fs_error_t objtable_insert(
-            obj_table_t *table,
-            const obj_meta_t *meta);
 ```
 
-Rules:
-- Every parameter in a `/* 参数：... */` block must have a direction tag.
-- Tags appear left-aligned in a column of their own (`[IN]`, `[OUT]`, `[IN/OUT]` are 7 chars wide).
-- `const` pointers are always `[IN]` — the compiler enforces this.
-- Non-const pointers that are only written-to (not read) are `[OUT]`.
-- Non-const pointers that are both read and written are `[IN/OUT]`.
-- Value-type parameters (non-pointer) are always `[IN]` and may omit the tag when the intent is obvious.
+规则：
+
+* `const` 指针总是 `[IN]`。
+* 非 const 但只写的参数是 `[OUT]`。
+* 非 const 且读写的参数是 `[IN/OUT]`。
+* 值类型参数天然是 `[IN]`，意图明显时可以省略。
 
 ---
 
-# Inline Functions
+## inline 规则
 
-Value-object helpers belong in the header as `static inline`.
+值对象 helper 可以放在头文件中作为 `static inline`。
 
-Only use `static inline` when ALL of:
-- The function body is ≤ 10 lines.
-- It has no side effects besides constructing / inspecting a value.
-- It is called on hot paths (lookup, comparison, hash).
+只有同时满足以下条件才使用 `static inline`：
 
-Examples:
+1. 函数体不超过 10 行。
+2. 除构造或检查值对象外没有副作用。
+3. 位于热点路径，例如 lookup、比较、hash。
 
-```c
-/* objkey.h — good fit for static inline */
-static inline obj_key_t objkey_make(ObjectId_t oid, GenId_t gen)
-{
-    obj_key_t key;
-    key.objectid = oid;
-    key.gen      = gen;
-    return key;
-}
-
-static inline bool objkey_is_valid(const obj_key_t *key)
-{
-    if (key == NULL) { return false; }
-    return (key->objectid != 0) && (key->gen != 0);
-}
-```
-
-Anything that allocates, locks, logs, or has complex error paths belongs in the `.c` file.
+涉及分配、锁、日志或复杂错误路径的函数必须放在 `.c` 文件。
 
 ---
 
-# NULL Handling
+## NULL 处理
 
-NULL checks on public API boundaries are required.
+公共 API 边界必须检查 NULL。
 
 ```c
 fs_error_t objtable_insert(obj_table_t *table, const obj_meta_t *meta)
@@ -750,28 +571,28 @@ fs_error_t objtable_insert(obj_table_t *table, const obj_meta_t *meta)
                           "err=%s (0x%x)", fs_error_str(err), err);
         return err;
     }
-    /* ... */
+
+    return FS_OK;
 }
 ```
 
-Once past the public boundary, internal static helpers may skip redundant NULL checks when the caller has already validated.
+通过公共边界后，内部 `static` helper 可以在调用方已保证参数合法时省略重复 NULL 检查。
 
-Return conventions for NULL-able returns:
-- Functions returning pointers: `NULL` means "not found" or "error".
-- Functions returning `bool`: `false` on NULL input (defensive).
-- Functions returning `fs_error_t`: positive `fs_error_t` on NULL input (typically `FS_ERRNO_EINVAL`).
+返回约定：
+
+* 返回指针：`NULL` 表示未找到或错误。
+* 返回 `bool`：NULL 输入时防御性返回 `false`。
+* 返回 `fs_error_t`：NULL 输入通常返回 `FS_ERRNO_EINVAL` 对应错误。
 
 ---
 
-# Code Layout
+## 代码布局
 
-Opening brace on next line.
-
-Example:
+左花括号另起一行。
 
 ```c
 fs_error_t cache_lookup(cache_t *cache,
-                 uint64_t key)
+                        uint64_t key)
 {
     if (cache == NULL) {
         return fs_common_error(FS_COMMON_SUB_HASH, FS_ERRNO_EINVAL);
@@ -781,13 +602,7 @@ fs_error_t cache_lookup(cache_t *cache,
 }
 ```
 
----
-
-# Structure Layout
-
-Group related fields together.
-
-Example:
+结构体字段按逻辑分组，组之间空行分隔。
 
 ```c
 typedef struct cache_entry {
@@ -804,32 +619,20 @@ typedef struct cache_entry {
 } cache_entry_t;
 ```
 
-Separate logical groups using blank lines.
-
 ---
 
-# Comment Style
+## 注释风格
 
-MirageFS uses C-style comments consistently.
+MirageFS 统一使用 C 风格注释。文档和代码注释以中文为主。
 
-## Field Comments
-
-For structure fields and short descriptions:
+字段和短描述使用尾注释：
 
 ```c
 uint64_t total_size; /* 内存池总大小 */
 uint32_t refcnt;     /* 引用计数 */
 ```
 
-Preferred for:
-
-- structure fields
-- enum items
-- macro descriptions
-
-## Local Comments
-
-For short logical explanations:
+局部逻辑注释使用块注释：
 
 ```c
 /* 参数检查 */
@@ -838,14 +641,7 @@ if (pool == NULL) {
 }
 ```
 
-```c
-/* 从空闲链表摘除 */
-cache_remove(entry);
-```
-
-## Section comments
-
-Use section separators for major code blocks:
+重要代码分区使用分隔注释：
 
 ```c
 /* ============================================================
@@ -853,7 +649,7 @@ Use section separators for major code blocks:
  * ============================================================ */
 ```
 
-Recommended sections:
+推荐分区名：
 
 ```text
 type definition
@@ -863,89 +659,59 @@ debug helper
 compile time check
 ```
 
-Avoid obvious comments that merely restate code.
+不要写只复述代码的注释。
 
 ---
 
-# Return Value Conventions
+## 返回值约定
 
-Use consistent return types across the codebase.
+全项目保持返回类型一致。
 
-| Return type | Meaning |
-|-------------|---------|
-| `fs_error_t` | `FS_OK` (0) = success; positive value = structured error (severity\|module\|sub\|errno) |
-| `bool` | Predicate result (valid, equal, exists, etc.) |
-| `T` (value type) | Constructed value object (never fails) |
-| `T *` (pointer) | `NULL` = not found / error; non-NULL = valid pointer |
-| `uint64_t` / `uint32_t` / `int32_t` | Count, hash, or refcount (unsigned or signed, never fails) |
+| 返回类型 | 含义 |
+|----------|------|
+| `fs_error_t` | `FS_OK` 表示成功，正值表示结构化错误 |
+| `bool` | 谓词结果 |
+| `T` | 值对象构造结果，不失败 |
+| `T *` | `NULL` 表示未找到或错误 |
+| `uint64_t` / `uint32_t` / `int32_t` | 计数、哈希、引用计数等自然数值 |
 
-Examples:
+规则：
 
-```c
-/* fs_error_t: FS_OK = ok, >0 = structured error */
-fs_error_t  objtable_init(obj_table_t *table, uint32_t bucket_nr);
-fs_error_t  objtable_insert(obj_table_t *table, const obj_meta_t *meta);
-fs_error_t  fs_hash_init(fs_hash_t *hash, uint32_t bucket_nr, ...);
-fs_error_t  fs_mutex_init(fs_mutex_t *lock, const char *name, uint32_t flags);
-
-/* bool: predicate */
-bool fuid_is_valid(const fuid_t *fuid);
-bool objkey_equal(const obj_key_t *a, const obj_key_t *b);
-bool fs_path_is_absolute(const char *path);
-
-/* value type: constructor */
-fuid_t      fuid_make(Fsid_t fsid, ObjectId_t oid, GenId_t gen, fuid_type_t type);
-obj_key_t   objkey_make(ObjectId_t oid, GenId_t gen);
-
-/* pointer: NULL = not found */
-obj_meta_t *objtable_lookup(obj_table_t *table, const obj_key_t *key);
-obj_meta_t *objmgr_acquire(fuid_t fuid);
-
-/* count / refcnt: never fails */
-uint64_t objtable_count(const obj_table_t *table);
-uint64_t fuid_hash(const fuid_t *fuid);
-int32_t  objmgr_refcnt(const fuid_t *fuid);
-```
-
-Rules:
-- Every function that can fail must return `fs_error_t`. Never use `int` or `int32_t` for error returns.
-- Never use bare `0`/`-1` for error returns. Use `FS_OK` and structured `fs_error_t` values.
-- Check errors with `fs_failed(err)` or `fs_succeeded(err)`, never with `!= 0` or `== -1`.
-- Do not bridge `0`/`-1` into `fs_error_t` by wrapping — propagate the original `fs_error_t` directly.
-- Value constructors (`xxx_make`) never fail — they simply pack fields.
-- Count and refcount functions (`xxx_count`, `xxx_refcnt`) return their natural integer type.
+* 可能失败的函数必须返回 `fs_error_t`。
+* 不使用裸 `0` / `-1` 表达错误。
+* 用 `fs_failed(err)` / `fs_succeeded(err)` 检查错误。
+* 不把已有 `fs_error_t` 重新包装成新错误。
+* 值构造函数不失败，只打包字段。
 
 ---
 
-# Logging
+## 日志规则
 
-Use MirageFS logging facilities only.
+只使用 MirageFS 日志设施，不在正式代码中引入 `printf()`、`fprintf()`、`puts()`。
 
-## Macros
+日志宏：
 
 ```c
-FS_LOG_DUMP_DEBUG(fmt, ...)   /* verbose —— 仅开发期开启 */
+FS_LOG_DUMP_DEBUG(fmt, ...)   /* 详细调试信息 */
 FS_LOG_DUMP_INFO(fmt, ...)    /* 关键路径进出 / 状态变化 */
 FS_LOG_DUMP_WARN(fmt, ...)    /* 可恢复异常 */
 FS_LOG_DUMP_ERROR(fmt, ...)   /* 不可恢复错误 */
 ```
 
-Each macro automatically injects `__FILE__`, `__LINE__`, `__func__` via `fs_log_write()`.
+日志宏会通过 `fs_log_write()` 自动带上 `__FILE__`、`__LINE__`、`__func__`。
 
-Do NOT introduce `printf()`, `fprintf()`, `puts()` outside debugging experiments.
+### 日志级别
 
-## Log Levels — When To Use
+| 级别 | 使用场景 |
+|------|----------|
+| `DEBUG` | 详细内部状态，例如 hash bucket walk、mempool expansion |
+| `INFO` | 函数进入/退出、状态变更、关键决策 |
+| `WARN` | 可恢复异常，例如 retry、fallback、降级 |
+| `ERROR` | 不可恢复失败，必须配合 `fs_error_str(err)` |
 
-| Level | Use Case |
-|-------|----------|
-| `DEBUG` | Detailed internal state (hash bucket walk, mempool expansion, etc.) |
-| `INFO` | Function entry/exit, state transitions, key decisions |
-| `WARN` | Recoverable anomalies (retry, fallback, degraded mode) |
-| `ERROR` | Unrecoverable failure — always paired with `fs_error_str(err)` |
+### 错误日志统一模式
 
-## Error Log — Unified Pattern
-
-Every error path MUST follow this pattern:
+每条错误路径必须遵循：
 
 ```c
 fs_error_t err;
@@ -956,154 +722,51 @@ FS_LOG_DUMP_ERROR("<what> failed: <why>, err=%s (0x%x)",
 return err;
 ```
 
-Rules:
-- `<what>` describes the operation that failed (e.g., `fs_hash_init`, `param check`, `calloc`).
-- `<why>` gives the business reason (e.g., `table is NULL`, `object already exists`).
-- `err=%s` always uses `fs_error_str(err)` to emit the full decoded error.
-- `(0x%x)` always follows —— the raw hex value is grep-friendly and unambiguous.
-- The error object is created first, logged once, then returned.
-- `fs_error_str(err)` already emits severity + module + sub + errno + description —— do NOT duplicate that information in the format string.
+规则：
 
-Correct:
+* `<what>` 描述失败操作，例如 `fs_hash_init`、`param check`。
+* `<why>` 描述业务原因，例如 `table is NULL`。
+* 必须使用 `fs_error_str(err)`。
+* 必须同时打印原始十六进制错误值 `(0x%x)`。
+* 错误对象先创建，日志只打一遍，然后返回。
+* 日志正文保持英文，方便 grep；中文用于文档和注释。
 
-```c
-err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EEXIST);
-FS_LOG_DUMP_ERROR("insert failed: object already exists, "
-                  "key=(%lu,%u), err=%s (0x%x)",
-                  (unsigned long)key.objectid,
-                  (unsigned int)key.gen,
-                  fs_error_str(err), err);
-return err;
-```
-
-Wrong:
+禁止模式：
 
 ```c
-/* BAD: bare string, no error code */
-FS_LOG_DUMP_ERROR("table is NULL");
-return obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
-
-/* BAD: passes fs_error_t as format string (CRASH) */
-FS_LOG_DUMP_ERROR(err);
-
-/* BAD: missing fs_error_str, error code not decoded */
-FS_LOG_DUMP_ERROR("init failed, ret=%d", ret);
+FS_LOG_DUMP_ERROR("table is NULL"); /* 缺少结构化错误 */
+FS_LOG_DUMP_ERROR(err);             /* err 不是 format string */
+FS_LOG_DUMP_ERROR("ret=%d", err);   /* 缺少 fs_error_str(err) */
+printf("debug\n");                 /* 绕过日志系统 */
 ```
 
-## Entry / Exit — INFO Pattern
+### 入口与退出日志
 
-Every public function MUST log entry and exit at `INFO` level.
-
-**Entry** —— log key input parameters:
+公共函数必须在 `INFO` 级别记录进入和退出。
 
 ```c
 FS_LOG_DUMP_INFO("enter: table=%p, key=%p", (void *)table, (void *)key);
+FS_LOG_DUMP_INFO("exit: ok");
 ```
 
-**Exit (success)** —— log key result:
+查询函数也需要记录进入和退出。如果日志量过大，后续可按模块降低等级，但默认先保持一致。
 
-```c
-FS_LOG_DUMP_INFO("exit: ok, count=%lu", (unsigned long)count);
-```
-
-**Exit (not found / predicate false)** —— log the outcome:
-
-```c
-FS_LOG_DUMP_INFO("exit: not found");
-FS_LOG_DUMP_INFO("exit: false");
-```
-
-**Exit (error)** —— the error path already logs via `FS_LOG_DUMP_ERROR`; add a one-line exit:
-
-```c
-FS_LOG_DUMP_INFO("exit: failed, ret=%d", (int)ret);
-return ret;
-```
-
-**Void functions** —— log `done`:
-
-```c
-FS_LOG_DUMP_INFO("exit: done");
-```
-
-## Query Functions
-
-Query functions (`lookup`, `exists`, `count`, `is_valid`, `equal`, etc.) also get entry/exit INFO logs. If the volume becomes excessive, lower the global log level or selectively downgrade specific functions to `DEBUG` later. A consistent baseline is more important than premature optimization.
-
-## Internal Helpers
-
-`static` helper functions may omit entry/exit if they are thin wrappers (≤ 3 lines) or pure field-access predicates. Use judgment: if a helper contains branching or error paths, log it.
-
-## Complete Example
-
-```c
-fs_error_t objtable_insert(obj_table_t *table, const obj_meta_t *meta)
-{
-    fs_error_t err;
-    objtable_entry_t *entry;
-    obj_key_t key;
-
-    FS_LOG_DUMP_INFO("enter: table=%p, meta=%p",
-                     (void *)table, (void *)meta);
-
-    if (table == NULL) {
-        err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EINVAL);
-        FS_LOG_DUMP_ERROR("param check failed: table is NULL, err=%s (0x%x)",
-                          fs_error_str(err), err);
-        return err;
-    }
-
-    /* ... validation, business logic ... */
-
-    if (objtable_exists(table, &key)) {
-        err = obj_error(OBJ_SUB_INSERT, FS_ERRNO_EEXIST);
-        FS_LOG_DUMP_ERROR("insert failed: object already exists, "
-                          "key=(%lu,%u), err=%s (0x%x)",
-                          (unsigned long)key.objectid,
-                          (unsigned int)key.gen,
-                          fs_error_str(err), err);
-        return err;
-    }
-
-    FS_LOG_DUMP_INFO("exit: ok");
-    return FS_OK;
-}
-```
-
-## Anti-Patterns Summary
-
-| Anti-Pattern | Why Wrong |
-|--------------|-----------|
-| Bare string, no error code | Can't grep for the error; can't correlate across modules |
-| `FS_LOG_DUMP_ERROR(err)` | `fs_error_t` (uint32_t) is not a format string —— potential crash |
-| `FS_LOG_DUMP_ERROR("... %d", err)` | Raw integer is opaque; use `fs_error_str(err) + (0x%x)` |
-| Missing entry/exit logs | Silent functions make production debugging impossible |
-| English+Chinese mixed in log messages | Logs must be grep-friendly; Chinese is for comments only |
-| `printf()` in production code | Bypasses the log infrastructure (file, rotation, level filter) |
+内部 `static` helper 如果只是很薄的包装或纯字段访问，可以省略进入/退出日志；如果包含分支或错误路径，应记录日志。
 
 ---
 
-# Memory Management
+## 内存管理
 
-Primary allocator:
-
-```c
-fs_mempool
-```
-
-Use:
+优先使用项目内存池设施：
 
 ```c
 fs_mp_create()
-
 fs_mp_destroy()
-
 fs_mp_alloc()
-
 fs_mp_free()
 ```
 
-Avoid direct use of:
+避免直接使用：
 
 ```c
 malloc()
@@ -1112,63 +775,37 @@ realloc()
 free()
 ```
 
-except when implementing memory infrastructure itself.
+实现内存基础设施本身时可以例外。
 
-Ownership must always be clear.
-
-Every allocation must have a defined release path.
+所有权必须清晰，每次分配都要有明确释放路径。
 
 ---
 
-# Concurrency
+## 并发规则
 
-Use common synchronization abstractions.
+使用 common 提供的同步抽象，不在模块边界暴露 pthread 类型。
 
-Examples:
+推荐：
 
 ```c
 fs_mutex_t
-
 fs_spinlock_t
-
 fs_rwlock_t
 ```
 
-Do not expose pthread types outside common.
-
-Bad:
+禁止在模块公共接口中暴露：
 
 ```c
 pthread_mutex_t
 ```
 
-Good:
-
-```c
-fs_mutex_t
-```
-
 ---
 
-# Alignment
+## 对齐与编译期校验
 
-Core metadata structures should consider cacheline alignment.
+核心元数据结构应考虑 cacheline 对齐。
 
-Example:
-
-```c
-64B cacheline alignment
-```
-
-Critical metadata structures should define size expectations explicitly.
-
----
-
-# Compile-Time Validation
-
-Important structures should provide compile-time size validation.
-
-Example:
+重要结构应提供编译期尺寸校验。
 
 ```c
 _Static_assert(
@@ -1178,35 +815,34 @@ _Static_assert(
 
 ---
 
-# API Design
+## API 设计
 
-Object lifetime must be explicit.
+对象生命周期必须显式。
 
-Typical lifecycle:
+典型生命周期：
 
 ```text
-create  →  destroy     (heap alloc + dealloc)
-init    →  deinit      (init resources in-place)
-acquire →  release     (refcount +1 / -1)
+create  -> destroy     /* 分配结构体并释放 */
+init    -> deinit      /* 原地初始化并反初始化 */
+acquire -> release     /* 引用计数 +1 / -1 */
 ```
 
-Avoid hidden initialization.
+规则：
 
-Avoid hidden ownership transfer.
-
-Every `init` must be paired with a matching `deinit` in the same module.
-Every `create` must be paired with a matching `destroy` in the same module.
+* 不隐藏初始化。
+* 不隐藏所有权转移。
+* `init` 和 `deinit` 必须在同一模块内成对出现。
+* `create` 和 `destroy` 必须在同一模块内成对出现。
 
 ---
 
-# Opaque Type Pattern
+## Opaque Type 模式
 
-When a struct's internals should not be visible to callers, use an opaque typedef in the header and define the struct only in the `.c` file.
+当结构体内部布局不应暴露给调用者时，在头文件中使用 opaque typedef，在 `.c` 文件中定义结构体。
 
-Header:
+头文件：
 
 ```c
-/* fs_mempool.h */
 typedef struct fs_mempool fs_mempool_t;
 
 fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg);
@@ -1214,32 +850,32 @@ void          fs_mp_destroy(fs_mempool_t *mp);
 void         *fs_mp_alloc(fs_mempool_t *mp, size_t size);
 ```
 
-Source:
+源文件：
 
 ```c
-/* fs_mempool.c */
 struct fs_mempool {
     void    *base;
     uint64_t size;
-    /* ... */
 };
 ```
 
-Use opaque types when:
-- The struct layout is an implementation detail that may change.
-- Direct field access would break invariants.
-- The module is in a lower layer and callers only use it through its API.
+适合 opaque type 的场景：
 
-Do NOT use opaque types when:
-- The struct is a value object passed by value (fuid_t, obj_key_t).
-- The struct is embedded inside another struct (obj_meta_t inside obj_runtime_t).
-- sizeof() or inline access is needed for performance on hot paths.
+* 结构体布局是实现细节。
+* 直接字段访问会破坏不变量。
+* 模块位于下层，调用方只应通过 API 使用。
+
+不适合 opaque type 的场景：
+
+* 值对象按值传递，例如 `fuid_t`、`obj_key_t`。
+* 结构体需要嵌入其他结构体。
+* 热点路径需要 `sizeof()` 或 inline 字段访问。
 
 ---
 
-# Header File Layout
+## 公共头文件布局
 
-Every public header follows this order:
+公共头文件采用固定顺序：
 
 ```c
 #pragma once
@@ -1251,109 +887,89 @@ Every public header follows this order:
 /* 2. project headers */
 #include "common/fs_common.h"
 
-/* 3. type definitions (enums first, then structs) */
-typedef enum { ... } foo_type_t;
+/* 3. type definitions */
+typedef enum foo_type { ... } foo_type_t;
 typedef struct foo { ... } foo_t;
 
 /* 4. compile-time checks */
 _Static_assert(sizeof(foo_t) == FOO_SIZE, "foo_t size invalid");
 
-/* 5. public API declarations, grouped by category */
-/* ---- lifecycle ---- */
-int  foo_init(foo_t *f, ...);
-void foo_deinit(foo_t *f);
-
-/* ---- value ops ---- */
-foo_t foo_make(...);
-bool  foo_valid(const foo_t *f);
-bool  foo_equal(const foo_t *a, const foo_t *b);
-
-/* ---- debug ---- */
-void foo_dump(const foo_t *f);
+/* 5. public API declarations */
 ```
 
-Rules:
-- No function bodies in `.h` except `static inline` helpers (see Inline Functions).
-- Section separators (`/* ==== ... ==== */`) are mandatory between logical groups.
-- Forward-declare opaque types at the top of the type-definitions section.
+规则：
+
+* `.h` 中除 `static inline` helper 外不写函数体。
+* 逻辑分组之间必须有分隔注释。
+* opaque 类型的前置声明放在类型定义区顶部。
 
 ---
 
-# Documentation Rules
+## 文档规则
 
-Documentation is part of the codebase.
+文档是代码库的一部分。
 
-Whenever a change affects:
+当改动影响以下内容时，必须同步更新文档：
 
 * public API
-* structure layout
-* module responsibility
-* object lifecycle
-* architecture decisions
+* 结构体布局
+* 模块职责
+* 对象生命周期
+* 架构决策
+* 跨模块调用约束
 
-update the corresponding documentation.
+文档和代码必须保持一致。
 
-Examples:
-
-```text
-docs/FUID.md
-
-docs/OBJMETA.md
-
-docs/CACHE.md
-
-docs/VFS.md
-```
-
-Code and documentation must remain consistent.
+文档以中文为主；代码标识符、命令、日志格式、API 名称保持原文。
 
 ---
 
-# Design Discussion Rules
+## 设计讨论规则
 
-When designing new functionality:
+设计新功能时：
 
-1. Verify whether an existing module already owns the responsibility.
-2. Challenge unnecessary abstractions.
-3. Prefer simple solutions first.
-4. Resolve lifecycle ownership before implementation.
-5. Resolve concurrency strategy before implementation.
+1. 先确认现有模块是否已经拥有该职责。
+2. 主动质疑不必要的抽象。
+3. 优先选择简单方案。
+4. 先解决生命周期所有权，再实现。
+5. 先解决并发策略，再实现共享状态。
 
-For significant architectural changes:
-
-* discuss design first
-* implement later
+重大架构改动应先讨论设计，再写正式代码。
 
 ---
 
-# Review Focus
+## 评审重点
 
-When reviewing code, pay special attention to:
+评审代码时优先关注：
 
-1. Memory leak
-2. Double free
-3. Ownership confusion
-4. Lock leak
-5. Deadlock risk
-6. Layer violation
-7. Incomplete error path
-8. Missing logging
-9. Missing cleanup path
-10. Missing compile-time validation
-11. Cacheline layout issues
-12. API consistency
+1. 内存泄漏
+2. double free
+3. 所有权不清
+4. 锁泄漏
+5. 死锁风险
+6. 层级依赖违规
+7. 错误路径不完整
+8. 缺少日志
+9. 缺少清理路径
+10. 缺少编译期校验
+11. cacheline 布局风险
+12. API 命名不一致
+13. 文档与代码不一致
+14. 上层绕过统一 dispatch 入口
 
 ---
 
-# Output Expectations
+## 输出要求
 
-When generating code:
+生成代码或文档时：
 
-* preserve existing style
-* avoid unnecessary refactoring
-* avoid renaming stable interfaces
-* prefer patch-style changes
-* explain architectural impact
-* mention documentation updates if required
+* 保持现有风格。
+* 避免无关重构。
+* 避免重命名稳定接口。
+* 优先小补丁修改。
+* 说明架构影响。
+* 涉及公共接口、职责边界或调用链时同步更新文档。
+* 文档和注释以中文为主。
+* 局部变量名必须表达业务含义，不使用 `tmp` 等弱语义名称。
 
-Consistency is more important than cleverness.
+一致性比炫技更重要。

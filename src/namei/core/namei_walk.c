@@ -56,6 +56,45 @@ fs_error_t namei_ctx_check(const namei_ctx_t *ctx)
     return FS_OK;
 }
 
+
+static fs_error_t namei_dispatch_lookup_plus(const fuid_t *parent_fuid,
+                                             const char *name,
+                                             fs_flags_t flags,
+                                             fops_object_result_t *out)
+{
+    fops_args_t args;
+
+    memset(&args, 0, sizeof(args));
+    args.op = FS_OP_LOOKUP;
+    args.flags = flags;
+    args.parent_fuid = parent_fuid;
+    args.name = name;
+    args.u.lookup.out = out;
+
+    return fops_dispatch(&args);
+}
+
+static fs_error_t namei_dispatch_readlink(const fuid_t *parent_fuid,
+                                          const char *name,
+                                          fs_flags_t flags,
+                                          char *buf,
+                                          size_t size,
+                                          size_t *actual)
+{
+    fops_args_t args;
+
+    memset(&args, 0, sizeof(args));
+    args.op = FS_OP_READLINK;
+    args.flags = flags;
+    args.parent_fuid = parent_fuid;
+    args.name = name;
+    args.u.readlink.buf = buf;
+    args.u.readlink.size = size;
+    args.u.readlink.actual = actual;
+
+    return fops_dispatch(&args);
+}
+
 static fs_error_t namei_next_component(const char **cursor,
                                        char *name,
                                        bool *has_more)
@@ -186,7 +225,7 @@ fs_error_t namei_walk(const namei_ctx_t *ctx,
         memset(&result, 0, sizeof(result));
         fuid_set_invalid(&result.fuid);
 
-        err = fops_lookup_plus(&current, name, FS_FLAG_NOFOLLOW, &result);
+        err = namei_dispatch_lookup_plus(&current, name, FS_FLAG_NOFOLLOW, &result);
         if (fs_failed(err)) {
             return err;
         }
@@ -199,8 +238,8 @@ fs_error_t namei_walk(const namei_ctx_t *ctx,
 
             memset(target, 0, sizeof(target));
             actual = 0U;
-            err = fops_readlink(&current, name, FS_FLAG_NOFOLLOW,
-                                target, sizeof(target) - 1U, &actual);
+            err = namei_dispatch_readlink(&current, name, FS_FLAG_NOFOLLOW,
+                                 target, sizeof(target) - 1U, &actual);
             if (fs_failed(err)) {
                 return err;
             }
