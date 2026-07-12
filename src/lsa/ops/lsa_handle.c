@@ -1,6 +1,8 @@
 #include "lsa/include/lsa_api.h"
 
 #include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
@@ -16,7 +18,8 @@ typedef struct lsa_linux_file_handle {
 
 } lsa_linux_file_handle_t;
 
-#define LSA_MOUNT_SLOT_NR 32U
+#define LSA_MOUNT_SLOT_NR       32U
+#define LSA_HANDLE_PATH_SLOT_NR 256U
 
 typedef struct lsa_mount_slot {
 
@@ -68,6 +71,158 @@ static lsa_ret_t lsa_mount_register(int32_t mount_id, int mount_fd)
     }
 
     return lsa_error(FS_OP_OPENHANDLE, ENOSPC);
+}
+
+typedef struct lsa_handle_path_slot {
+
+    bool used;
+    int32_t mount_id;
+    uint32_t handle_bytes;
+    int32_t handle_type;
+    uint8_t data[LSA_HANDLE_MAX_SIZE];
+    char path[PATH_MAX];
+
+} lsa_handle_path_slot_t;
+
+static lsa_handle_path_slot_t
+        g_lsa_handle_paths[LSA_HANDLE_PATH_SLOT_NR];
+
+static bool lsa_handle_path_match(
+                const lsa_handle_path_slot_t *slot,
+                int32_t mount_id,
+                const lsa_file_handle_t *handle)
+{
+    if ((slot == NULL) ||
+        (handle == NULL) ||
+        !slot->used ||
+        (slot->mount_id != mount_id) ||
+        (slot->handle_bytes != handle->handle_bytes) ||
+        (slot->handle_type != handle->handle_type)) {
+        return false;
+    }
+
+    return memcmp(slot->data,
+                  handle->data,
+                  handle->handle_bytes) == 0;
+}
+
+static int lsa_handle_path_make(
+                int dirfd,
+                const char *path,
+                char *out,
+                size_t out_size)
+{
+    char base[PATH_MAX];
+    char proc_path[64];
+    ssize_t len;
+    int n;
+
+    if ((path == NULL) || (out == NULL) || (out_size == 0U)) {
+        return 1;
+    }
+
+    if (path[0] == '/') {
+        n = snprintf(out, out_size, "%s", path);
+        return ((n < 0) || ((size_t)n >= out_size)) ? 1 : 0;
+    }
+
+    if (dirfd == AT_FDCWD) {
+        if (getcwd(base, sizeof(base)) == NULL) {
+            return 1;
+        }
+    } else {
+        n = snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d", dirfd);
+        if ((n < 0) || ((size_t)n >= sizeof(proc_path))) {
+            return 1;
+        }
+
+        len = readlink(proc_path, base, sizeof(base) - 1U);
+        if (len < 0) {
+            return 1;
+        }
+        base[len] = 0;
+    }
+
+    if (strcmp(path, ".") == 0) {
+        n = snprintf(out, out_size, "%s", base);
+    } else {
+        n = snprintf(out, out_size, "%s/%s", base, path);
+    }
+
+    return ((n < 0) || ((size_t)n >= out_size)) ? 1 : 0;
+}
+
+static void lsa_handle_path_register(
+                int dirfd,
+                const char *path,
+                int32_t mount_id,
+                const lsa_file_handle_t *handle)
+{
+    lsa_handle_path_slot_t *slot;
+    char abs_path[PATH_MAX];
+    uint32_t i;
+
+    if ((handle == NULL) ||
+        (handle->handle_bytes > LSA_HANDLE_MAX_SIZE) ||
+        (lsa_handle_path_make(dirfd,
+                              path,
+                              abs_path,
+                              sizeof(abs_path)) != 0)) {
+        return;
+    }
+
+    slot = NULL;
+    for (i = 0U; i < LSA_HANDLE_PATH_SLOT_NR; i++) {
+        if (lsa_handle_path_match(&g_lsa_handle_paths[i],
+                                  mount_id,
+                                  handle)) {
+            slot = &g_lsa_handle_paths[i];
+            break;
+        }
+        if ((slot == NULL) && !g_lsa_handle_paths[i].used) {
+            slot = &g_lsa_handle_paths[i];
+        }
+    }
+
+    if (slot == NULL) {
+        return;
+    }
+
+    memset(slot, 0, sizeof(*slot));
+    slot->used = true;
+    slot->mount_id = mount_id;
+    slot->handle_bytes = handle->handle_bytes;
+    slot->handle_type = handle->handle_type;
+    memcpy(slot->data, handle->data, handle->handle_bytes);
+    memcpy(slot->path, abs_path, strlen(abs_path) + 1U);
+}
+
+static lsa_ret_t lsa_open_by_registered_path(
+                int32_t mount_id,
+                const lsa_file_handle_t *handle,
+                int flags,
+                int *fd)
+{
+    uint32_t i;
+    int newfd;
+
+    for (i = 0U; i < LSA_HANDLE_PATH_SLOT_NR; i++) {
+        if (!lsa_handle_path_match(&g_lsa_handle_paths[i],
+                                   mount_id,
+                                   handle)) {
+            continue;
+        }
+
+        newfd = open(g_lsa_handle_paths[i].path, flags);
+        if (newfd < 0) {
+            return lsa_error(FS_OP_OPENHANDLE, errno);
+        }
+
+        *fd = newfd;
+        return FS_OK;
+    }
+
+    return lsa_error(FS_OP_OPENHANDLE, ENOENT);
 }
 
 /*
@@ -125,6 +280,8 @@ lsa_ret_t lsa_name_to_handle_at(
         handle->data,
         fh.data,
         fh.hdr.handle_bytes);
+
+    lsa_handle_path_register(dirfd, path, *mount_id, handle);
 
     FS_LOG_DUMP_INFO("exit: ok, mount_id=%d", *mount_id);
     return FS_OK;
@@ -195,6 +352,7 @@ lsa_ret_t lsa_open_by_handle_id(
                 int *fd)
 {
     lsa_mount_slot_t *slot;
+    lsa_ret_t err;
 
     FS_LOG_DUMP_INFO("enter: mount_id=%d, flags=%d",
                      mount_id, flags);
@@ -206,7 +364,12 @@ lsa_ret_t lsa_open_by_handle_id(
         return lsa_error(FS_OP_OPENHANDLE, ENOENT);
     }
 
-    return lsa_open_by_handle_at(slot->mount_fd, handle, flags, fd);
+    err = lsa_open_by_handle_at(slot->mount_fd, handle, flags, fd);
+    if (fs_succeeded(err)) {
+        return FS_OK;
+    }
+
+    return lsa_open_by_registered_path(mount_id, handle, flags, fd);
 }
 
 lsa_ret_t lsa_release_mount(
@@ -265,7 +428,7 @@ lsa_ret_t lsa_bootstrap_root(
         return err;
     }
 
-    mount_fd = open(path, O_PATH | O_DIRECTORY);
+    mount_fd = open(path, O_RDONLY | O_DIRECTORY);
     if (mount_fd < 0) {
         return lsa_error(FS_OP_OPENHANDLE, errno);
     }

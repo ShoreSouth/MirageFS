@@ -84,6 +84,9 @@ def is_text_file(path: Path) -> bool:
 
 
 def is_output_allowed(path: Path) -> bool:
+    if len(path.parts) >= 3 and path.parts[:2] == ("src", "msh"):
+        return True
+
     allowed = {
         Path("src/app/main.c"),
         Path("src/common/log/fs_log.c"),

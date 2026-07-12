@@ -34,13 +34,18 @@ fs_error_t runtime_create(const char *path,
 {
     fs_error_t err;
     namei_ctx_t ctx;
+    fops_object_result_t tmp;
 
     err = runtime_make_ctx(&ctx);
     if (fs_failed(err)) {
         return err;
     }
 
-    return namei_create(&ctx, path, attr, flags, out);
+    return namei_create(&ctx,
+                        path,
+                        attr,
+                        flags,
+                        (out != NULL) ? out : &tmp);
 }
 
 fs_error_t runtime_mkdir(const char *path,
@@ -50,13 +55,18 @@ fs_error_t runtime_mkdir(const char *path,
 {
     fs_error_t err;
     namei_ctx_t ctx;
+    fops_object_result_t tmp;
 
     err = runtime_make_ctx(&ctx);
     if (fs_failed(err)) {
         return err;
     }
 
-    return namei_mkdir(&ctx, path, attr, flags, out);
+    return namei_mkdir(&ctx,
+                       path,
+                       attr,
+                       flags,
+                       (out != NULL) ? out : &tmp);
 }
 
 fs_error_t runtime_unlink(const char *path, fs_flags_t flags)
@@ -107,13 +117,18 @@ fs_error_t runtime_symlink(const char *target,
 {
     fs_error_t err;
     namei_ctx_t ctx;
+    fops_object_result_t tmp;
 
     err = runtime_make_ctx(&ctx);
     if (fs_failed(err)) {
         return err;
     }
 
-    return namei_symlink(&ctx, target, linkpath, flags, out);
+    return namei_symlink(&ctx,
+                         target,
+                         linkpath,
+                         flags,
+                         (out != NULL) ? out : &tmp);
 }
 
 fs_error_t runtime_readlink(const char *path,
