@@ -140,3 +140,21 @@ print:
 	@echo "BIN_DIR=$(BIN_DIR)"
 
 .PHONY: all _build prepare modules app link clean print
+
+# ============================================================
+#  Tests
+# ============================================================
+
+test:
+	@$(MAKE) -s -C tests test
+
+test-%:
+	@$(MAKE) -s -C tests MODULE=$* test
+
+coverage:
+	@$(MAKE) -s -C tests coverage
+
+coverage-check:
+	@$(MAKE) -s -C tests coverage-check
+
+.PHONY: test test-% coverage coverage-check

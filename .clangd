@@ -1,2 +1,9 @@
+CompileFlags:
+  Add:
+    - -Isrc
+    - -Itests
+    - -D_GNU_SOURCE
+    - -std=c17
+
 Diagnostics:
   UnusedIncludes: None
