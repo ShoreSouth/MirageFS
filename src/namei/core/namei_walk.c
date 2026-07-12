@@ -225,7 +225,10 @@ fs_error_t namei_walk(const namei_ctx_t *ctx,
         memset(&result, 0, sizeof(result));
         fuid_set_invalid(&result.fuid);
 
-        err = namei_dispatch_lookup_plus(&current, name, FS_FLAG_NOFOLLOW, &result);
+        err = namei_dispatch_lookup_plus(&current,
+                                         name,
+                                         FS_FLAG_NOFOLLOW,
+                                         &result);
         if (fs_failed(err)) {
             return err;
         }

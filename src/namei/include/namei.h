@@ -59,18 +59,12 @@ fs_error_t namei_readlink(const namei_ctx_t *ctx,
 fs_error_t namei_readdir(const namei_ctx_t *ctx,
                          const char *path,
                          fs_flags_t flags,
-                         fops_dirent_t *entries,
-                         uint32_t entry_cap,
-                         uint32_t *out_entry_nr,
-                         bool *out_eof);
+                         const namei_readdir_args_t *args);
 
 fs_error_t namei_readdirplus(const namei_ctx_t *ctx,
                              const char *path,
                              fs_flags_t flags,
-                             fops_dirent_plus_t *entries,
-                             uint32_t entry_cap,
-                             uint32_t *out_entry_nr,
-                             bool *out_eof);
+                             const namei_readdirplus_args_t *args);
 
 fs_error_t namei_unlink(const namei_ctx_t *ctx,
                         const char *path,

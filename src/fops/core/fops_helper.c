@@ -481,3 +481,68 @@ fs_error_t fops_handle_from_lsa_checked(obj_handle_t *out,
 
     return objmeta_handle_from_lsa(out, lsa_handle, mount_id);
 }
+
+int fops_linux_open_flags(fs_flags_t flags)
+{
+    int linux_flags;
+
+    if (fs_flag_test(flags, FS_FLAG_WRITE) &&
+        fs_flag_test(flags, FS_FLAG_READ)) {
+        linux_flags = O_RDWR;
+    } else if (fs_flag_test(flags, FS_FLAG_WRITE)) {
+        linux_flags = O_WRONLY;
+    } else {
+        linux_flags = O_RDONLY;
+    }
+
+    linux_flags |= O_CLOEXEC;
+
+    if (fs_flag_test(flags, FS_FLAG_APPEND)) {
+        linux_flags |= O_APPEND;
+    }
+    if (fs_flag_test(flags, FS_FLAG_TRUNCATE)) {
+        linux_flags |= O_TRUNC;
+    }
+    if (fs_flag_test(flags, FS_FLAG_SYNC)) {
+        linux_flags |= O_SYNC;
+    }
+    if (fs_flag_test(flags, FS_FLAG_DIRECT)) {
+        linux_flags |= O_DIRECT;
+    }
+    if (fs_flag_test(flags, FS_FLAG_DIRECTORY)) {
+        linux_flags |= O_DIRECTORY;
+    }
+
+    return linux_flags;
+}
+
+fs_error_t fops_file_check(const fops_file_t *file, fs_op_t sub)
+{
+    fs_error_t err;
+
+    if ((file == NULL) || (file->meta == NULL) || (file->fd < 0)) {
+        err = fops_error(sub, EBADF);
+        FS_LOG_DUMP_ERROR("file check failed: invalid file, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    if ((sub == FS_OP_READ) &&
+        fs_flag_test(file->flags, FS_FLAG_WRITE) &&
+        !fs_flag_test(file->flags, FS_FLAG_READ)) {
+        err = fops_error(sub, EBADF);
+        FS_LOG_DUMP_ERROR("file check failed: write-only, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    if ((sub == FS_OP_WRITE) &&
+        !fs_flag_test(file->flags, FS_FLAG_WRITE)) {
+        err = fops_error(sub, EBADF);
+        FS_LOG_DUMP_ERROR("file check failed: not writable, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    return FS_OK;
+}

@@ -21,6 +21,7 @@
     _(FSC,     "FSC")               \
     _(FOPS,    "FOPS")              \
     _(NAMEI,   "NAMEI")             \
+    _(RUNTIME, "RUNTIME")           \
                                     \
     _(LSA,     "LSA")               \
     _(SERVER,  "SERVER")            \

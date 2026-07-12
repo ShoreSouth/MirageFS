@@ -236,7 +236,9 @@ fs_error_t namei_lookup(const namei_ctx_t *ctx,
     if (namei_type_flags(flags) != FS_FLAG_NONE) {
         fops_attr_t attr;
 
-        err = namei_dispatch_getattr(&result.fuid, namei_type_flags(flags), &attr);
+        err = namei_dispatch_getattr(&result.fuid,
+                                      namei_type_flags(flags),
+                                      &attr);
         if (fs_failed(err)) {
             return err;
         }
@@ -271,7 +273,9 @@ fs_error_t namei_lookup_plus(const namei_ctx_t *ctx,
         return FS_OK;
     }
 
-    return namei_dispatch_getattr(&out->fuid, namei_type_flags(flags), &out->attr);
+    return namei_dispatch_getattr(&out->fuid,
+                                  namei_type_flags(flags),
+                                  &out->attr);
 }
 
 fs_error_t namei_lookup_parent(const namei_ctx_t *ctx,
@@ -353,7 +357,11 @@ fs_error_t namei_create(const namei_ctx_t *ctx,
         return err;
     }
 
-    return namei_dispatch_create_plus(&parent.parent_fuid, parent.name, attr, flags, out);
+    return namei_dispatch_create_plus(&parent.parent_fuid,
+                                      parent.name,
+                                      attr,
+                                      flags,
+                                      out);
 }
 
 fs_error_t namei_mkdir(const namei_ctx_t *ctx,
@@ -370,7 +378,11 @@ fs_error_t namei_mkdir(const namei_ctx_t *ctx,
         return err;
     }
 
-    return namei_dispatch_mkdir_plus(&parent.parent_fuid, parent.name, attr, flags, out);
+    return namei_dispatch_mkdir_plus(&parent.parent_fuid,
+                                     parent.name,
+                                     attr,
+                                     flags,
+                                     out);
 }
 
 fs_error_t namei_symlink(const namei_ctx_t *ctx,
@@ -413,41 +425,45 @@ fs_error_t namei_readlink(const namei_ctx_t *ctx,
 fs_error_t namei_readdir(const namei_ctx_t *ctx,
                          const char *path,
                          fs_flags_t flags,
-                         fops_dirent_t *entries,
-                         uint32_t entry_cap,
-                         uint32_t *out_entry_nr,
-                         bool *out_eof)
+                         const namei_readdir_args_t *args)
 {
     fs_error_t err;
     fuid_t fuid;
+
+    if (args == NULL) {
+        return namei_error(NAMEI_SUB_OP, EINVAL);
+    }
 
     err = namei_lookup(ctx, path, flags | FS_FLAG_DIRECTORY, &fuid);
     if (fs_failed(err)) {
         return err;
     }
 
-    return namei_dispatch_readdir(&fuid, flags | FS_FLAG_DIRECTORY, entries,
-                          entry_cap, out_entry_nr, out_eof);
+    return namei_dispatch_readdir(&fuid, flags | FS_FLAG_DIRECTORY,
+                                  args->entries, args->entry_cap,
+                                  args->out_entry_nr, args->out_eof);
 }
 
 fs_error_t namei_readdirplus(const namei_ctx_t *ctx,
                              const char *path,
                              fs_flags_t flags,
-                             fops_dirent_plus_t *entries,
-                             uint32_t entry_cap,
-                             uint32_t *out_entry_nr,
-                             bool *out_eof)
+                             const namei_readdirplus_args_t *args)
 {
     fs_error_t err;
     fuid_t fuid;
+
+    if (args == NULL) {
+        return namei_error(NAMEI_SUB_OP, EINVAL);
+    }
 
     err = namei_lookup(ctx, path, flags | FS_FLAG_DIRECTORY, &fuid);
     if (fs_failed(err)) {
         return err;
     }
 
-    return namei_dispatch_readdirplus(&fuid, flags | FS_FLAG_DIRECTORY, entries,
-                              entry_cap, out_entry_nr, out_eof);
+    return namei_dispatch_readdirplus(&fuid, flags | FS_FLAG_DIRECTORY,
+                                      args->entries, args->entry_cap,
+                                      args->out_entry_nr, args->out_eof);
 }
 
 fs_error_t namei_unlink(const namei_ctx_t *ctx,
