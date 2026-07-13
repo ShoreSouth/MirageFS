@@ -17,7 +17,7 @@
 - `tests/framework/test_framework.h` 提供 `TEST_CASE` 和断言宏。
 - `tests/framework/test_framework.c` 负责打印 suite/case/scenario/fault/expected/result，并支持单 case 过滤。
 - `tests/Makefile` 负责构建所有测试二进制、运行测试、生成覆盖率。
-- `tools/test/run-ut.sh` 是日常入口，封装全部、单模块、单 case、列表和覆盖率命令。
+- `tools/test/run-ut.sh` 是日常入口，封装全部、单模块、单 case、列表和覆盖率命令，并输出最终汇总表。
 
 cmocka 已安装，可以后续在需要 mock syscall、复杂 fixture、setup/teardown 时引入；当前第一版先保持依赖少、接入快。
 
@@ -44,17 +44,19 @@ docs/testing/ut-framework.md
 
 ## 当前测试点
 
-| 模块 | 已覆盖测试点 |
-| --- | --- |
-| config | 默认配置加载；重复初始化幂等性 |
-| common | fs_error_t 布局 round trip；路径拼接 slash 归一；过小 buffer；路径 normalize dot/dotdot |
-| lsa | 临时目录真实 create/write/read；缺失 lookup 映射 ENOENT；互斥 flag 提前拒绝 |
-| object | FUID 构造/类型/flags；ObjKey 从 FUID 转换；ObjMeta 与 LSA handle 往返；NULL/超长 handle 参数校验 |
-| fsc | FSC 错误码布局；FSID 分配/释放/重复释放 stale；NULL 输出参数 |
-| fops | init/deinit 生命周期；dispatch NULL args；非法 op 参数校验 |
-| namei | init/deinit 生命周期；ctx 保存 root/cwd；lookup NULL ctx |
-| runtime | deinit 初始状态；未初始化保护；root/cwd getter NULL 输出 |
-| msh | 命令行 quoted 参数解析；注释行；参数默认值 |
+| 模块 | case 数 | 已覆盖测试点 |
+| --- | ---: | --- |
+| config | 2 | 默认配置加载；重复初始化幂等性 |
+| common | 7 | fs_error_t 布局 round trip；模块名/操作名 helper 边界；flag 位检测；路径拼接 slash 归一；过小 buffer；路径 normalize dot/dotdot |
+| lsa | 3 | 临时目录真实 create/write/read；缺失 lookup 映射 ENOENT；互斥 flag 提前拒绝 |
+| object | 9 | FUID 构造/类型/flags；ObjKey 从 FUID 转换；ObjMeta 与 LSA handle 往返；ObjMeta init/equal/deinit；ObjRuntime 状态读取；ObjTable 插入/查找/删除/重复插入/非法参数 |
+| fsc | 7 | FSC 错误码布局；FSID 分配/释放/重复释放 stale；NULL 输出参数；Namespace init/deinit/状态迁移/root 校验；FSTable 通过 fsid/name 双索引插入/查找/删除 |
+| fops | 8 | init/deinit 生命周期；dispatch NULL args；非法 op 参数校验；name 校验；flag 冲突和未知位；类型 flag 不匹配；create mode 掩码；create attr valid_mask 校验 |
+| namei | 3 | init/deinit 生命周期；ctx 保存 root/cwd；lookup NULL ctx |
+| runtime | 3 | deinit 初始状态；未初始化保护；root/cwd getter NULL 输出 |
+| msh | 3 | 命令行 quoted 参数解析；注释行；参数默认值 |
+
+当前合计 45 个 case。
 
 ## 写 case 的格式
 
@@ -110,6 +112,11 @@ make coverage
 tools/test/run-ut.sh coverage
 ```
 
+`tools/test/run-ut.sh coverage` 会在执行完 case 后额外输出两张汇总表：
+
+- UT 结果汇总：按模块列出 passed/total/status。
+- 覆盖率汇总：列出 TOTAL 以及 config/common/lsa/object/fsc/fops/namei/runtime/msh 各模块的行覆盖率和函数覆盖率。
+
 覆盖率阈值检查：
 
 ```sh
@@ -135,11 +142,37 @@ output/coverage/html/index.html
 5. 过滤 `/usr/*`、`tests/*`、`output/tests/*`。
 6. 生成 `output/coverage/html/index.html`。
 
-当前第一批基线约为行覆盖 11.3%。这是框架骨架阶段的正常结果，不代表目标完成。后续每个模块补业务 case 时，逐步把模块覆盖率推进到 90% 以上，再把 `COVERAGE_MIN=90` 固化到 CI 或默认检查中。
+当前第一批补测后的基线为：行覆盖率 19.6%，函数覆盖率 29.8%。这是框架骨架阶段的正常结果，不代表目标完成。后续每个模块补业务 case 时，逐步把模块覆盖率推进到 90% 以上，再把 `COVERAGE_MIN=90` 固化到 CI 或默认检查中。
+
+当前按模块覆盖率基线：
+
+| 模块 | 行覆盖率 | 函数覆盖率 |
+| --- | ---: | ---: |
+| TOTAL | 19.6% | 29.8% |
+| config | 47.4% | 66.7% |
+| common | 30.8% | 38.0% |
+| lsa | 9.4% | 13.0% |
+| object | 28.5% | 39.8% |
+| fsc | 38.9% | 58.0% |
+| fops | 6.7% | 11.7% |
+| namei | 11.6% | 22.0% |
+| runtime | 11.9% | 28.9% |
+| msh | 8.3% | 8.6% |
+
+## make clean 行为
+
+`make clean` 现在会清理：
+
+- 根目录 `output/`
+- `tests/output/`
+- `src` 下的 `*.o`、`*.gcda`、`*.gcno`
+- Python `__pycache__`
+
+这样 coverage 或 UT 运行后不会留下旧测试输出影响下一轮验证。
 
 ## VSCode include 爆红说明
 
-`#include "framework/test_framework.h"` 爆红的原因是 clangd 当前只看到主程序的 `compile_commands.json`，不知道 `tests` 目录的 include path。
+`#include "framework/test_framework.h"` 爆红的原因通常是 clangd 只看到了主程序的 `compile_commands.json`，不知道 `tests` 目录的 include path。
 
 当前已通过 `.clangd` 增加：
 
