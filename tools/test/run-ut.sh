@@ -95,20 +95,39 @@ list_cases() {
 
 print_test_summary() {
     local log_file="$1"
+    local order="${MODULES[*]}"
+
     printf "\n${C_BOLD}UT 结果汇总${C_RESET}\n"
     printf "+------------+--------+--------+--------+\n"
     printf "| %-10s | %6s | %6s | %6s |\n" "module" "passed" "total" "status"
     printf "+------------+--------+--------+--------+\n"
-    awk '
+    awk -v order="$order" '
+        BEGIN { split(order, order_items, " "); }
         /^\[suite\] [^:]+: [0-9]+\/[0-9]+ passed/ {
             module=$2; gsub(":", "", module);
+            split(module, module_parts, "/");
+            module=module_parts[1];
             split($3, nums, "/");
-            passed=nums[1]; total=nums[2];
-            status=(passed == total ? "PASS" : "FAIL");
-            printf "| %-10s | %6s | %6s | %6s |\n", module, passed, total, status;
-            seen=1;
+            passed=nums[1]+0; total=nums[2]+0;
+            passed_sum[module]+=passed; total_sum[module]+=total;
+            seen[module]=1; any=1;
         }
-        END { if (!seen) printf "| %-10s | %6s | %6s | %6s |\n", "-", "-", "-", "NOLOG"; }
+        END {
+            if (!any) {
+                printf "| %-10s | %6s | %6s | %6s |\n", "-", "-", "-", "NOLOG";
+                exit;
+            }
+            for (i=1; i<=length(order_items); ++i) {
+                module=order_items[i];
+                if (!(module in seen)) continue;
+                status=(passed_sum[module] == total_sum[module] ? "PASS" : "FAIL");
+                printf "| %-10s | %6d | %6d | %6s |\n", module, passed_sum[module], total_sum[module], status;
+                total_passed+=passed_sum[module]; total_cases+=total_sum[module];
+            }
+            status=(total_passed == total_cases ? "PASS" : "FAIL");
+            printf "+------------+--------+--------+--------+\n";
+            printf "| %-10s | %6d | %6d | %6s |\n", "TOTAL", total_passed, total_cases, status;
+        }
     ' "$log_file"
     printf "+------------+--------+--------+--------+\n"
 }

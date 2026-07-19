@@ -126,7 +126,9 @@ clean:
 	done
 	@rm -rf output
 	@rm -rf tests/output
+	@rm -rf miragefs.root
 	@find src -type f \( -name '*.o' -o -name '*.gcda' -o -name '*.gcno' \) -delete
+	@find . -type f -name '*.gcov' -delete
 	@find . -type d -name __pycache__ -prune -exec rm -rf {} +
 	@printf "  $(C_GREEN)✓$(C_RESET) clean done\n"
 
