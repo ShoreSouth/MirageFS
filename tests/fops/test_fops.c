@@ -10,6 +10,18 @@
 #include "fops/include/fops_types.h"
 #include "fops/internal/fops_internal.h"
 
+
+typedef enum test_fops_component {
+    TEST_FOPS_COMPONENT_CORE = 0x01,
+    TEST_FOPS_COMPONENT_DISPATCH = 0x02,
+    TEST_FOPS_COMPONENT_VALIDATE = 0x03,
+    TEST_FOPS_COMPONENT_CREATE = 0x04,
+    TEST_FOPS_COMPONENT_FILE = 0x05,
+    TEST_FOPS_COMPONENT_ATTR = 0x06,
+    TEST_FOPS_COMPONENT_IDENTITY = 0x07,
+    TEST_FOPS_COMPONENT_HANDLE = 0x08,
+} test_fops_component_t;
+
 static fuid_t make_test_fuid(fuid_type_t type)
 {
     fuid_t fuid;
@@ -92,7 +104,7 @@ static int test_fops_op_spec_get_exposes_lookup_contract(void)
     return 0;
 }
 
-static int test_fops_validate_args_accepts_valid_lookup_and_rejects_missing_fields(void)
+static int test_fops_validate_args_missing_fields(void)
 {
     fs_error_t err;
     fops_args_t args;
@@ -183,8 +195,9 @@ static int test_fops_validate_specialized_flag_helpers(void)
     err = fops_validate_readdir_flags(FS_FLAG_DIRECTORY, FS_OP_READDIRPLUS);
     TEST_ASSERT_EQ_INT(err, FS_OK);
 
-    err = fops_validate_open_flags(FS_FLAG_READ | FS_FLAG_WRITE | FS_FLAG_APPEND,
-                                   FS_OP_OPEN);
+    fs_flags_t open_flags = FS_FLAG_READ | FS_FLAG_WRITE | FS_FLAG_APPEND;
+
+    err = fops_validate_open_flags(open_flags, FS_OP_OPEN);
     TEST_ASSERT_EQ_INT(err, FS_OK);
 
     err = fops_validate_xattr_flags(FS_FLAG_REPLACE | FS_FLAG_EXCLUSIVE,
@@ -228,7 +241,7 @@ static int test_fops_create_mode_masks_permissions(void)
     return 0;
 }
 
-static int test_fops_validate_create_attr_rejects_unsupported_mask_and_size(void)
+static int test_fops_validate_create_attr_bad_mask_size(void)
 {
     fs_error_t err;
     fops_create_attr_t attr;
@@ -320,8 +333,10 @@ static int test_fops_type_and_attr_helpers_convert_linux_stat(void)
 
     TEST_ASSERT_EQ_INT(fops_type_from_mode(S_IFREG | 0644), FS_TYPE_REG);
     TEST_ASSERT_EQ_INT(fops_type_from_mode(S_IFDIR | 0755), FS_TYPE_DIR);
-    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_LNK), FUID_TYPE_SYMLINK);
-    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_UNKNOWN), FUID_TYPE_INVALID);
+    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_LNK),
+                       FUID_TYPE_SYMLINK);
+    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_UNKNOWN),
+                       FUID_TYPE_INVALID);
 
     fops_attr_from_stat(&attr, &st);
     TEST_ASSERT_EQ_INT(attr.type, FS_TYPE_DIR);
@@ -395,22 +410,182 @@ static int test_fops_handle_from_lsa_checked_validates_mount_boundary(void)
 }
 
 static const test_case_t TEST_CASES[] = {
-    TEST_CASE(test_fops_lifecycle_is_repeatable, "FOPS 生命周期", "重复 init/deinit", "初始化成功，重复反初始化不崩溃"),
-    TEST_CASE(test_fops_dispatch_rejects_null_args, "FOPS dispatch 空参数", "fops_dispatch 传入 NULL", "返回 FOPS 模块 EINVAL"),
-    TEST_CASE(test_fops_dispatch_rejects_invalid_op, "FOPS dispatch 非法 op", "op 设置为 FS_OP_MAX", "统一参数校验拒绝非法操作码"),
-    TEST_CASE(test_fops_op_spec_get_exposes_lookup_contract, "FOPS op spec 查询", "查询 LOOKUP 和非法 op", "LOOKUP 约束字段正确，非法 op 返回 NULL"),
-    TEST_CASE(test_fops_validate_args_accepts_valid_lookup_and_rejects_missing_fields, "FOPS args 校验", "构造合法 lookup 后移除 parent/name", "合法参数通过，缺失必填字段返回 EINVAL"),
-    TEST_CASE(test_fops_validate_name_accepts_dot_only_when_allowed, "FOPS 名称校验", "普通名、点名、带 slash 名称和超长名称", "dot 仅在允许时通过，非法名称被拒绝"),
-    TEST_CASE(test_fops_validate_flags_rejects_unknown_and_conflict_bits, "FOPS flag 校验", "注入互斥 flag、不支持 flag 和非法 op", "返回 FOPS/EINVAL"),
-    TEST_CASE(test_fops_validate_specialized_flag_helpers, "FOPS 专用 flag helper", "覆盖 getattr/readdir/open/xattr flag helper", "合法组合通过，互斥 xattr flag 被拒绝"),
-    TEST_CASE(test_fops_check_type_flags_maps_type_mismatch, "FOPS 类型约束", "目录/普通文件 flag 与实际类型不匹配", "返回 ENOTDIR/EISDIR/EINVAL"),
-    TEST_CASE(test_fops_create_mode_masks_permissions, "FOPS create mode", "传入带特殊位的 mode/default_mode", "按 FS_PERM_MASK 保留权限相关位"),
-    TEST_CASE(test_fops_validate_create_attr_rejects_unsupported_mask_and_size, "FOPS create attr 校验", "attr valid_mask 超出 supported_mask 或 size 不被允许", "返回 FOPS/EINVAL"),
-    TEST_CASE(test_fops_linux_open_flags_maps_access_and_modifiers, "FOPS Linux open flag 转换", "构造读写方向和 append/truncate/sync/directory modifier", "转换为预期 Linux O_* flag"),
-    TEST_CASE(test_fops_file_check_rejects_bad_handles_and_access_modes, "FOPS file 校验", "NULL file、写只读、读写只写句柄", "非法句柄返回 EBADF，读写句柄通过"),
-    TEST_CASE(test_fops_type_and_attr_helpers_convert_linux_stat, "FOPS stat 属性转换", "构造 Linux struct stat", "type/mode/uid/gid/size/time 字段正确映射"),
-    TEST_CASE(test_fops_make_child_fuid_inherits_parent_view, "FOPS 子 FUID 构造", "从父目录 FUID 派生普通文件 FUID", "继承 fsid/view 字段并设置 child identity"),
-    TEST_CASE(test_fops_handle_from_lsa_checked_validates_mount_boundary, "FOPS handle 转换边界", "NULL 输出、跨 mount、合法 LSA handle", "非法参数返回 EINVAL/EXDEV，合法时完成字段转换"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_CORE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_CORE,
+                         0x1,
+                         0x001),
+              test_fops_lifecycle_is_repeatable,
+              "FOPS 生命周期",
+              "重复 init/deinit",
+              "初始化成功，重复反初始化不崩溃"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1,
+                         0x001),
+              test_fops_dispatch_rejects_null_args,
+              "FOPS dispatch 空参数",
+              "fops_dispatch 传入 NULL",
+              "返回 FOPS 模块 EINVAL"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1,
+                         0x002),
+              test_fops_dispatch_rejects_invalid_op,
+              "FOPS dispatch 非法 op",
+              "op 设置为 FS_OP_MAX",
+              "统一参数校验拒绝非法操作码"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1,
+                         0x003),
+              test_fops_op_spec_get_exposes_lookup_contract,
+              "FOPS op spec 查询",
+              "查询 LOOKUP 和非法 op",
+              "LOOKUP 约束字段正确，非法 op 返回 NULL"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_DISPATCH,
+                         0x1,
+                         0x004),
+              test_fops_validate_args_missing_fields,
+              "FOPS args 校验",
+              "构造合法 lookup 后移除 parent/name",
+              "合法参数通过，缺失必填字段返回 EINVAL"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1,
+                         0x001),
+              test_fops_validate_name_accepts_dot_only_when_allowed,
+              "FOPS 名称校验",
+              "普通名、点名、带 slash 名称和超长名称",
+              "dot 仅在允许时通过，非法名称被拒绝"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1,
+                         0x002),
+              test_fops_validate_flags_rejects_unknown_and_conflict_bits,
+              "FOPS flag 校验",
+              "注入互斥 flag、不支持 flag 和非法 op",
+              "返回 FOPS/EINVAL"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1,
+                         0x003),
+              test_fops_validate_specialized_flag_helpers,
+              "FOPS 专用 flag helper",
+              "覆盖 getattr/readdir/open/xattr flag helper",
+              "合法组合通过，互斥 xattr flag 被拒绝"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1,
+                         0x004),
+              test_fops_check_type_flags_maps_type_mismatch,
+              "FOPS 类型约束",
+              "目录/普通文件 flag 与实际类型不匹配",
+              "返回 ENOTDIR/EISDIR/EINVAL"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_CREATE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_CREATE,
+                         0x1,
+                         0x001),
+              test_fops_create_mode_masks_permissions,
+              "FOPS create mode",
+              "传入带特殊位的 mode/default_mode",
+              "按 FS_PERM_MASK 保留权限相关位"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_VALIDATE,
+                         0x1,
+                         0x005),
+              test_fops_validate_create_attr_bad_mask_size,
+              "FOPS create attr 校验",
+              "attr valid_mask 超出 supported_mask 或 size 不被允许",
+              "返回 FOPS/EINVAL"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_FILE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_FILE,
+                         0x1,
+                         0x001),
+              test_fops_linux_open_flags_maps_access_and_modifiers,
+              "FOPS Linux open flag 转换",
+              "构造读写方向和 append/truncate/sync/directory modifier",
+              "转换为预期 Linux O_* flag"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_FILE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_FILE,
+                         0x1,
+                         0x002),
+              test_fops_file_check_rejects_bad_handles_and_access_modes,
+              "FOPS file 校验",
+              "NULL file、写只读、读写只写句柄",
+              "非法句柄返回 EBADF，读写句柄通过"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_ATTR,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_ATTR,
+                         0x1,
+                         0x001),
+              test_fops_type_and_attr_helpers_convert_linux_stat,
+              "FOPS stat 属性转换",
+              "构造 Linux struct stat",
+              "type/mode/uid/gid/size/time 字段正确映射"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_IDENTITY,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_IDENTITY,
+                         0x1,
+                         0x001),
+              test_fops_make_child_fuid_inherits_parent_view,
+              "FOPS 子 FUID 构造",
+              "从父目录 FUID 派生普通文件 FUID",
+              "继承 fsid/view 字段并设置 child identity"),
+    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_HANDLE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_FOPS,
+                         TEST_FOPS_COMPONENT_HANDLE,
+                         0x1,
+                         0x001),
+              test_fops_handle_from_lsa_checked_validates_mount_boundary,
+              "FOPS handle 转换边界",
+              "NULL 输出、跨 mount、合法 LSA handle",
+              "非法参数返回 EINVAL/EXDEV，合法时完成字段转换"),
 };
 
 int main(void)

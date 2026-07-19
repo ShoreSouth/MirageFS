@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_PATHS = ("src",)
-ALL_PATHS = ("src", "tools", "docs")
+ALL_PATHS = ("src", "tests", "tools", "docs")
 TEXT_SUFFIXES = {".c", ".h", ".md", ".py", ".mk"}
 SKIP_DIRS = {".git", "output", "build", "__pycache__"}
 
@@ -92,6 +92,7 @@ def is_output_allowed(path: Path) -> bool:
         Path("src/common/log/fs_log.c"),
         Path("src/common/trace/fs_trace.h"),
         Path("src/common/utils/fs_utils.h"),
+        Path("tests/framework/test_framework.c"),
     }
     return path in allowed
 
@@ -255,12 +256,17 @@ def check_file(path: Path, max_line_length: int,
         if line.rstrip(" \t") != line:
             add(findings, "ERROR", "whitespace.trailing", path, idx,
                 "行尾存在多余空白")
-        if "\t" in line:
+        if "\t" in line and path.name != "Makefile":
             add(findings, "WARN", "whitespace.trailing", path, idx,
                 "发现 tab，项目代码建议统一使用空格")
-        if path.suffix != ".md" and len(line) > max_line_length:
+        if path.name == "Makefile":
+            line_limit = max(max_line_length, 120)
+        else:
+            line_limit = max_line_length
+        if path.suffix != ".md" and len(line) > line_limit:
             add(findings, "WARN", "style.line_length", path, idx,
-                f"行宽 {len(line)} 超过阈值 {max_line_length}")
+                f"行宽 {len(line)} 超过阈值 {line_limit}")
+
 
         if line.strip() == "":
             empty_run += 1
@@ -276,7 +282,8 @@ def check_file(path: Path, max_line_length: int,
             if FORBIDDEN_IO_RE.search(code_part) and not is_output_allowed(path):
                 add(findings, "WARN", "io.forbidden", path, idx,
                     "发现直接使用 printf/fprintf/puts，请确认是否应改为日志接口")
-            if RETURN_RAW_ERR_RE.search(code_part):
+            if RETURN_RAW_ERR_RE.search(code_part) and not (
+                    path.parts and path.parts[0] == "tests"):
                 add(findings, "WARN", "c.raw_return", path, idx,
                     "疑似裸返回错误值，请确认是否应使用 fs_error_t")
             arr = STACK_ARRAY_RE.search(code_part)
@@ -337,6 +344,8 @@ def module_of(path: Path) -> str:
     parts = path.parts
     if len(parts) >= 2 and parts[0] == "src":
         return parts[1]
+    if len(parts) >= 2 and parts[0] == "tests":
+        return f"tests/{parts[1]}"
     if len(parts) >= 1 and parts[0] in {"docs", "tools"}:
         return parts[0]
     return "-"
@@ -442,11 +451,13 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true",
                         help="将 WARN 也视为失败")
     parser.add_argument("--all", action="store_true",
-                        help="检查 src、tools、docs 全量路径")
+                        help="检查 src、tests、tools、docs 全量路径")
     parser.add_argument("--plain", action="store_true",
                         help="关闭 banner、进度条和汇总表格")
     parser.add_argument("--max-line-length", type=int, default=120,
-                        help="行宽告警阈值，默认 120")
+                        help="src/tools/docs 行宽告警阈值，默认 120")
+    parser.add_argument("--test-max-line-length", type=int, default=80,
+                        help="tests 行宽告警阈值，默认 80")
     parser.add_argument("--max-params", type=int, default=6,
                         help="函数参数数量告警阈值，默认 6")
     parser.add_argument("--max-stack-array", type=int, default=4096,
@@ -465,7 +476,10 @@ def main() -> int:
     start = time.time()
     for idx, path in enumerate(files, start=1):
         print_progress(rich, idx, len(files), path)
-        findings.extend(check_file(path, args.max_line_length,
+        line_limit = (args.test_max_line_length
+                      if path.parts and path.parts[0] == "tests"
+                      else args.max_line_length)
+        findings.extend(check_file(path, line_limit,
                                    args.max_params,
                                    args.max_stack_array))
 

@@ -1,4 +1,4 @@
-﻿# NAMEI Parent Resolution
+# NAMEI Parent Resolution
 
 `namei_lookup_parent()` 将路径转换为：
 

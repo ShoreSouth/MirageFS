@@ -1,35 +1,130 @@
-﻿# FOPS 妯″潡鎬荤翰
+# FOPS 模块总纲
 
-FOPS锛團ile Operations锛夋槸 MirageFS 鐨勫崟姝ユ枃浠舵搷浣滃眰銆傚畠鍚戜笂鎻愪緵缁熶竴鐨勬枃浠舵搷浣滃叆鍙ｏ紝鍚戜笅缁勫悎 ObjMgr銆丗SC 涓?LSA 鑳藉姏锛岃礋璐ｆ妸涓婂眰 OP 璇锋眰杞崲涓烘竻鏅般€佸彲鏍￠獙銆佸彲杩借釜鐨勬枃浠剁郴缁熻涔夈€?
-鏈枃妗ｅ彧淇濈暀鎬荤翰涓庡鑸紱姣忕被 OP 鐨勫弬鏁般€乫lag銆佽繑鍥炶涔夊拰瀹炵幇绾︽潫鏀惧湪鍚岀洰褰曠殑涓撻鏂囨。涓€?
-## 妯″潡瀹氫綅
+FOPS（File Operations）是 MirageFS 的单步文件操作层。它向上提供统一的文件操作入口，向下组合 Object、FSC 和 LSA 能力，负责把上层请求转换为清晰、可校验、可追踪的文件系统语义。
 
-FOPS 鐨勬牳蹇冭亴璐ｏ細
+本文只保留总纲和导航；每类 OP 的参数、flag、返回语义和实现约束放在同目录专题文档中。
 
-- 鎻愪緵缁熶竴鍏ュ彛 `fops_dispatch(args)`锛屼篃淇濈暀缁嗙矑搴?C API 渚夸簬鍐呴儴澶嶇敤鍜屽崟娴嬭鐩栥€?- 浣跨敤 `fops_args_t` 鎵胯浇鎵€鏈?OP 鍙傛暟锛屽叕鍏卞瓧娈垫斁鍦ㄥ灞傦紝宸紓瀛楁鏀惧湪 union 涓€?- 浣跨敤 `fops_op_spec_t` 鎻忚堪姣忎釜 OP 鐨勫弬鏁拌鍒欍€乫lag 鐧藉悕鍗曘€乫lag 鍐茬獊鍜屽熀纭€鏍￠獙瑙勫垯銆?- 浠?`obj_fuid_t` 浣滀负瀵硅薄韬唤锛宱bjectid/gen 鐢?MirageFS 鐨勫璞′綋绯诲垎閰嶅拰绠＄悊銆?- 瀵圭洰褰曢」銆佸睘鎬с€佸彞鏌勩€佽鍐欍€亁attr銆乫s 绾ф搷浣滄彁渚涘崟姝ヨ涔夊皝瑁呫€?
-## 鍒嗗眰鍏崇郴
+## 模块定位
+
+FOPS 位于 NAMEI 和底层对象/文件系统上下文之间：
 
 ```text
-涓婂眰璋冪敤鑰?  鈫?FOPS dispatch / spec / validate
-  鈫?FOPS 缁嗙矑搴?OP
-  鈫?FSC / ObjMgr / LSA
-  鈫?Linux / 鍚庣鏂囦欢绯荤粺
+NAMEI / RUNTIME / MSH
+        ↓
+      FOPS
+        ↓
+  Object / FSC / LSA
 ```
 
-FOPS 涓嶇洿鎺ユ壙鎷呭叏灞€鏂囦欢绯荤粺娉ㄥ唽鑱岃矗锛涙枃浠剁郴缁熷疄渚嬪拰鍛藉悕绌洪棿浠嶇敱 FSC 绠＄悊銆侳OPS 鍙湪鎵ц OP 鏃舵秷璐?FSC 鎻愪緵鐨勪笂涓嬫枃銆?
-## 鏂囨。鐩綍
+职责边界：
 
-- [dispatch.md](dispatch.md)锛氱粺涓€鍏ュ彛銆佸弬鏁扮粨鏋勩€丱P 琛ㄥ拰鏍￠獙娴佺▼銆?- [identity.md](identity.md)锛欶UID銆乷bjectid銆乬en 涓庡璞＄敓鍛藉懆鏈熴€?- [lookup.md](lookup.md)锛歭ookup / lookup_plus銆?- [create.md](create.md)锛歝reate / create_plus銆?- [mkdir.md](mkdir.md)锛歮kdir / mkdir_plus銆?- [mknod.md](mknod.md)锛歮knod / mknod_plus銆?- [unlink.md](unlink.md)锛歶nlink銆?- [rmdir.md](rmdir.md)锛歳mdir銆?- [rename.md](rename.md)锛歳ename銆?- [link.md](link.md)锛歭ink / link_plus / symlink / symlink_plus銆?- [attr.md](attr.md)锛歡etattr / setattr / access / truncate銆?- [readdir.md](readdir.md)锛歳eaddir / readdirplus銆?- [handle.md](handle.md)锛歰pen / openhandle / close / gethandle銆?- [rw.md](rw.md)锛歳ead / write / pread / pwrite銆?- [xattr.md](xattr.md)锛氭墿灞曞睘鎬ф搷浣溿€?- [fs.md](fs.md)锛歴tatfs / syncfs銆?- [flags.md](flags.md)锛歠lag 鎬昏〃鍜屽悇 OP 鏀寔鐭╅樀銆?- [errors.md](errors.md)锛氶敊璇爜鏄犲皠涓庤繑鍥炵害瀹氥€?
-## 婧愮爜瀵瑰簲鍏崇郴
+- FOPS 负责单步文件操作语义，例如 lookup、create、mkdir、unlink、rename、readdir、read/write、attr、xattr 等。
+- FOPS 不负责路径解析；路径拆分、父目录定位和 basename 组织属于 NAMEI。
+- FOPS 不负责文件系统实例生命周期；namespace、fsid、fstable、sysroot 属于 FSC。
+- FOPS 不直接表达 Linux syscall 细节；后端访问应通过 LSA 封装。
+- FOPS 可以使用 Object 模块表达对象身份、元数据、运行时对象和对象表。
+
+## 统一入口
+
+正式上层模块应通过：
+
+```c
+fops_dispatch(fops_args_t *args)
+```
+
+进入 FOPS。
+
+`fops_dispatch()` 负责：
+
+1. 校验 `args` 和 `op`。
+2. 根据 `op` 查询操作规格。
+3. 校验参数、name、flag、类型和属性约束。
+4. 分发到具体操作实现。
+5. 保持错误码、日志和返回语义一致。
+
+细粒度 API 可以保留给 FOPS 内部、兼容层和 UT 使用，但 NAMEI、SERVER、CLI、MSH 等正式调用方不应绕过 `fops_dispatch()` 直接调用 `fops_create_plus()`、`fops_mkdir_plus()`、`fops_readlink()` 这类接口。
+
+## 目录结构
 
 ```text
 src/fops/
-  core/      缁熶竴鍏ュ彛銆丱P spec銆佸弬鏁版牎楠屻€侀敊璇槧灏勩€佽緟鍔╅€昏緫
-  include/   瀵瑰澶存枃浠?fops.h / fops_types.h
-  internal/  FOPS 鍐呴儴鎺ュ彛
-  ops/       鍚勭被 OP 鐨勫叿浣撳疄鐜?```
+  include/
+    fops.h
+    fops_types.h
+  internal/
+    fops_error.h
+    fops_internal.h
+  core/
+    fops_dispatch.c
+    fops_error.c
+    fops_helper.c
+    fops_init.c
+    fops_spec.c
+  ops/
+    fops_attr.c
+    fops_create.c
+    fops_fs.c
+    fops_handle.c
+    fops_link.c
+    fops_lookup.c
+    fops_mkdir.c
+    fops_mknod.c
+    fops_readdir.c
+    fops_rename.c
+    fops_rmdir.c
+    fops_rw.c
+    fops_unlink.c
+    fops_xattr.c
+```
 
-涓撻鏂囨。鎸?`src/fops/ops/` 鐨勬枃浠跺垝鍒嗕负涓伙紝鍙湁 dispatch銆乮dentity銆乫lags銆乪rrors 灞炰簬妯垏璇存槑銆?
-## 褰撳墠绾﹀畾
+## 文档导航
 
-- 鏂囨。銆佹敞閲婂拰璁捐璇存槑浠ヤ腑鏂囦负涓伙紝蹇呰鑻辨枃鏈淇濈暀鑻辨枃鍘熻瘝銆?- 瀵瑰缁熶竴鍏ュ彛浼樺厛璧?`fops_dispatch()`锛涚粏绮掑害鎺ュ彛浠嶄綔涓哄唴閮ㄥ疄鐜板崟鍏冨拰杞婚噺璋冪敤鍏ュ彛銆?- 鍒涘缓绫?OP 鍚屾椂鎻愪緵杞婚噺鎺ュ彛鍜?`*_plus` 鎺ュ彛锛沗*_plus` 鍦ㄥ垱寤烘垚鍔熷悗杩斿洖灞炴€э紝鍑忓皯涓婂眰棰濆 getattr銆?- `lookup_plus` 杩斿洖鐩綍椤硅В鏋愮粨鏋滃拰灞炴€э紱杞婚噺 `lookup` 鍙繑鍥炲璞¤韩浠姐€?- `readdir` 鍙繑鍥炵洰褰曢」鍩虹淇℃伅锛沗readdirplus` 杩斿洖鐩綍椤瑰拰灞炴€с€?- flag 璇箟鐢?`common/flag` 瀹氫箟锛孎OPS 閫氳繃 spec 琛ㄩ檺鍒舵瘡涓?OP 鍙帴鍙楃殑 flag 闆嗗悎銆?
+- [dispatch](dispatch.md)：统一入口、参数校验和分发规则。
+- [flags](flags.md)：FOPS flag 语义和合法组合。
+- [errors](errors.md)：FOPS 错误码和 sub 错误约定。
+- [identity](identity.md)：FUID、对象身份和子对象身份派生。
+- [handle](handle.md)：Object handle 与 LSA handle 转换边界。
+- [lookup](lookup.md)：lookup 类操作。
+- [create](create.md)：create 类操作。
+- [mkdir](mkdir.md)：mkdir 类操作。
+- [mknod](mknod.md)：mknod 类操作。
+- [unlink](unlink.md)：unlink 类操作。
+- [rmdir](rmdir.md)：rmdir 类操作。
+- [rename](rename.md)：rename 类操作。
+- [readdir](readdir.md)：readdir/readdirplus 操作。
+- [rw](rw.md)：read/write 操作。
+- [attr](attr.md)：getattr/setattr 和属性转换。
+- [xattr](xattr.md)：扩展属性操作。
+- [link](link.md)：link/symlink/readlink 操作。
+- [fs](fs.md)：文件系统级操作。
+
+## 设计约束
+
+- 所有可能失败的 FOPS public/internal 操作应返回 `fs_error_t`。
+- 不把 Linux `errno`、`0`、`-1` 与 `fs_error_t` 混用。
+- 参数边界必须在模块入口或公共 helper 中显式校验。
+- 下层已经返回 `fs_error_t` 时直接向上传播，不重新包装。
+- 错误日志应包含 `fs_error_str(err)` 和原始十六进制错误码。
+- 新增 OP 时必须同步更新规格表、UT、模块文档和必要的指导手册。
+
+## UT 要求
+
+FOPS 相关 UT 位于：
+
+```text
+tests/fops/test_fops.c
+```
+
+新增 FOPS case 时必须分配稳定编号，编号规则见：
+
+```text
+docs/testing/ut-framework.md
+```
+
+常用检查命令：
+
+```sh
+tools/test/list-ut.py --module fops
+tools/test/list-ut.py --check
+tools/test/run-ut.sh fops
+```

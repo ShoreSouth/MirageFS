@@ -45,6 +45,30 @@ tools/test/run-ut.sh namei
 config common lsa object fsc fops namei runtime msh
 ```
 
+## UT 编号
+
+每个 UT case 都有两个编号：
+
+- `list_no`：用例集编号，例如 `0x06041000`。
+- `case_no`：具体用例编号，例如 `0x06041001`。
+
+编号格式为 `0xMMCCLIII`：
+
+```text
+MM   模块编号
+CC   组件编号
+L    用例集编号
+III  用例项编号
+```
+
+例如 `0x06041001` 表示：FOPS 模块、create 组件、第 1 个用例集、第 1 个 case。
+
+编号校验：
+
+```sh
+tools/test/list-ut.py --check
+```
+
 ## 单 case 测试
 
 使用环境变量：
@@ -53,20 +77,34 @@ config common lsa object fsc fops namei runtime msh
 MIRAGEFS_TEST_CASE=test_error_layout_round_trip make test-common
 ```
 
-使用脚本：
+使用脚本按函数名执行：
 
 ```sh
 tools/test/run-ut.sh common test_error_layout_round_trip
+```
+
+使用脚本按 `case_no` 执行：
+
+```sh
+tools/test/run-ut.sh fops 0x06041001
+```
+
+使用脚本按 `list_no` 执行同一用例集：
+
+```sh
+tools/test/run-ut.sh fops 0x06041000
 ```
 
 单 case 执行适合调试边界条件、复现失败和配合 GDB 使用。
 
 ## 列出测试
 
-列出全部测试模块：
+列出全部测试 case：
 
 ```sh
 tools/test/run-ut.sh list
+# 或
+tools/test/list-ut.py
 ```
 
 列出某个模块下的 case：
@@ -74,6 +112,21 @@ tools/test/run-ut.sh list
 ```sh
 tools/test/run-ut.sh list common
 tools/test/run-ut.sh list fops
+tools/test/list-ut.py --module fops
+```
+
+按编号和名称检索：
+
+```sh
+tools/test/list-ut.py --list 0x06041000
+tools/test/list-ut.py --case 0x06041001
+tools/test/list-ut.py --name create_mode
+```
+
+需要给其他工具消费时可以输出 JSON：
+
+```sh
+tools/test/list-ut.py --json
 ```
 
 ## 覆盖率

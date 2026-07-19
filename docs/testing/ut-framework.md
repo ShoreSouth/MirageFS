@@ -21,6 +21,64 @@
 
 cmocka 已安装，可以后续在需要 mock syscall、复杂 fixture、setup/teardown 时引入；当前第一版先保持依赖少、接入快。
 
+
+## UT 编号体系
+
+每个 `test_case_t` 都必须带有稳定编号：
+
+- `list_no`：用例集编号，低 12 位固定为 0。
+- `case_no`：具体用例编号，低 12 位为用例项编号，不能为 0。
+
+编号采用 32-bit 十六进制布局：
+
+```text
+31 -------- 24 | 23 -------- 16 | 15 -------- 12 | 11 -------- 0
+----------------------------------------------------------------
+ module id     | component id  | case list id | case item id
+   8 bit           8 bit            4 bit          12 bit
+```
+
+也就是：
+
+```text
+0xMMCCLIII
+```
+
+字段含义：
+
+- `MM`：模块编号，例如 common/config/lsa/object/fsc/fops/namei/runtime/msh。
+- `CC`：组件编号，由各测试文件本地定义，例如 FOPS 的 core/dispatch/validate/create。
+- `L`：用例集编号，每个组件最多 15 个用例集。
+- `III`：用例项编号，每个用例集最多 4095 个 case。
+
+示例：
+
+```text
+0x06041000  fops/create/list 1
+0x06041001  fops/create/list 1/case 1
+```
+
+框架宏：
+
+```c
+UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_CREATE, 0x1)
+UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_CREATE, 0x1, 0x001)
+```
+
+新增 case 时必须保证：
+
+1. `list_no` 低 12 位为 0。
+2. `case_no` 低 12 位非 0。
+3. `case_no & 0xfffff000` 等于 `list_no`。
+4. `case_no` 全局唯一。
+5. 组件编号枚举放在对应 `tests/<module>/test_<module>.c` 中。
+
+可以用下面命令校验：
+
+```sh
+tools/test/list-ut.py --check
+```
+
 ## 目录结构
 
 ```text
@@ -63,7 +121,14 @@ docs/testing/ut-framework.md
 推荐每个 case 都使用这种结构：
 
 ```c
-TEST_CASE(test_xxx,
+TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
+                     TEST_FOPS_COMPONENT_CREATE,
+                     0x1),
+          UT_CASE_NO(UT_MOD_FOPS,
+                     TEST_FOPS_COMPONENT_CREATE,
+                     0x1,
+                     0x001),
+          test_xxx,
           "中文场景名",
           "注入什么边界/故障",
           "期望什么结果")
@@ -102,6 +167,27 @@ tools/test/run-ut.sh common test_error_layout_round_trip
 ```sh
 tools/test/run-ut.sh list
 tools/test/run-ut.sh list common
+```
+
+查看完整 case 索引：
+
+```sh
+tools/test/list-ut.py
+```
+
+按模块、list_no、case_no 或函数名检索：
+
+```sh
+tools/test/list-ut.py --module fops
+tools/test/list-ut.py --list 0x06041000
+tools/test/list-ut.py --case 0x06041001
+tools/test/list-ut.py --name create_mode
+```
+
+输出 JSON：
+
+```sh
+tools/test/list-ut.py --json
 ```
 
 覆盖率：

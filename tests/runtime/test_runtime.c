@@ -5,6 +5,13 @@
 #include "common/fs_common.h"
 #include "runtime/include/runtime.h"
 
+
+typedef enum test_runtime_component {
+    TEST_RUNTIME_COMPONENT_LIFECYCLE = 0x01,
+    TEST_RUNTIME_COMPONENT_SESSION = 0x02,
+    TEST_RUNTIME_COMPONENT_GETTER = 0x03,
+} test_runtime_component_t;
+
 static int test_runtime_initial_state_is_not_initialized(void)
 {
     runtime_deinit();
@@ -47,15 +54,36 @@ static int test_runtime_getters_reject_null_outputs(void)
 }
 
 static const test_case_t TEST_CASES[] = {
-    TEST_CASE(test_runtime_initial_state_is_not_initialized,
+    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
+                         TEST_RUNTIME_COMPONENT_LIFECYCLE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_RUNTIME,
+                         TEST_RUNTIME_COMPONENT_LIFECYCLE,
+                         0x1,
+                         0x001),
+              test_runtime_initial_state_is_not_initialized,
               "Runtime 初始状态",
               "确保 runtime 处于 deinit 状态",
               "未初始化且没有活动 namespace"),
-    TEST_CASE(test_runtime_requires_init_for_session_ops,
+    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
+                         TEST_RUNTIME_COMPONENT_SESSION,
+                         0x1),
+              UT_CASE_NO(UT_MOD_RUNTIME,
+                         TEST_RUNTIME_COMPONENT_SESSION,
+                         0x1,
+                         0x001),
+              test_runtime_requires_init_for_session_ops,
               "Runtime 未初始化保护",
               "未 init 时调用 getcwd/leave",
               "返回 RUNTIME 模块 EINVAL"),
-    TEST_CASE(test_runtime_getters_reject_null_outputs,
+    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
+                         TEST_RUNTIME_COMPONENT_GETTER,
+                         0x1),
+              UT_CASE_NO(UT_MOD_RUNTIME,
+                         TEST_RUNTIME_COMPONENT_GETTER,
+                         0x1,
+                         0x001),
+              test_runtime_getters_reject_null_outputs,
               "Runtime getter 空输出",
               "root/cwd getter 传入 NULL",
               "返回 RUNTIME 模块 EINVAL"),

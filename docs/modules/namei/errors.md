@@ -1,4 +1,4 @@
-﻿# NAMEI Errors
+# NAMEI Errors
 
 NAMEI 使用独立模块 ID：
 

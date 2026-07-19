@@ -6,6 +6,13 @@
 #include "namei/include/namei.h"
 #include "object/fuid/fuid.h"
 
+
+typedef enum test_namei_component {
+    TEST_NAMEI_COMPONENT_LIFECYCLE = 0x01,
+    TEST_NAMEI_COMPONENT_CTX = 0x02,
+    TEST_NAMEI_COMPONENT_LOOKUP = 0x03,
+} test_namei_component_t;
+
 static int test_namei_lifecycle_is_repeatable(void)
 {
     fs_error_t err;
@@ -46,15 +53,36 @@ static int test_namei_lookup_rejects_null_ctx(void)
 }
 
 static const test_case_t TEST_CASES[] = {
-    TEST_CASE(test_namei_lifecycle_is_repeatable,
+    TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI,
+                         TEST_NAMEI_COMPONENT_LIFECYCLE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_NAMEI,
+                         TEST_NAMEI_COMPONENT_LIFECYCLE,
+                         0x1,
+                         0x001),
+              test_namei_lifecycle_is_repeatable,
               "NAMEI 生命周期",
               "重复 init/deinit",
               "初始化成功，重复反初始化不崩溃"),
-    TEST_CASE(test_namei_ctx_make_copies_root_and_cwd,
+    TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI,
+                         TEST_NAMEI_COMPONENT_CTX,
+                         0x1),
+              UT_CASE_NO(UT_MOD_NAMEI,
+                         TEST_NAMEI_COMPONENT_CTX,
+                         0x1,
+                         0x001),
+              test_namei_ctx_make_copies_root_and_cwd,
               "NAMEI 上下文构造",
               "传入 root/cwd FUID",
               "ctx 正确保存 root 和 cwd"),
-    TEST_CASE(test_namei_lookup_rejects_null_ctx,
+    TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI,
+                         TEST_NAMEI_COMPONENT_LOOKUP,
+                         0x1),
+              UT_CASE_NO(UT_MOD_NAMEI,
+                         TEST_NAMEI_COMPONENT_LOOKUP,
+                         0x1,
+                         0x001),
+              test_namei_lookup_rejects_null_ctx,
               "NAMEI lookup 空上下文",
               "lookup 传入 NULL ctx",
               "返回 NAMEI 模块 EINVAL"),

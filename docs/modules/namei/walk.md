@@ -1,4 +1,4 @@
-﻿# NAMEI Walk
+# NAMEI Walk
 
 `namei_walk()` 是 NAMEI 的内部遍历核心，不作为公开 API 暴露。
 

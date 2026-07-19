@@ -1,4 +1,4 @@
-﻿# NAMEI Flags
+# NAMEI Flags
 
 NAMEI 复用 `fs_flags_t`，v1 不新增 LOOKUP_* flag。
 

@@ -84,12 +84,15 @@ coverage:
 	@$(MAKE) -s -C $(ROOT_DIR) CFLAGS="$(CFLAGS) -O0 --coverage" all
 	@$(MAKE) -s TEST_CFLAGS="$(TEST_CFLAGS) -O0 --coverage" TEST_LDFLAGS="--coverage" test-no-build
 	@lcov --capture --directory $(ROOT_DIR) --output-file $(COVERAGE_DIR)/coverage.info >/dev/null
-	@lcov --remove $(COVERAGE_DIR)/coverage.info '/usr/*' '*/tests/*' '*/output/tests/*' --output-file $(COVERAGE_DIR)/coverage.filtered.info >/dev/null
+	@lcov --remove $(COVERAGE_DIR)/coverage.info \
+		'/usr/*' '*/tests/*' '*/output/tests/*' \
+		--output-file $(COVERAGE_DIR)/coverage.filtered.info >/dev/null
 	@genhtml $(COVERAGE_DIR)/coverage.filtered.info --output-directory $(COVERAGE_DIR)/html >/dev/null
 	@lcov --summary $(COVERAGE_DIR)/coverage.filtered.info
 
 coverage-check: coverage
-	@line_rate=$$(lcov --summary $(COVERAGE_DIR)/coverage.filtered.info 2>/dev/null | awk '/lines/ { gsub("%", "", $$2); print $$2; exit }'); \
+	@line_rate=$$(lcov --summary $(COVERAGE_DIR)/coverage.filtered.info 2>/dev/null | \
+		awk '/lines/ { gsub("%", "", $$2); print $$2; exit }'); \
 	awk -v actual="$$line_rate" -v min="$(COVERAGE_MIN)" 'BEGIN { \
 		printf("coverage line-rate: %.2f%%, threshold: %.2f%%\n", actual, min); \
 		exit(actual + 0.0 >= min + 0.0 ? 0 : 1); \

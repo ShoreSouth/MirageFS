@@ -6,6 +6,11 @@
 #include "common/fs_common.h"
 #include "config/fs_config.h"
 
+
+typedef enum test_config_component {
+    TEST_CONFIG_COMPONENT_CORE = 0x01,
+} test_config_component_t;
+
 static int test_config_init_loads_default_values(void)
 {
     g_fs_config.mempool_size = 0;
@@ -33,11 +38,25 @@ static int test_config_init_is_idempotent(void)
 }
 
 static const test_case_t TEST_CASES[] = {
-    TEST_CASE(test_config_init_loads_default_values,
+    TEST_CASE(UT_LIST_NO(UT_MOD_CONFIG,
+                         TEST_CONFIG_COMPONENT_CORE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_CONFIG,
+                         TEST_CONFIG_COMPONENT_CORE,
+                         0x1,
+                         0x001),
+              test_config_init_loads_default_values,
               "配置初始化",
               "清空全局配置后重新初始化",
               "恢复默认内存池、worker、trace/debug 开关"),
-    TEST_CASE(test_config_init_is_idempotent,
+    TEST_CASE(UT_LIST_NO(UT_MOD_CONFIG,
+                         TEST_CONFIG_COMPONENT_CORE,
+                         0x1),
+              UT_CASE_NO(UT_MOD_CONFIG,
+                         TEST_CONFIG_COMPONENT_CORE,
+                         0x1,
+                         0x002),
+              test_config_init_is_idempotent,
               "配置重复初始化",
               "连续调用 fs_config_init",
               "默认配置保持稳定"),

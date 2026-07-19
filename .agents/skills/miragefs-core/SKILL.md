@@ -928,6 +928,67 @@ _Static_assert(sizeof(foo_t) == FOO_SIZE, "foo_t size invalid");
 
 ---
 
+
+## UT 规则
+
+新增或修改 UT 时必须遵守：
+
+* 每个 `TEST_CASE` 必须分配稳定的 `list_no` 和 `case_no`。
+* UT 编号采用 `0xMMCCLIII` 布局：module/component/list/item。
+* `list_no` 低 12 位必须为 0；`case_no` 低 12 位不能为 0。
+* `case_no & 0xfffff000` 必须等于 `list_no`。
+* 同一仓库内 `case_no` 必须全局唯一。
+* case 描述以中文为主，必须说明场景、注入条件或故障、期望结果。
+* 新增 case 后运行 `tools/test/list-ut.py --check`。
+* 调整 UT 编号、脚本或使用方式时同步更新 `docs/testing/` 和 `docs/guides/unit-testing.md`。
+
+
+## 文档编码规则
+
+中文文档必须保持 UTF-8 无 BOM、LF 换行。
+
+本项目在 Windows Codex 桌面环境与 WSL 仓库之间协作时，容易出现两类编码问题：
+
+* 终端显示乱码：文件本身仍是正确 UTF-8，但工具输出通道按错误编码渲染。
+* 文件内容污染：UTF-8 中文被 PowerShell、旧代码页或错误解码流程读成乱码后，又被重新写回 UTF-8，乱码字符真实进入文件。
+
+处理中文 Markdown、SKILL、注释时必须遵守：
+
+1. 不要把终端里显示的乱码内容复制回文件。
+2. 不要用 PowerShell `Get-Content` 读取中文文件后再拼接写回。
+3. 不要在 PowerShell 中构造包含大量中文的脚本，再转发给 WSL 执行。
+4. 需要批量改中文文档时，优先在 WSL 内使用 Python，显式指定 `encoding="utf-8-sig"` 读取，`encoding="utf-8"` 写入。
+5. 只做 BOM/换行清理时，优先按 bytes 处理，不要先把中文内容错误解码。
+6. 写入后必须验证 UTF-8、无 BOM、LF，并扫描常见 mojibake marker。
+
+推荐验证脚本模式：
+
+```sh
+python3 tools/check/miragefs_lint.py --all --plain
+```
+
+如怀疑文档已被污染，可用 Python 检查真实内容，不以终端渲染为准。示例 marker 使用 `chr()` 构造，避免把乱码字符本身写进本文档：
+
+```sh
+python3 - <<'PY'
+from pathlib import Path
+markers = [
+    chr(0x951b),  # 常见 GBK 误解码残留
+    chr(0x9428),
+    chr(0x93c2),
+    chr(0x6d93),
+    chr(0x00e6),  # 常见 latin1/cp1252 误解码残留
+    chr(0x00e7),
+]
+for path in Path('docs').rglob('*.md'):
+    text = path.read_text(encoding='utf-8', errors='replace')
+    if sum(text.count(marker) for marker in markers) >= 5:
+        print(path)
+PY
+```
+
+如果只是终端显示乱码，但 Python 读取后 `unicode_escape` 或编辑器显示正常，不要修改文件。
+
 ## 文档规则
 
 文档是代码库的一部分。

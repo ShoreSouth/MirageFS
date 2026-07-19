@@ -1,4 +1,4 @@
-﻿# NAMEI 模块总纲
+# NAMEI 模块总纲
 
 NAMEI 是 MirageFS 的路径命名解析层。它把上层传入的 `root/cwd + path + flags` 转换为目标 FUID，或转换为 FOPS 需要的 `parent_fuid + name` 参数组合。
 

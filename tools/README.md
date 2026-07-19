@@ -16,3 +16,24 @@ python3 tools/check/miragefs_lint.py src/fops docs/modules/fops tools/check
 全仓库检查使用 `--all`，会覆盖 `src`、`tools` 和 `docs`。
 CI 或日志收集场景可使用 `--plain` 关闭 banner、进度条和表格。
 `--detail-limit N` 可控制问题明细表最多显示多少条记录。
+
+
+## UT 工具
+
+`tools/test/run-ut.sh` 是日常 UT 运行入口，支持全部、单模块、单 case、覆盖率和 case 列表。
+
+```sh
+tools/test/run-ut.sh all
+tools/test/run-ut.sh fops
+tools/test/run-ut.sh fops 0x06041001
+tools/test/run-ut.sh coverage
+```
+
+`tools/test/list-ut.py` 负责从源码中提取 UT case 索引，支持按模块、`list_no`、`case_no`、函数名检索，也可以输出 JSON。
+
+```sh
+tools/test/list-ut.py --module fops
+tools/test/list-ut.py --list 0x06041000
+tools/test/list-ut.py --case 0x06041001
+tools/test/list-ut.py --check
+```

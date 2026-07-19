@@ -206,9 +206,9 @@ case "$cmd" in
         ;;
     list)
         if [[ $# -ge 2 ]]; then
-            list_cases "$2"
+            python3 "$ROOT_DIR/tools/test/list-ut.py" --module "$2"
         else
-            list_modules
+            python3 "$ROOT_DIR/tools/test/list-ut.py"
         fi
         ;;
     all)
