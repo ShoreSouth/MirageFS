@@ -8,7 +8,7 @@
 - case 能直接构造非常规场景，例如空指针、非法 flag、过小 buffer、重复释放、缺失文件等。
 - 每个 case 都写明：场景、注入条件或故障、期望结果。
 - 覆盖率使用 lcov/genhtml 生成 HTML 报告；长期目标是各模块 90% 以上。
-- 当前先建立骨架和第一批高价值边界测试，不为了数字硬凑脆弱测试。
+- 当前先建立骨架和高价值边界测试，不为了数字硬凑脆弱测试。
 
 ## 工具选择
 
@@ -16,7 +16,7 @@
 
 - `tests/framework/test_framework.h` 提供 `TEST_CASE` 和断言宏。
 - `tests/framework/test_framework.c` 负责打印 suite/case/scenario/fault/expected/result，并支持单 case 过滤。
-- `tests/Makefile` 负责构建所有测试二进制、运行测试、生成覆盖率。
+- `tests/Makefile` 负责构建测试二进制、运行测试、生成覆盖率。
 - `tools/test/run-ut.sh` 是日常入口，封装全部、单模块、单 case、列表和覆盖率命令，并输出最终汇总表。
 
 cmocka 已安装，可以后续在需要 mock syscall、复杂 fixture、setup/teardown 时引入；当前第一版先保持依赖少、接入快。
@@ -51,12 +51,12 @@ docs/testing/ut-framework.md
 | lsa | 3 | 临时目录真实 create/write/read；缺失 lookup 映射 ENOENT；互斥 flag 提前拒绝 |
 | object | 9 | FUID 构造/类型/flags；ObjKey 从 FUID 转换；ObjMeta 与 LSA handle 往返；ObjMeta init/equal/deinit；ObjRuntime 状态读取；ObjTable 插入/查找/删除/重复插入/非法参数 |
 | fsc | 7 | FSC 错误码布局；FSID 分配/释放/重复释放 stale；NULL 输出参数；Namespace init/deinit/状态迁移/root 校验；FSTable 通过 fsid/name 双索引插入/查找/删除 |
-| fops | 8 | init/deinit 生命周期；dispatch NULL args；非法 op 参数校验；name 校验；flag 冲突和未知位；类型 flag 不匹配；create mode 掩码；create attr valid_mask 校验 |
+| fops | 16 | init/deinit 生命周期；dispatch/args/op spec；name/flag/type 校验；create mode/attr；Linux open flags；file check；stat attr；child FUID；handle mount 边界 |
 | namei | 3 | init/deinit 生命周期；ctx 保存 root/cwd；lookup NULL ctx |
 | runtime | 3 | deinit 初始状态；未初始化保护；root/cwd getter NULL 输出 |
-| msh | 3 | 命令行 quoted 参数解析；注释行；参数默认值 |
+| msh | 8 | 命令行 quoted/single quote/BOM 解析；注释行；未闭合 quote；参数数量上限；NULL 输入；参数默认值 |
 
-当前合计 45 个 case。
+当前合计 58 个 case。
 
 ## 写 case 的格式
 
@@ -115,7 +115,7 @@ tools/test/run-ut.sh coverage
 `tools/test/run-ut.sh coverage` 会在执行完 case 后额外输出两张汇总表：
 
 - UT 结果汇总：按模块列出 passed/total/status。
-- 覆盖率汇总：列出 TOTAL 以及 config/common/lsa/object/fsc/fops/namei/runtime/msh 各模块的行覆盖率和函数覆盖率。
+- 覆盖率汇总：列出 TOTAL 以及各模块的行覆盖率和函数覆盖率。
 
 覆盖率阈值检查：
 
@@ -142,22 +142,22 @@ output/coverage/html/index.html
 5. 过滤 `/usr/*`、`tests/*`、`output/tests/*`。
 6. 生成 `output/coverage/html/index.html`。
 
-当前第一批补测后的基线为：行覆盖率 19.6%，函数覆盖率 29.8%。这是框架骨架阶段的正常结果，不代表目标完成。后续每个模块补业务 case 时，逐步把模块覆盖率推进到 90% 以上，再把 `COVERAGE_MIN=90` 固化到 CI 或默认检查中。
+当前补测后的基线为：行覆盖率 21.7%，函数覆盖率 32.1%。这是框架骨架阶段的正常结果，不代表目标完成。后续每个模块补业务 case 时，逐步把模块覆盖率推进到 90% 以上，再把 `COVERAGE_MIN=90` 固化到 CI 或默认检查中。
 
 当前按模块覆盖率基线：
 
 | 模块 | 行覆盖率 | 函数覆盖率 |
 | --- | ---: | ---: |
-| TOTAL | 19.6% | 29.8% |
+| TOTAL | 21.7% | 32.1% |
 | config | 47.4% | 66.7% |
-| common | 30.8% | 38.0% |
+| common | 31.2% | 38.8% |
 | lsa | 9.4% | 13.0% |
 | object | 28.5% | 39.8% |
 | fsc | 38.9% | 58.0% |
-| fops | 6.7% | 11.7% |
+| fops | 15.2% | 22.5% |
 | namei | 11.6% | 22.0% |
 | runtime | 11.9% | 28.9% |
-| msh | 8.3% | 8.6% |
+| msh | 10.5% | 8.6% |
 
 ## make clean 行为
 

@@ -84,6 +84,7 @@ src/
 │   ├── list/
 │   ├── trace/
 │   └── ...
+├── config/
 ├── object/
 │   ├── fuid/
 │   ├── objkey/
@@ -95,6 +96,8 @@ src/
 ├── fsc/
 ├── fops/
 ├── namei/
+├── runtime/
+├── msh/
 ├── lsa/
 └── app/
 ```
@@ -104,7 +107,9 @@ src/
 当前主链路：
 
 ```text
-APP / CLI / SERVER
+APP / CLI / SERVER / MSH
+        ↓
+      RUNTIME
         ↓
       NAMEI
         ↓
@@ -128,6 +133,12 @@ APP / CLI / SERVER
 提供通用基础设施，例如日志、错误、锁、链表、哈希、路径、内存池、trace 等。
 
 业务语义不能放进 `common`。
+
+### config
+
+负责 MirageFS 配置加载、默认配置和配置生命周期管理。
+
+CONFIG 不承载业务操作语义，不直接参与路径解析、对象生命周期或后端文件操作。
 
 ### object
 
@@ -158,6 +169,18 @@ APP / CLI / SERVER
 负责路径解析和 FOPS 参数组织。
 
 NAMEI 可以提供薄封装，让 SERVER / CLI 不必手动拆路径，但 NAMEI 不直接执行底层文件操作，不管理对象生命周期，不管理 namespace 创建/销毁。
+
+### runtime
+
+负责 MirageFS 运行时初始化、反初始化、session/root/cwd 等运行时上下文，以及对 app、msh、未来 server 更友好的上层入口封装。
+
+RUNTIME 可以调用 NAMEI/FOPS 等下层模块，但不应绕过模块边界直接承担对象生命周期、namespace 管理或 LSA syscall 细节。
+
+### msh
+
+负责 MirageFS shell、命令解析、REPL 和命令级调用封装。
+
+MSH 是上层使用者，不承载底层文件系统语义，不直接管理 object/fsc 生命周期，不绕过 runtime/namei/fops 的正式入口。
 
 ### lsa
 
@@ -909,6 +932,13 @@ _Static_assert(sizeof(foo_t) == FOO_SIZE, "foo_t size invalid");
 
 文档是代码库的一部分。
 
+当前文档分层：
+
+* `docs/modules/`：模块设计、职责、API、结构体、错误码和调用约束。
+* `docs/testing/`：测试框架设计、测试策略和测试点总纲。
+* `docs/guides/`：指导手册，说明本地开发、构建运行、UT 使用、GDB 调试、模块地图、读代码路线和常见问题。
+* `.cache/development-plan/`：阶段性待开发总纲和临时计划，内容重要时应沉淀到 `docs/`。
+
 当改动影响以下内容时，必须同步更新文档：
 
 * public API
@@ -917,10 +947,22 @@ _Static_assert(sizeof(foo_t) == FOO_SIZE, "foo_t size invalid");
 * 对象生命周期
 * 架构决策
 * 跨模块调用约束
+* 构建、清理、运行、调试或测试命令
+* UT 框架、case 规范、覆盖率策略或测试脚本
+* 新增、删除、重命名模块或调整模块调用链
 
 文档和代码必须保持一致。
 
-文档以中文为主；代码标识符、命令、日志格式、API 名称保持原文。
+如果改动会影响日常使用方式，应优先检查并同步 `docs/guides/README.md` 及对应指导手册：
+
+* `docs/guides/build-run.md`
+* `docs/guides/unit-testing.md`
+* `docs/guides/gdb-debugging.md`
+* `docs/guides/troubleshooting.md`
+* `docs/guides/module-map.md`
+* `docs/guides/code-reading.md`
+
+文档以中文为主；文件名、目录名、代码标识符、命令、日志格式、API 名称保持英文或原文。
 
 ---
 
@@ -968,8 +1010,10 @@ _Static_assert(sizeof(foo_t) == FOO_SIZE, "foo_t size invalid");
 * 避免重命名稳定接口。
 * 优先小补丁修改。
 * 说明架构影响。
-* 涉及公共接口、职责边界或调用链时同步更新文档。
+* 涉及公共接口、职责边界、调用链、构建测试命令、调试流程或使用方式时同步更新文档。
+* 涉及日常开发手册内容时同步检查 `docs/guides/`。
 * 文档和注释以中文为主。
+* 文件名和目录名优先使用英文。
 * 局部变量名必须表达业务含义，不使用 `tmp` 等弱语义名称。
 
 一致性比炫技更重要。

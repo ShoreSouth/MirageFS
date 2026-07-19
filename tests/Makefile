@@ -75,7 +75,7 @@ run-selected: $(SELECTED_TEST_BINS)
 	done
 
 build-app:
-	@$(MAKE) -s -C $(ROOT_DIR) all
+	@env -u MODULE MAKEFLAGS= $(MAKE) -s -C $(ROOT_DIR) all
 
 coverage:
 	@$(MAKE) -s -C $(ROOT_DIR) clean
