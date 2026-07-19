@@ -223,34 +223,41 @@ def load_cases() -> list[UtCase]:
     cases: list[UtCase] = []
 
     for module in MODULE_ORDER:
-        path = TEST_DIR / module / f"test_{module}.c"
-        if not path.exists():
+        module_dir = TEST_DIR / module
+        if not module_dir.exists():
             continue
-        text = path.read_text(encoding="utf-8-sig")
-        values = {**framework_values, **parse_enums(text)}
-        for start, _end, args in iter_test_case_calls(text):
-            if len(args) != 6:
-                raise ValueError(f"{path}: TEST_CASE 参数数量应为 6，实际为 {len(args)}")
-            list_no = eval_no(args[0], values)
-            case_no = eval_no(args[1], values)
-            case_module = module_name_from_no((case_no >> 24) & 0xff,
-                                             module_names)
-            component = component_name((case_no >> 16) & 0xff,
-                                       values,
-                                       case_module)
-            source_line = text.count("\n", 0, start) + 1
-            cases.append(UtCase(
-                module=case_module,
-                component=component,
-                list_no=f"0x{list_no:08x}",
-                case_no=f"0x{case_no:08x}",
-                case_name=args[2].strip(),
-                scenario=eval_c_string(args[3]),
-                fault=eval_c_string(args[4]),
-                expected=eval_c_string(args[5]),
-                source_file=str(path.relative_to(ROOT_DIR)),
-                source_line=source_line,
-            ))
+        header_text = ""
+        for header in sorted(module_dir.glob("*.h")):
+            header_text += header.read_text(encoding="utf-8-sig") + "\n"
+        module_values = {**framework_values, **parse_enums(header_text)}
+
+        for path in sorted(module_dir.glob("*.c")):
+            text = path.read_text(encoding="utf-8-sig")
+            values = {**module_values, **parse_enums(text)}
+            for start, _end, args in iter_test_case_calls(text):
+                if len(args) != 6:
+                    raise ValueError(
+                        f"{path}: TEST_CASE 参数数量应为 6，实际为 {len(args)}")
+                list_no = eval_no(args[0], values)
+                case_no = eval_no(args[1], values)
+                case_module = module_name_from_no((case_no >> 24) & 0xff,
+                                                 module_names)
+                component = component_name((case_no >> 16) & 0xff,
+                                           values,
+                                           case_module)
+                source_line = text.count("\n", 0, start) + 1
+                cases.append(UtCase(
+                    module=case_module,
+                    component=component,
+                    list_no=f"0x{list_no:08x}",
+                    case_no=f"0x{case_no:08x}",
+                    case_name=args[2].strip(),
+                    scenario=eval_c_string(args[3]),
+                    fault=eval_c_string(args[4]),
+                    expected=eval_c_string(args[5]),
+                    source_file=str(path.relative_to(ROOT_DIR)),
+                    source_line=source_line,
+                ))
     return cases
 
 
