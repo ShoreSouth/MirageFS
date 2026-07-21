@@ -100,6 +100,8 @@ docs/testing/ut-framework.md
 .cache/development-plan/ut-test-framework-plan.md
 ```
 
+临时文件系统资源约定：UT 如需创建真实文件或目录，统一使用 `output/tests/<module>/`，其中 `<module>` 必须是模块名，例如 `lsa`、`fops`、`object`。case 退出前应清理自己创建的资源，`make clean` 负责兜底清理 `output/tests/`。
+
 ## 当前测试点
 
 | 模块 | case 数 | 已覆盖测试点 |
@@ -107,14 +109,14 @@ docs/testing/ut-framework.md
 | config | 2 | 默认配置加载；重复初始化幂等性 |
 | common | 7 | fs_error_t 布局 round trip；模块名/操作名 helper 边界；flag 位检测；路径拼接 slash 归一；过小 buffer；路径 normalize dot/dotdot |
 | lsa | 3 | 临时目录真实 create/write/read；缺失 lookup 映射 ENOENT；互斥 flag 提前拒绝 |
-| object | 9 | FUID 构造/类型/flags；ObjKey 从 FUID 转换；ObjMeta 与 LSA handle 往返；ObjMeta init/equal/deinit；ObjRuntime 状态读取；ObjTable 插入/查找/删除/重复插入/非法参数 |
+| object | 20 | FUID 构造/类型/flags/hash/debug；ObjKey 从 FUID 转换；ObjMeta 与 LSA handle 往返及非法 handle/FUID 边界；ObjRuntime 状态读取；ObjTable 插入/查找/删除/销毁/非法参数；ObjPool 生命周期；ObjMgr key 分配回收、create/lookup/acquire/delete、重复 key/handle、缺失对象、内部状态迁移/引用计数/handle 索引边界 |
 | fsc | 7 | FSC 错误码布局；FSID 分配/释放/重复释放 stale；NULL 输出参数；Namespace init/deinit/状态迁移/root 校验；FSTable 通过 fsid/name 双索引插入/查找/删除 |
 | fops | 16 | init/deinit 生命周期；dispatch/args/op spec；name/flag/type 校验；create mode/attr；Linux open flags；file check；stat attr；child FUID；handle mount 边界 |
 | namei | 3 | init/deinit 生命周期；ctx 保存 root/cwd；lookup NULL ctx |
 | runtime | 3 | deinit 初始状态；未初始化保护；root/cwd getter NULL 输出 |
 | msh | 8 | 命令行 quoted/single quote/BOM 解析；注释行；未闭合 quote；参数数量上限；NULL 输入；参数默认值 |
 
-当前合计 58 个 case。
+当前合计 92 个 case。
 
 ## 写 case 的格式
 

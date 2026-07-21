@@ -43,21 +43,21 @@ static int test_fops_make_tmp_root(char *path, size_t size)
     const char *base;
     int written;
 
-    base = "../output/tests/tmp";
+    base = "../output/tests/fops";
     if (access("../output", F_OK) != 0) {
-        base = "output/tests/tmp";
+        base = "output/tests/fops";
     }
 
-    if (strcmp(base, "../output/tests/tmp") == 0) {
+    if (strcmp(base, "../output/tests/fops") == 0) {
         if ((test_fops_mkdir_if_missing("../output") != 0) ||
             (test_fops_mkdir_if_missing("../output/tests") != 0) ||
-            (test_fops_mkdir_if_missing("../output/tests/tmp") != 0)) {
+            (test_fops_mkdir_if_missing("../output/tests/fops") != 0)) {
             return -1;
         }
     } else {
         if ((test_fops_mkdir_if_missing("output") != 0) ||
             (test_fops_mkdir_if_missing("output/tests") != 0) ||
-            (test_fops_mkdir_if_missing("output/tests/tmp") != 0)) {
+            (test_fops_mkdir_if_missing("output/tests/fops") != 0)) {
             return -1;
         }
     }

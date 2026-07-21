@@ -251,6 +251,8 @@ TEST_ASSERT_NOT_NULL(ptr);
 
 对于 LSA、FOPS、NAMEI 这类会碰真实文件系统的模块，优先使用临时目录构造测试场景，并保证 case 结束后清理。
 
+临时目录命名约定：需要真实文件系统资源的 UT 统一放在 `output/tests/<module>/` 下，目录名使用模块名，例如 `output/tests/lsa/`、`output/tests/fops/`。后续如果 object 或其他模块需要落盘临时资源，也按同样规则使用 `output/tests/object/`、`output/tests/<module>/`，并在 case 结束时清理干净。
+
 ## 推荐执行流程
 
 日常开发：
