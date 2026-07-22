@@ -285,6 +285,7 @@ fs_error_t namei_lookup_parent(const namei_ctx_t *ctx,
 {
     fs_error_t err;
     char path_buf[FS_MAX_PATH_LEN + 1U];
+    char leaf_name[FS_MAX_NAME_LEN + 1U];
     char *slash;
     char *name;
     size_t len;
@@ -319,6 +320,18 @@ fs_error_t namei_lookup_parent(const namei_ctx_t *ctx,
         if (name[0] == '\0') {
             return namei_error(NAMEI_SUB_PATH, EINVAL);
         }
+
+        /*
+         * /leaf 的父路径需要保留为 /，但不能直接截断 name 指向的
+         * 原始缓冲区，否则 leaf 首字符会被 slash[1] = '\0' 覆盖。
+         */
+        len = strlen(name);
+        if ((len == 0U) || (len > FS_MAX_NAME_LEN)) {
+            return namei_error(NAMEI_SUB_PATH, EINVAL);
+        }
+        memcpy(leaf_name, name, len + 1U);
+        name = leaf_name;
+
         if (slash == path_buf) {
             slash[1] = '\0';
         } else {

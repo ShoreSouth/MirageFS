@@ -37,9 +37,16 @@ fs_error_t fops_unlink(const fuid_t *parent_fuid,
 
     err = fops_lookup_plus(parent_fuid,
                            name,
-                           flags | FS_FLAG_REGULAR,
+                           flags,
                            &child);
     if (fs_failed(err)) {
+        goto out;
+    }
+    if (child.attr.type == FS_TYPE_DIR) {
+        err = fops_error(FS_OP_UNLINK, EISDIR);
+        FS_LOG_DUMP_ERROR("unlink type check failed: name=%s, "
+                          "err=%s (0x%x)",
+                          name, fs_error_str(err), err);
         goto out;
     }
 
@@ -52,7 +59,7 @@ fs_error_t fops_unlink(const fuid_t *parent_fuid,
         goto out;
     }
 
-    err = lsa_unlink(parent_fd, name, flags | FS_FLAG_REGULAR);
+    err = lsa_unlink(parent_fd, name, flags);
     if (fs_failed(err)) {
         goto out;
     }

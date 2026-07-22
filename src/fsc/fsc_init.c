@@ -8,6 +8,18 @@
 #include "fsc/nspool/nspool.h"
 #include "fsc/sysroot/sysroot.h"
 
+#ifdef FS_TEST_FAULTS
+#include <stdlib.h>
+#include <string.h>
+
+static bool fsc_test_fault_enabled(const char *point)
+{
+    const char *value = getenv("MIRAGEFS_FSC_INIT_FAIL");
+
+    return (value != NULL) && (strcmp(value, point) == 0);
+}
+#endif
+
 /*
  * ============================================================
  * FSC module bootstrap
@@ -30,21 +42,42 @@ fs_error_t fsc_init(void)
         goto out;
     }
 
-    err = fsid_init();
+#ifdef FS_TEST_FAULTS
+    if (fsc_test_fault_enabled("fsid")) {
+        err = fsc_error(FSC_SUB_FSID, FS_ERRNO_ENOMEM);
+    } else
+#endif
+    {
+        err = fsid_init();
+    }
     if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("fsid_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
         goto err_sysroot;
     }
 
-    err = nspool_init();
+#ifdef FS_TEST_FAULTS
+    if (fsc_test_fault_enabled("nspool")) {
+        err = fsc_error(FSC_SUB_NSPOOL, FS_ERRNO_ENOMEM);
+    } else
+#endif
+    {
+        err = nspool_init();
+    }
     if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("nspool_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
         goto err_fsid;
     }
 
-    err = fsmgr_init();
+#ifdef FS_TEST_FAULTS
+    if (fsc_test_fault_enabled("fsmgr")) {
+        err = fsc_error(FSC_SUB_INIT, FS_ERRNO_ENOMEM);
+    } else
+#endif
+    {
+        err = fsmgr_init();
+    }
     if (fs_failed(err)) {
         FS_LOG_DUMP_ERROR("fsmgr_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);

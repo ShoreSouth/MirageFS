@@ -5,7 +5,8 @@ TEST_OBJ_DIR := $(TEST_OUTPUT_DIR)/obj
 TEST_BIN_DIR := $(TEST_OUTPUT_DIR)/bin
 COVERAGE_DIR := $(OUTPUT_DIR)/coverage
 
-TEST_CFLAGS := $(CFLAGS) $(INCLUDES) -I$(ROOT_DIR)/tests -std=c17
+TEST_PRODUCT_CFLAGS := $(CFLAGS) -DFS_TEST_FAULTS
+TEST_CFLAGS := $(TEST_PRODUCT_CFLAGS) $(INCLUDES) -I$(ROOT_DIR)/tests -std=c17
 TEST_LDFLAGS ?=
 COVERAGE_MIN ?= 0
 
@@ -16,7 +17,8 @@ COMMON_TEST_OBJ := $(TEST_OBJ_DIR)/common/test_common.o
 COMMON_TEST_BIN := $(TEST_BIN_DIR)/common_test
 LSA_TEST_OBJ := $(TEST_OBJ_DIR)/lsa/test_lsa.o
 LSA_TEST_BIN := $(TEST_BIN_DIR)/lsa_test
-OBJECT_TEST_OBJ := $(TEST_OBJ_DIR)/object/test_object.o
+OBJECT_TEST_SRC := $(wildcard object/*.c)
+OBJECT_TEST_OBJ := $(patsubst %.c,$(TEST_OBJ_DIR)/%.o,$(OBJECT_TEST_SRC))
 OBJECT_TEST_BIN := $(TEST_BIN_DIR)/object_test
 FSC_TEST_OBJ := $(TEST_OBJ_DIR)/fsc/test_fsc.o
 FSC_TEST_BIN := $(TEST_BIN_DIR)/fsc_test
@@ -76,13 +78,13 @@ run-selected: $(SELECTED_TEST_BINS)
 	done
 
 build-app:
-	@env -u MODULE MAKEFLAGS= $(MAKE) -s -C $(ROOT_DIR) all
+	@env -u MODULE MAKEFLAGS= $(MAKE) -s -C $(ROOT_DIR) CFLAGS="$(TEST_PRODUCT_CFLAGS)" all
 
 coverage:
 	@$(MAKE) -s -C $(ROOT_DIR) clean
 	@find $(ROOT_DIR)/src -name '*.gcda' -delete -o -name '*.gcno' -delete
 	@mkdir -p $(COVERAGE_DIR)
-	@$(MAKE) -s -C $(ROOT_DIR) CFLAGS="$(CFLAGS) -O0 --coverage" all
+	@$(MAKE) -s -C $(ROOT_DIR) CFLAGS="$(TEST_PRODUCT_CFLAGS) -O0 --coverage" all
 	@$(MAKE) -s TEST_CFLAGS="$(TEST_CFLAGS) -O0 --coverage" TEST_LDFLAGS="--coverage" test-no-build
 	@lcov --capture --directory $(ROOT_DIR) --output-file $(COVERAGE_DIR)/coverage.info >/dev/null
 	@lcov --remove $(COVERAGE_DIR)/coverage.info \

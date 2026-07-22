@@ -260,7 +260,6 @@ static int test_fops_dispatch_namespace_round_trip(void)
     fops_create_attr_t attr;
     fops_args_t args;
     char link_buf[64];
-    char fifo_path[220];
     uint32_t entry_nr;
     size_t actual;
     bool eof;
@@ -372,13 +371,7 @@ static int test_fops_dispatch_namespace_round_trip(void)
     err = test_fops_dispatch_unlink(&env, "base.txt");
     TEST_ASSERT_EQ_INT(err, FS_OK);
     err = test_fops_dispatch_unlink(&env, "dispatch_fifo");
-    TEST_ASSERT_EQ_INT(fs_err_errno(err), EINVAL);
-    TEST_ASSERT_TRUE(snprintf(fifo_path,
-                              sizeof(fifo_path),
-                              "%s/%s",
-                              env.path,
-                              "dispatch_fifo") > 0);
-    TEST_ASSERT_EQ_INT(unlink(fifo_path), 0);
+    TEST_ASSERT_EQ_INT(err, FS_OK);
 
     memset(&args, 0, sizeof(args));
     args.op = FS_OP_RMDIR;
