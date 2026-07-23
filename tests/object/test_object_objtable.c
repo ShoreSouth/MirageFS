@@ -110,39 +110,30 @@ static int test_objtable_destroy_and_edge_paths(void)
 }
 
 const test_case_t OBJECT_OBJTABLE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJTABLE,
-                         0x1),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJTABLE,
-                         0x1,
-                         0x001),
-              test_objtable_insert_lookup_remove_round_trip,
-              "ObjTable 插入查找删除",
-              "插入有效 runtime，按 ObjKey 查询，再重复插入并删除",
-              "lookup 返回原 runtime 指针，重复插入 EEXIST，删除后计数归零且 key 不存在"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJTABLE,
-                         0x1),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJTABLE,
-                         0x1,
-                         0x002),
-              test_objtable_rejects_invalid_inputs,
-              "ObjTable 参数校验",
-              "初始化传入 NULL table，插入 NULL runtime，并删除缺失 key",
-              "返回 OBJECT 模块 EINVAL/ENOENT，NULL 查询和计数安全失败"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJTABLE,
-                         0x2),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJTABLE,
-                         0x2,
-                         0x001),
-              test_objtable_destroy_and_edge_paths,
-              "ObjTable 销毁和边界路径",
-              "插入多个 runtime 后直接 destroy，并注入无效 key/runtime",
-              "计数正确，非法输入返回 OBJECT/EINVAL，销毁可释放表项"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJTABLE, 0x1),
+                UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJTABLE, 0x1,
+                           0x001),
+                test_objtable_insert_lookup_remove_round_trip,
+                "ObjTable 插入查找删除",
+                "插入有效 runtime，按 ObjKey 查询，再重复插入并删除",
+                "lookup 返回原 runtime 指针，重复插入 EEXIST，删除后计数归零且 "
+                "key 不存在"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJTABLE, 0x1),
+                UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJTABLE, 0x1,
+                           0x002),
+                test_objtable_rejects_invalid_inputs, "ObjTable 参数校验",
+                "初始化传入 NULL table，插入 NULL runtime，并删除缺失 key",
+                "返回 OBJECT 模块 EINVAL/ENOENT，NULL 查询和计数安全失败"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJTABLE, 0x2),
+                UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJTABLE, 0x2,
+                           0x001),
+                test_objtable_destroy_and_edge_paths, "ObjTable 销毁和边界路径",
+                "插入多个 runtime 后直接 destroy，并注入无效 key/runtime",
+                "计数正确，非法输入返回 OBJECT/EINVAL，销毁可释放表项"),
 };
 
-const size_t OBJECT_OBJTABLE_CASE_COUNT = sizeof(OBJECT_OBJTABLE_CASES) / sizeof(OBJECT_OBJTABLE_CASES[0]);
+const size_t OBJECT_OBJTABLE_CASE_COUNT =
+        sizeof(OBJECT_OBJTABLE_CASES) / sizeof(OBJECT_OBJTABLE_CASES[0]);

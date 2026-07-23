@@ -29,7 +29,8 @@ void test_fsc_prepare_temp_dir(void)
 
 void test_fsc_cleanup_sysroot(const char *path)
 {
-    if (path != NULL) {
+    if (path != NULL)
+    {
         (void)rmdir(path);
     }
 

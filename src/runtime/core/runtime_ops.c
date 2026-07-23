@@ -1,10 +1,8 @@
 #include "runtime/internal/runtime_internal.h"
 
-fs_error_t runtime_mknod(const char *path,
-                         fs_type_t type,
+fs_error_t runtime_mknod(const char *path, fs_type_t type,
                          const fops_create_attr_t *attr,
-                         const fops_device_t *device,
-                         fs_flags_t flags,
+                         const fops_device_t *device, fs_flags_t flags,
                          fops_object_result_t *out)
 {
     fs_error_t err;
@@ -12,7 +10,8 @@ fs_error_t runtime_mknod(const char *path,
     fops_args_t args;
 
     err = runtime_lookup_parent_path(path, flags, &parent);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -29,10 +28,8 @@ fs_error_t runtime_mknod(const char *path,
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_link(const char *old_path,
-                        const char *new_path,
-                        fs_flags_t flags,
-                        fops_object_result_t *out)
+fs_error_t runtime_link(const char *old_path, const char *new_path,
+                        fs_flags_t flags, fops_object_result_t *out)
 {
     fs_error_t err;
     namei_parent_result_t old_parent;
@@ -40,12 +37,14 @@ fs_error_t runtime_link(const char *old_path,
     fops_args_t args;
 
     err = runtime_lookup_parent_path(old_path, flags, &old_parent);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
     err = runtime_lookup_parent_path(new_path, flags, &new_parent);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -61,8 +60,7 @@ fs_error_t runtime_link(const char *old_path,
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_setattr(const char *path,
-                           const fops_setattr_t *attr,
+fs_error_t runtime_setattr(const char *path, const fops_setattr_t *attr,
                            fs_flags_t flags)
 {
     fs_error_t err;
@@ -70,7 +68,8 @@ fs_error_t runtime_setattr(const char *path,
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, flags, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -90,7 +89,8 @@ fs_error_t runtime_access(const char *path, int mask, fs_flags_t flags)
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, flags, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -110,7 +110,8 @@ fs_error_t runtime_truncate(const char *path, uint64_t size, fs_flags_t flags)
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, flags, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -134,9 +135,7 @@ fs_error_t runtime_close(fops_file_t *file)
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_read(fops_file_t *file,
-                        void *buf,
-                        size_t size,
+fs_error_t runtime_read(fops_file_t *file, void *buf, size_t size,
                         size_t *actual)
 {
     fops_args_t args;
@@ -151,9 +150,7 @@ fs_error_t runtime_read(fops_file_t *file,
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_write(fops_file_t *file,
-                         const void *buf,
-                         size_t size,
+fs_error_t runtime_write(fops_file_t *file, const void *buf, size_t size,
                          size_t *actual)
 {
     fops_args_t args;
@@ -168,18 +165,16 @@ fs_error_t runtime_write(fops_file_t *file,
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_getxattr(const char *path,
-                            const char *name,
-                            void *value,
-                            size_t size,
-                            size_t *actual)
+fs_error_t runtime_getxattr(const char *path, const char *name, void *value,
+                            size_t size, size_t *actual)
 {
     fs_error_t err;
     fuid_t fuid;
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, FS_FLAG_NONE, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -194,18 +189,16 @@ fs_error_t runtime_getxattr(const char *path,
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_setxattr(const char *path,
-                            const char *name,
-                            const void *value,
-                            size_t size,
-                            fs_flags_t flags)
+fs_error_t runtime_setxattr(const char *path, const char *name,
+                            const void *value, size_t size, fs_flags_t flags)
 {
     fs_error_t err;
     fuid_t fuid;
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, FS_FLAG_NONE, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -220,9 +213,7 @@ fs_error_t runtime_setxattr(const char *path,
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_listxattr(const char *path,
-                             char *list,
-                             size_t size,
+fs_error_t runtime_listxattr(const char *path, char *list, size_t size,
                              size_t *actual)
 {
     fs_error_t err;
@@ -230,7 +221,8 @@ fs_error_t runtime_listxattr(const char *path,
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, FS_FLAG_NONE, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -251,7 +243,8 @@ fs_error_t runtime_removexattr(const char *path, const char *name)
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, FS_FLAG_NONE, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -270,7 +263,8 @@ fs_error_t runtime_statfs(const char *path, fops_statfs_t *out_statfs)
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, FS_FLAG_NONE, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -289,7 +283,8 @@ fs_error_t runtime_syncfs(const char *path)
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, FS_FLAG_NONE, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -307,7 +302,8 @@ fs_error_t runtime_gethandle(const char *path, obj_handle_t *out_handle)
     fops_args_t args;
 
     err = runtime_lookup_fuid(path, FS_FLAG_NONE, &fuid);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -319,8 +315,7 @@ fs_error_t runtime_gethandle(const char *path, obj_handle_t *out_handle)
     return runtime_dispatch(&args);
 }
 
-fs_error_t runtime_openhandle(const obj_handle_t *handle,
-                              fs_flags_t flags,
+fs_error_t runtime_openhandle(const obj_handle_t *handle, fs_flags_t flags,
                               fops_file_t **out_file)
 {
     fops_args_t args;

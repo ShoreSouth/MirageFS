@@ -54,23 +54,13 @@ static int test_namei_rejects_bad_context_and_outputs(void)
 
 
 const test_case_t NAMEI_LOOKUP_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI,
-                             TEST_NAMEI_COMPONENT_LOOKUP,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_NAMEI,
-                             TEST_NAMEI_COMPONENT_LOOKUP,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI, TEST_NAMEI_COMPONENT_LOOKUP, 0x1),
+                  UT_CASE_NO(UT_MOD_NAMEI, TEST_NAMEI_COMPONENT_LOOKUP, 0x1,
                              0x001),
-                  test_namei_lookup_rejects_null_ctx,
-                  "NAMEI lookup 空上下文",
-                  "lookup 传入 NULL ctx",
-                  "返回 NAMEI 模块 EINVAL"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI,
-                             TEST_NAMEI_COMPONENT_LOOKUP,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_NAMEI,
-                             TEST_NAMEI_COMPONENT_LOOKUP,
-                             0x1,
+                  test_namei_lookup_rejects_null_ctx, "NAMEI lookup 空上下文",
+                  "lookup 传入 NULL ctx", "返回 NAMEI 模块 EINVAL"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI, TEST_NAMEI_COMPONENT_LOOKUP, 0x1),
+                  UT_CASE_NO(UT_MOD_NAMEI, TEST_NAMEI_COMPONENT_LOOKUP, 0x1,
                              0x002),
                   test_namei_rejects_bad_context_and_outputs,
                   "NAMEI 上下文和输出参数边界",
@@ -78,4 +68,5 @@ const test_case_t NAMEI_LOOKUP_CASES[] = {
                   "返回 NAMEI 模块 EINVAL"),
 };
 
-const size_t NAMEI_LOOKUP_CASE_COUNT = sizeof(NAMEI_LOOKUP_CASES) / sizeof(NAMEI_LOOKUP_CASES[0]);
+const size_t NAMEI_LOOKUP_CASE_COUNT =
+        sizeof(NAMEI_LOOKUP_CASES) / sizeof(NAMEI_LOOKUP_CASES[0]);

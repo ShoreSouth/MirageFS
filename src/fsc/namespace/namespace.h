@@ -15,7 +15,7 @@
  */
 
 #define FSC_NAMESPACE_NAME_MAX 64U /* 名称最大长度，包含结尾 '\0' */
-#define FSC_NAMESPACE_SIZE     192U /* 固定大小，便于 pool 管理 */
+#define FSC_NAMESPACE_SIZE 192U    /* 固定大小，便于 pool 管理 */
 
 
 /*
@@ -24,12 +24,13 @@
  * ============================================================
  */
 
-typedef enum fsc_namespace_state {
+typedef enum fsc_namespace_state
+{
 
     FSC_NAMESPACE_STATE_INVALID = 0, /* 无效或不存在 */
     FSC_NAMESPACE_STATE_INIT,        /* 已初始化，尚未对外可见 */
     FSC_NAMESPACE_STATE_ACTIVE,      /* 已注册到 fstable，可被 lookup */
-    FSC_NAMESPACE_STATE_DELETING,    /* 正在销毁，阻止新的外部使用 */
+    FSC_NAMESPACE_STATE_DELETING, /* 正在销毁，阻止新的外部使用 */
 
 } fsc_namespace_state_t;
 
@@ -55,18 +56,18 @@ typedef enum fsc_namespace_state {
  * 注意：结构体不保存 fd/path。需要访问后端时，调用方应通过 FUID
  * 找到元数据，再由 LSA 在边界内打开临时 fd。
  */
-typedef struct fsc_namespace {
+typedef struct fsc_namespace
+{
+    fsc_fsid_t fsid;
+    char name[FSC_NAMESPACE_NAME_MAX];
 
-    fsc_fsid_t      fsid;
-    char            name[FSC_NAMESPACE_NAME_MAX];
+    fuid_t root_fuid;
+    obj_handle_t root_handle;
 
-    fuid_t          root_fuid;
-    obj_handle_t    root_handle;
+    fs_atomic32_t refcnt;
+    uint32_t state;
 
-    fs_atomic32_t   refcnt;
-    uint32_t        state;
-
-    uint8_t         reserved[24];
+    uint8_t reserved[24];
 
 } fsc_namespace_t;
 
@@ -85,16 +86,12 @@ _Static_assert(sizeof(fsc_namespace_t) == FSC_NAMESPACE_SIZE,
  * 本函数只填充对象字段，不注册到 fstable，也不创建后端目录。
  * 后端目录创建由 fsmgr_create() 在调用本函数前完成。
  */
-fs_error_t fsc_namespace_init(
-                fsc_namespace_t *ns,
-                fsc_fsid_t fsid,
-                const char *name,
-                const fuid_t *root_fuid,
-                const obj_handle_t *root_handle);
+fs_error_t fsc_namespace_init(fsc_namespace_t *ns, fsc_fsid_t fsid,
+                              const char *name, const fuid_t *root_fuid,
+                              const obj_handle_t *root_handle);
 
 /* 清空 Namespace Runtime Object。 */
-void fsc_namespace_deinit(
-                fsc_namespace_t *ns);
+void fsc_namespace_deinit(fsc_namespace_t *ns);
 
 /*
  * ============================================================
@@ -102,22 +99,17 @@ void fsc_namespace_deinit(
  * ============================================================
  */
 
-bool fsc_namespace_is_valid(
-                const fsc_namespace_t *ns);
+bool fsc_namespace_is_valid(const fsc_namespace_t *ns);
 
-bool fsc_namespace_name_is_valid(
-                const char *name);
+bool fsc_namespace_name_is_valid(const char *name);
 
-fsc_namespace_state_t fsc_namespace_state(
-                const fsc_namespace_t *ns);
+fsc_namespace_state_t fsc_namespace_state(const fsc_namespace_t *ns);
 
-bool fsc_namespace_state_can_transit(
-                fsc_namespace_state_t from,
-                fsc_namespace_state_t to);
+bool fsc_namespace_state_can_transit(fsc_namespace_state_t from,
+                                     fsc_namespace_state_t to);
 
-fs_error_t fsc_namespace_change_state(
-                fsc_namespace_t *ns,
-                fsc_namespace_state_t state);
+fs_error_t fsc_namespace_change_state(fsc_namespace_t *ns,
+                                      fsc_namespace_state_t state);
 
 /*
  * ============================================================
@@ -126,5 +118,4 @@ fs_error_t fsc_namespace_change_state(
  */
 
 /* 单行打印 namespace 快照，避免 dump 路径刷屏。 */
-void fsc_namespace_dump(
-                const fsc_namespace_t *ns);
+void fsc_namespace_dump(const fsc_namespace_t *ns);

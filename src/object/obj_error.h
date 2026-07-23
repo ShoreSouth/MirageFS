@@ -17,6 +17,4 @@
  *      sub     : Object Layer 子操作
  *      err     : Linux errno
  */
-fs_error_t obj_error(
-                obj_sub_t sub,
-                int err);
+fs_error_t obj_error(obj_sub_t sub, int err);

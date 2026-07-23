@@ -2,10 +2,9 @@
 
 static const char *g_fsc_sub_names[] = {
 
-#define FSC_SUB_NAME(name, str) \
-    [FSC_SUB_##name] = str,
+#define FSC_SUB_NAME(name, str) [FSC_SUB_##name] = str,
 
-    FSC_SUB_TABLE(FSC_SUB_NAME)
+        FSC_SUB_TABLE(FSC_SUB_NAME)
 
 #undef FSC_SUB_NAME
 
@@ -13,7 +12,8 @@ static const char *g_fsc_sub_names[] = {
 
 const char *fsc_sub_name(fsc_sub_t sub)
 {
-    if (!fsc_sub_valid(sub)) {
+    if (!fsc_sub_valid(sub))
+    {
         return "UNKNOWN";
     }
 

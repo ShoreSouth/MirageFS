@@ -23,9 +23,7 @@ static int test_namei_real_namespace_walk_and_ops_edges(void)
     runtime_deinit();
     test_namei_cleanup_root();
     memset(&cfg, 0, sizeof(cfg));
-    (void)snprintf(namespace_name,
-                   sizeof(namespace_name),
-                   "ni_%ld",
+    (void)snprintf(namespace_name, sizeof(namespace_name), "ni_%ld",
                    (long)getpid());
     cfg.default_namespace = namespace_name;
     cfg.auto_create = true;
@@ -87,12 +85,8 @@ static int test_namei_real_namespace_walk_and_ops_edges(void)
     TEST_ASSERT_STR_EQ(parent.name, "rel.txt");
 
     memset(target_buf, 0, sizeof(target_buf));
-    err = namei_readlink(&ctx,
-                         "/dir/link",
-                         FS_FLAG_NONE,
-                         target_buf,
-                         sizeof(target_buf),
-                         &actual);
+    err = namei_readlink(&ctx, "/dir/link", FS_FLAG_NONE, target_buf,
+                         sizeof(target_buf), &actual);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_STR_EQ(target_buf, "target");
 
@@ -129,17 +123,15 @@ static int test_namei_real_namespace_walk_and_ops_edges(void)
 
 
 const test_case_t NAMEI_FLOW_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_NAMEI,
-                             TEST_NAMEI_COMPONENT_FLOW,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_NAMEI,
-                             TEST_NAMEI_COMPONENT_FLOW,
-                             0x1,
-                             0x001),
-                  test_namei_real_namespace_walk_and_ops_edges,
-                  "NAMEI 真实 namespace 路径解析回环",
-                  "创建目录/文件/软链接后覆盖绝对、相对、点点、NOFOLLOW、ELOOP 和 readdir",
-                  "路径解析和对象操作按预期成功，非法路径返回结构化错误"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_NAMEI, TEST_NAMEI_COMPONENT_FLOW, 0x1),
+                UT_CASE_NO(UT_MOD_NAMEI, TEST_NAMEI_COMPONENT_FLOW, 0x1, 0x001),
+                test_namei_real_namespace_walk_and_ops_edges,
+                "NAMEI 真实 namespace 路径解析回环",
+                "创建目录/文件/软链接后覆盖绝对、相对、点点、NOFOLLOW、ELOOP "
+                "和 readdir",
+                "路径解析和对象操作按预期成功，非法路径返回结构化错误"),
 };
 
-const size_t NAMEI_FLOW_CASE_COUNT = sizeof(NAMEI_FLOW_CASES) / sizeof(NAMEI_FLOW_CASES[0]);
+const size_t NAMEI_FLOW_CASE_COUNT =
+        sizeof(NAMEI_FLOW_CASES) / sizeof(NAMEI_FLOW_CASES[0]);

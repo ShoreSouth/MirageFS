@@ -198,22 +198,22 @@ static int test_fops_ops_namespace_mutation_round_trip(void)
 
     TEST_ASSERT_EQ_INT(test_fops_env_setup(&env), 0);
 
-    err = fops_mkdir_plus(&env.root_fuid, "dir_a", NULL,
-                          FS_FLAG_DIRECTORY, &dir_out);
+    err = fops_mkdir_plus(&env.root_fuid, "dir_a", NULL, FS_FLAG_DIRECTORY,
+                          &dir_out);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_TRUE(fuid_is_dir(&dir_out.fuid));
 
-    err = fops_create_plus(&env.root_fuid, "base.txt", NULL,
-                           FS_FLAG_EXCLUSIVE, &file_out);
+    err = fops_create_plus(&env.root_fuid, "base.txt", NULL, FS_FLAG_EXCLUSIVE,
+                           &file_out);
     TEST_ASSERT_EQ_INT(err, FS_OK);
 
-    err = fops_link(&env.root_fuid, "base.txt", &env.root_fuid,
-                    "hard.txt", FS_FLAG_EXCLUSIVE, &out_fuid);
+    err = fops_link(&env.root_fuid, "base.txt", &env.root_fuid, "hard.txt",
+                    FS_FLAG_EXCLUSIVE, &out_fuid);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_TRUE(fuid_is_file(&out_fuid));
 
-    err = fops_rename(&env.root_fuid, "hard.txt", &env.root_fuid,
-                      "renamed.txt", FS_FLAG_NONE);
+    err = fops_rename(&env.root_fuid, "hard.txt", &env.root_fuid, "renamed.txt",
+                      FS_FLAG_NONE);
     TEST_ASSERT_EQ_INT(err, FS_OK);
 
     err = fops_symlink(&env.root_fuid, "link.txt", "base.txt",
@@ -222,8 +222,8 @@ static int test_fops_ops_namespace_mutation_round_trip(void)
     TEST_ASSERT_TRUE(fuid_is_symlink(&out_fuid));
 
     memset(link_buf, 0, sizeof(link_buf));
-    err = fops_readlink(&env.root_fuid, "link.txt", FS_FLAG_NONE,
-                        link_buf, sizeof(link_buf), &actual);
+    err = fops_readlink(&env.root_fuid, "link.txt", FS_FLAG_NONE, link_buf,
+                        sizeof(link_buf), &actual);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_STR_EQ(link_buf, "base.txt");
     TEST_ASSERT_EQ_INT(actual, strlen("base.txt"));
@@ -242,39 +242,24 @@ static int test_fops_ops_namespace_mutation_round_trip(void)
 }
 
 const test_case_t FOPS_OPS_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_OPS,
-                         0x1),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_OPS,
-                         0x1,
-                         0x001),
-              test_fops_ops_reject_invalid_public_arguments,
-              "FOPS 操作层公共入参防御",
-              "直接调用各 public op，注入 NULL、非法 flag、缺失输出参数",
-              "所有非法输入在进入底层 syscall 前返回 FOPS 模块错误"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_OPS,
-                         0x2),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_OPS,
-                         0x2,
-                         0x001),
-              test_fops_ops_create_lookup_rw_readdir_round_trip,
-              "FOPS 文件创建、查找、读写和目录读取回环",
-              "临时 root 后端中创建普通文件并经过 open/write/pread/readdir",
-              "对象 FUID、属性、读写内容和目录项均符合预期"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_OPS,
-                         0x2),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_OPS,
-                         0x2,
-                         0x002),
-              test_fops_ops_namespace_mutation_round_trip,
-              "FOPS namespace 修改回环",
-              "创建目录、文件、硬链接、软链接并执行 rename/unlink/rmdir",
-              "命名空间变更成功且清理后临时 root 可删除"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_OPS, 0x1),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_OPS, 0x1, 0x001),
+                  test_fops_ops_reject_invalid_public_arguments,
+                  "FOPS 操作层公共入参防御",
+                  "直接调用各 public op，注入 NULL、非法 flag、缺失输出参数",
+                  "所有非法输入在进入底层 syscall 前返回 FOPS 模块错误"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_OPS, 0x2),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_OPS, 0x2, 0x001),
+                  test_fops_ops_create_lookup_rw_readdir_round_trip,
+                  "FOPS 文件创建、查找、读写和目录读取回环",
+                  "临时 root 后端中创建普通文件并经过 open/write/pread/readdir",
+                  "对象 FUID、属性、读写内容和目录项均符合预期"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_OPS, 0x2),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_OPS, 0x2, 0x002),
+                  test_fops_ops_namespace_mutation_round_trip,
+                  "FOPS namespace 修改回环",
+                  "创建目录、文件、硬链接、软链接并执行 rename/unlink/rmdir",
+                  "命名空间变更成功且清理后临时 root 可删除"),
 };
 
 const size_t FOPS_OPS_CASE_COUNT =

@@ -47,7 +47,8 @@ static int test_mempool_create_alloc_realloc_and_global_wrappers(void)
 
     zero_ptr = fs_mp_calloc(mp, 4U, 8U);
     TEST_ASSERT_TRUE(zero_ptr != NULL);
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 32; i++)
+    {
         TEST_ASSERT_EQ_INT(0U, zero_ptr[i]);
     }
     TEST_ASSERT_TRUE(fs_mp_calloc(mp, 0U, 8U) == NULL);
@@ -101,17 +102,16 @@ static int test_mempool_create_alloc_realloc_and_global_wrappers(void)
 
 
 const test_case_t COMMON_MEMPOOL_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_MEMPOOL,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_MEMPOOL,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_MEMPOOL, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_MEMPOOL, 0x1,
                              0x001),
                   test_mempool_create_alloc_realloc_and_global_wrappers,
                   "Mempool 分配器和全局包装器",
-                  "创建私有池后执行 alloc/align/calloc/realloc/free/stats/verify/dump，再覆盖全局池 wrapper",
+                  "创建私有池后执行 "
+                  "alloc/align/calloc/realloc/free/stats/verify/"
+                  "dump，再覆盖全局池 wrapper",
                   "正常分配可用，非法配置和超大分配按预期失败"),
 };
 
-const size_t COMMON_MEMPOOL_CASE_COUNT = sizeof(COMMON_MEMPOOL_CASES) / sizeof(COMMON_MEMPOOL_CASES[0]);
+const size_t COMMON_MEMPOOL_CASE_COUNT =
+        sizeof(COMMON_MEMPOOL_CASES) / sizeof(COMMON_MEMPOOL_CASES[0]);

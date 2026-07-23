@@ -15,12 +15,12 @@
  * ============================================================
  */
 
-#define FS_ERR_STR_BUF_NR   4
+#define FS_ERR_STR_BUF_NR 4
 #define FS_ERR_STR_BUF_SIZE 256
 
-static _Thread_local char g_fs_err_str_buf
-    [FS_ERR_STR_BUF_NR][FS_ERR_STR_BUF_SIZE];
-static _Thread_local int  g_fs_err_str_idx;
+static _Thread_local char g_fs_err_str_buf[FS_ERR_STR_BUF_NR]
+                                          [FS_ERR_STR_BUF_SIZE];
+static _Thread_local int g_fs_err_str_idx;
 
 static char *fs_err_str_buf(void)
 {
@@ -37,12 +37,18 @@ static char *fs_err_str_buf(void)
 
 const char *fs_severity_name(fs_err_severity_t sev)
 {
-    switch (sev) {
-    case FS_SEV_INFO:  return "INFO";
-    case FS_SEV_WARN:  return "WARN";
-    case FS_SEV_ERROR: return "ERROR";
-    case FS_SEV_FATAL: return "FATAL";
-    default:           return "UNKNOWN";
+    switch (sev)
+    {
+    case FS_SEV_INFO:
+        return "INFO";
+    case FS_SEV_WARN:
+        return "WARN";
+    case FS_SEV_ERROR:
+        return "ERROR";
+    case FS_SEV_FATAL:
+        return "FATAL";
+    default:
+        return "UNKNOWN";
     }
 }
 
@@ -55,26 +61,27 @@ const char *fs_severity_name(fs_err_severity_t sev)
 const char *fs_error_str(fs_error_t err)
 {
     fs_err_severity_t sev;
-    fs_module_t       module;
-    uint32_t          sub;
-    fs_errno_t        eno;
-    const char       *sub_str;
-    const char       *eno_name;
-    const char       *eno_desc;
-    char             *buf;
-    int               off;
+    fs_module_t module;
+    uint32_t sub;
+    fs_errno_t eno;
+    const char *sub_str;
+    const char *eno_name;
+    const char *eno_desc;
+    char *buf;
+    int off;
 
     /* FS_OK */
-    if (fs_succeeded(err)) {
+    if (fs_succeeded(err))
+    {
         return "OK";
     }
 
-    sev     = fs_err_severity(err);
-    module  = fs_err_module(err);
-    sub     = fs_err_sub(err);
-    eno     = fs_err_errno(err);
+    sev = fs_err_severity(err);
+    module = fs_err_module(err);
+    sub = fs_err_sub(err);
+    eno = fs_err_errno(err);
 
-    sub_str  = fs_sub_name(module, sub);
+    sub_str = fs_sub_name(module, sub);
     eno_name = fs_errno_name(eno);
     eno_desc = fs_errno_desc(eno);
 
@@ -86,17 +93,14 @@ const char *fs_error_str(fs_error_t err)
      * [SEVERITY] MODULE::SUB => ERRNO (description)
      */
 
-    off += snprintf(buf + off,
-                    FS_ERR_STR_BUF_SIZE - off,
-                    "[%s] %s::%s => %s (%s)",
-                    fs_severity_name(sev),
-                    fs_module_name(module),
-                    sub_str  ? sub_str  : "?",
-                    eno_name,
+    off += snprintf(buf + off, FS_ERR_STR_BUF_SIZE - off,
+                    "[%s] %s::%s => %s (%s)", fs_severity_name(sev),
+                    fs_module_name(module), sub_str ? sub_str : "?", eno_name,
                     eno_desc);
 
     /* 如果格式化溢出，保证以 \0 结尾 */
-    if (off >= FS_ERR_STR_BUF_SIZE) {
+    if (off >= FS_ERR_STR_BUF_SIZE)
+    {
         buf[FS_ERR_STR_BUF_SIZE - 1] = '\0';
     }
 

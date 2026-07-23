@@ -27,8 +27,8 @@
  * entry 只持有 namespace 指针，不拥有 namespace 内存。
  * namespace 的分配和释放由 nspool/fsmgr 负责。
  */
-typedef struct fsc_table_entry {
-
+typedef struct fsc_table_entry
+{
     fsc_namespace_t *ns; /* 被索引的 namespace */
 
     fs_list_head_t fsid_node; /* fsid_index hash 节点 */
@@ -55,8 +55,8 @@ typedef struct fsc_table_entry {
  * fstable 不负责生命周期状态迁移，也不负责 refcnt；
  * 它只是索引层，对应 Object Layer 中 objtable 的角色。
  */
-typedef struct fsc_table {
-
+typedef struct fsc_table
+{
     fs_hash_t fsid_index; /* 按 FSID 查找 namespace */
     fs_hash_t name_index; /* 按名称查找 namespace */
 
@@ -68,8 +68,7 @@ typedef struct fsc_table {
  * 参数：
  *      [IN] ns        : 待回收 namespace
  */
-typedef void (*fstable_reclaim_fn)(
-                fsc_namespace_t *ns);
+typedef void (*fstable_reclaim_fn)(fsc_namespace_t *ns);
 
 /*
  * ============================================================
@@ -88,9 +87,7 @@ typedef void (*fstable_reclaim_fn)(
  *      FS_OK           : 成功
  *      fs_error_t      : 参数非法或 hash 初始化失败
  */
-fs_error_t fstable_init(
-                fsc_table_t *table,
-                uint32_t bucket_nr);
+fs_error_t fstable_init(fsc_table_t *table, uint32_t bucket_nr);
 
 /*
  * 销毁 namespace 注册表。
@@ -99,9 +96,7 @@ fs_error_t fstable_init(
  *      [IN/OUT] table   : 待销毁表，内部 hash 资源会被释放并清零
  *      [IN]     reclaim : namespace 回收回调，可为 NULL
  */
-void fstable_deinit(
-                fsc_table_t *table,
-                fstable_reclaim_fn reclaim);
+void fstable_deinit(fsc_table_t *table, fstable_reclaim_fn reclaim);
 
 /*
  * ============================================================
@@ -123,9 +118,7 @@ void fstable_deinit(
  *      FS_OK          : 成功
  *      fs_error_t     : 参数非法、重复或内存不足
  */
-fs_error_t fstable_insert(
-                fsc_table_t *table,
-                fsc_namespace_t *ns);
+fs_error_t fstable_insert(fsc_table_t *table, fsc_namespace_t *ns);
 
 /*
  * 移除 namespace。
@@ -142,10 +135,8 @@ fs_error_t fstable_insert(
  *      FS_OK           : 成功
  *      fs_error_t      : 参数非法或未找到
  */
-fs_error_t fstable_remove(
-                fsc_table_t *table,
-                fsc_fsid_t fsid,
-                fsc_namespace_t **ns_out);
+fs_error_t fstable_remove(fsc_table_t *table, fsc_fsid_t fsid,
+                          fsc_namespace_t **ns_out);
 
 /*
  * 通过 FSID 查找 namespace。
@@ -158,9 +149,7 @@ fs_error_t fstable_remove(
  *      NULL           : 未找到
  *      非 NULL        : fsc_namespace_t 借用指针
  */
-fsc_namespace_t *fstable_lookup_fsid(
-                fsc_table_t *table,
-                fsc_fsid_t fsid);
+fsc_namespace_t *fstable_lookup_fsid(fsc_table_t *table, fsc_fsid_t fsid);
 
 /*
  * 通过名称查找 namespace。
@@ -173,23 +162,17 @@ fsc_namespace_t *fstable_lookup_fsid(
  *      NULL           : 未找到
  *      非 NULL        : fsc_namespace_t 借用指针
  */
-fsc_namespace_t *fstable_lookup_name(
-                fsc_table_t *table,
-                const char *name);
+fsc_namespace_t *fstable_lookup_name(fsc_table_t *table, const char *name);
 
 /*
  * 判断指定 FSID 是否已注册。
  */
-bool fstable_exists_fsid(
-                fsc_table_t *table,
-                fsc_fsid_t fsid);
+bool fstable_exists_fsid(fsc_table_t *table, fsc_fsid_t fsid);
 
 /*
  * 判断指定名称是否已注册。
  */
-bool fstable_exists_name(
-                fsc_table_t *table,
-                const char *name);
+bool fstable_exists_name(fsc_table_t *table, const char *name);
 
 /*
  * ============================================================
@@ -203,5 +186,4 @@ bool fstable_exists_name(
  * 参数：
  *      [IN] table     : namespace 注册表
  */
-uint64_t fstable_count(
-                const fsc_table_t *table);
+uint64_t fstable_count(const fsc_table_t *table);

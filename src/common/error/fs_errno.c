@@ -3,12 +3,13 @@
 
 const char *fs_errno_name(fs_errno_t err)
 {
-    switch (err) {
+    switch (err)
+    {
+#define FS_ERRNO_CASE(name, desc)                                              \
+    case name:                                                                 \
+        return #name;
 
-#define FS_ERRNO_CASE(name, desc) \
-    case name: return #name;
-
-    FS_ERRNO_TABLE(FS_ERRNO_CASE)
+        FS_ERRNO_TABLE(FS_ERRNO_CASE)
 
 #undef FS_ERRNO_CASE
 
@@ -19,12 +20,13 @@ const char *fs_errno_name(fs_errno_t err)
 
 const char *fs_errno_desc(fs_errno_t err)
 {
-    switch (err) {
+    switch (err)
+    {
+#define FS_ERRNO_CASE(name, desc)                                              \
+    case name:                                                                 \
+        return desc;
 
-#define FS_ERRNO_CASE(name, desc) \
-    case name: return desc;
-
-    FS_ERRNO_TABLE(FS_ERRNO_CASE)
+        FS_ERRNO_TABLE(FS_ERRNO_CASE)
 
 #undef FS_ERRNO_CASE
 
@@ -35,12 +37,13 @@ const char *fs_errno_desc(fs_errno_t err)
 
 bool fs_errno_valid(int err)
 {
-    switch (err) {
+    switch (err)
+    {
+#define FS_ERRNO_CASE(name, desc)                                              \
+    case name:                                                                 \
+        return true;
 
-#define FS_ERRNO_CASE(name, desc) \
-    case name: return true;
-
-    FS_ERRNO_TABLE(FS_ERRNO_CASE)
+        FS_ERRNO_TABLE(FS_ERRNO_CASE)
 
 #undef FS_ERRNO_CASE
 

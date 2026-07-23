@@ -9,42 +9,42 @@
  * ============================================================
  */
 
-#define FS_OP_TABLE(_)                 \
-                                       \
-    _(NONE,         "NONE")            \
-                                       \
-    _(LOOKUP,       "LOOKUP")          \
-    _(CREATE,       "CREATE")          \
-    _(MKDIR,        "MKDIR")           \
-    _(MKNOD,        "MKNOD")           \
-    _(UNLINK,       "UNLINK")          \
-    _(RMDIR,        "RMDIR")           \
-    _(RENAME,       "RENAME")          \
-    _(LINK,         "LINK")            \
-    _(SYMLINK,      "SYMLINK")         \
-    _(READLINK,     "READLINK")        \
-                                       \
-    _(OPEN,         "OPEN")            \
-    _(CLOSE,        "CLOSE")           \
-                                       \
-    _(GETHANDLE,    "GETHANDLE")       \
-    _(OPENHANDLE,   "OPENHANDLE")      \
-                                       \
-    _(READDIR,      "READDIR")         \
-    _(READDIRPLUS,  "READDIRPLUS")     \
-                                       \
-    _(GETATTR,      "GETATTR")         \
-    _(SETATTR,      "SETATTR")         \
-                                       \
-    _(ACCESS,       "ACCESS")          \
-                                       \
-    _(READ,         "READ")            \
-    _(WRITE,        "WRITE")           \
-                                       \
-    _(TRUNCATE,     "TRUNCATE")        \
-    _(GETXATTR,     "GETXATTR")        \
-    _(SETXATTR,     "SETXATTR")        \
-    _(LISTXATTR,    "LISTXATTR")       \
-    _(REMOVEXATTR,  "REMOVEXATTR")     \
-    _(STATFS,       "STATFS")           \
-    _(SYNCFS,       "SYNCFS")
+#define FS_OP_TABLE(_)                                                         \
+                                                                               \
+    _(NONE, "NONE")                                                            \
+                                                                               \
+    _(LOOKUP, "LOOKUP")                                                        \
+    _(CREATE, "CREATE")                                                        \
+    _(MKDIR, "MKDIR")                                                          \
+    _(MKNOD, "MKNOD")                                                          \
+    _(UNLINK, "UNLINK")                                                        \
+    _(RMDIR, "RMDIR")                                                          \
+    _(RENAME, "RENAME")                                                        \
+    _(LINK, "LINK")                                                            \
+    _(SYMLINK, "SYMLINK")                                                      \
+    _(READLINK, "READLINK")                                                    \
+                                                                               \
+    _(OPEN, "OPEN")                                                            \
+    _(CLOSE, "CLOSE")                                                          \
+                                                                               \
+    _(GETHANDLE, "GETHANDLE")                                                  \
+    _(OPENHANDLE, "OPENHANDLE")                                                \
+                                                                               \
+    _(READDIR, "READDIR")                                                      \
+    _(READDIRPLUS, "READDIRPLUS")                                              \
+                                                                               \
+    _(GETATTR, "GETATTR")                                                      \
+    _(SETATTR, "SETATTR")                                                      \
+                                                                               \
+    _(ACCESS, "ACCESS")                                                        \
+                                                                               \
+    _(READ, "READ")                                                            \
+    _(WRITE, "WRITE")                                                          \
+                                                                               \
+    _(TRUNCATE, "TRUNCATE")                                                    \
+    _(GETXATTR, "GETXATTR")                                                    \
+    _(SETXATTR, "SETXATTR")                                                    \
+    _(LISTXATTR, "LISTXATTR")                                                  \
+    _(REMOVEXATTR, "REMOVEXATTR")                                              \
+    _(STATFS, "STATFS")                                                        \
+    _(SYNCFS, "SYNCFS")

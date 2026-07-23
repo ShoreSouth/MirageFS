@@ -10,8 +10,7 @@ fs_error_t fops_init(void)
 {
     FS_LOG_DUMP_INFO("enter");
 
-    fs_sub_register(FS_MODULE_FOPS,
-                    (fs_sub_name_fn)fs_op_name);
+    fs_sub_register(FS_MODULE_FOPS, (fs_sub_name_fn)fs_op_name);
 
     g_fops_ctx.inited = 1U;
 

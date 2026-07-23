@@ -9,18 +9,18 @@
  * module id
  * ============================================================ */
 
-typedef enum fs_module {
+typedef enum fs_module
+{
 
     FS_MODULE_NONE = 0,
 
-#define FS_MODULE_ENUM(name, str) \
-    FS_MODULE_##name,
+#define FS_MODULE_ENUM(name, str) FS_MODULE_##name,
 
     FS_MODULE_TABLE(FS_MODULE_ENUM)
 
 #undef FS_MODULE_ENUM
 
-    FS_MODULE_MAX
+            FS_MODULE_MAX
 
 } fs_module_t;
 

@@ -2,10 +2,9 @@
 
 static const char *g_fs_op_names[] = {
 
-#define FS_OP_NAME(name, str) \
-    [FS_OP_##name] = str,
+#define FS_OP_NAME(name, str) [FS_OP_##name] = str,
 
-    FS_OP_TABLE(FS_OP_NAME)
+        FS_OP_TABLE(FS_OP_NAME)
 
 #undef FS_OP_NAME
 

@@ -64,5 +64,4 @@ obj_runtime_t *objpool_alloc(void);
  * 参数：
  *      [IN] rt     : 待释放的运行时对象（必须由 objpool_alloc 分配）
  */
-void objpool_free(
-                obj_runtime_t *rt);
+void objpool_free(obj_runtime_t *rt);

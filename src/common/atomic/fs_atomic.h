@@ -19,13 +19,9 @@ typedef _Atomic int64_t fs_atomic64_t;
  * ============================================================
  */
 
-void fs_atomic32_init(
-                fs_atomic32_t *atom,
-                int32_t value);
+void fs_atomic32_init(fs_atomic32_t *atom, int32_t value);
 
-void fs_atomic64_init(
-                fs_atomic64_t *atom,
-                int64_t value);
+void fs_atomic64_init(fs_atomic64_t *atom, int64_t value);
 
 /*
  * ============================================================
@@ -33,19 +29,13 @@ void fs_atomic64_init(
  * ============================================================
  */
 
-int32_t fs_atomic32_load(
-                const fs_atomic32_t *atom);
+int32_t fs_atomic32_load(const fs_atomic32_t *atom);
 
-int64_t fs_atomic64_load(
-                const fs_atomic64_t *atom);
+int64_t fs_atomic64_load(const fs_atomic64_t *atom);
 
-void fs_atomic32_store(
-                fs_atomic32_t *atom,
-                int32_t value);
+void fs_atomic32_store(fs_atomic32_t *atom, int32_t value);
 
-void fs_atomic64_store(
-                fs_atomic64_t *atom,
-                int64_t value);
+void fs_atomic64_store(fs_atomic64_t *atom, int64_t value);
 
 /*
  * ============================================================
@@ -53,17 +43,13 @@ void fs_atomic64_store(
  * ============================================================
  */
 
-int32_t fs_atomic32_inc(
-                fs_atomic32_t *atom);
+int32_t fs_atomic32_inc(fs_atomic32_t *atom);
 
-int64_t fs_atomic64_inc(
-                fs_atomic64_t *atom);
+int64_t fs_atomic64_inc(fs_atomic64_t *atom);
 
-int32_t fs_atomic32_dec(
-                fs_atomic32_t *atom);
+int32_t fs_atomic32_dec(fs_atomic32_t *atom);
 
-int64_t fs_atomic64_dec(
-                fs_atomic64_t *atom);
+int64_t fs_atomic64_dec(fs_atomic64_t *atom);
 
 /*
  * ============================================================
@@ -71,21 +57,13 @@ int64_t fs_atomic64_dec(
  * ============================================================
  */
 
-int32_t fs_atomic32_add(
-                fs_atomic32_t *atom,
-                int32_t value);
+int32_t fs_atomic32_add(fs_atomic32_t *atom, int32_t value);
 
-int64_t fs_atomic64_add(
-                fs_atomic64_t *atom,
-                int64_t value);
+int64_t fs_atomic64_add(fs_atomic64_t *atom, int64_t value);
 
-int32_t fs_atomic32_sub(
-                fs_atomic32_t *atom,
-                int32_t value);
+int32_t fs_atomic32_sub(fs_atomic32_t *atom, int32_t value);
 
-int64_t fs_atomic64_sub(
-                fs_atomic64_t *atom,
-                int64_t value);
+int64_t fs_atomic64_sub(fs_atomic64_t *atom, int64_t value);
 
 /*
  * ============================================================
@@ -93,12 +71,6 @@ int64_t fs_atomic64_sub(
  * ============================================================
  */
 
-bool fs_atomic32_cas(
-                fs_atomic32_t *atom,
-                int32_t *expected,
-                int32_t desired);
+bool fs_atomic32_cas(fs_atomic32_t *atom, int32_t *expected, int32_t desired);
 
-bool fs_atomic64_cas(
-                fs_atomic64_t *atom,
-                int64_t *expected,
-                int64_t desired);
+bool fs_atomic64_cas(fs_atomic64_t *atom, int64_t *expected, int64_t desired);

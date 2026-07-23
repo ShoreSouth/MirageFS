@@ -54,29 +54,17 @@ static int test_fops_file_check_rejects_bad_handles_and_access_modes(void)
 }
 
 const test_case_t FOPS_FILE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_FILE,
-                         0x1),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_FILE,
-                         0x1,
-                         0x001),
-              test_fops_linux_open_flags_maps_access_and_modifiers,
-              "FOPS Linux open flag 转换",
-              "构造读写方向和 append/truncate/sync/directory modifier",
-              "转换为预期 Linux O_* flag"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_FILE,
-                         0x1),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_FILE,
-                         0x1,
-                         0x002),
-              test_fops_file_check_rejects_bad_handles_and_access_modes,
-              "FOPS file 校验",
-              "NULL file、写只读、读写只写句柄",
-              "非法句柄返回 EBADF，读写句柄通过")
-};
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_FILE, 0x1),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_FILE, 0x1, 0x001),
+                  test_fops_linux_open_flags_maps_access_and_modifiers,
+                  "FOPS Linux open flag 转换",
+                  "构造读写方向和 append/truncate/sync/directory modifier",
+                  "转换为预期 Linux O_* flag"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_FILE, 0x1),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_FILE, 0x1, 0x002),
+                  test_fops_file_check_rejects_bad_handles_and_access_modes,
+                  "FOPS file 校验", "NULL file、写只读、读写只写句柄",
+                  "非法句柄返回 EBADF，读写句柄通过")};
 
 const size_t FOPS_FILE_CASE_COUNT =
         sizeof(FOPS_FILE_CASES) / sizeof(FOPS_FILE_CASES[0]);

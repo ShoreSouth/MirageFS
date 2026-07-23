@@ -2,9 +2,7 @@
 
 static int test_error_layout_round_trip(void)
 {
-    fs_error_t err = FS_ERR(FS_SEV_ERROR,
-                            FS_MODULE_COMMON,
-                            FS_COMMON_SUB_PATH,
+    fs_error_t err = FS_ERR(FS_SEV_ERROR, FS_MODULE_COMMON, FS_COMMON_SUB_PATH,
                             FS_ERRNO_EINVAL);
 
     TEST_ASSERT_EQ_INT(FS_SEV_ERROR, fs_err_severity(err));
@@ -36,10 +34,7 @@ static int test_error_helpers_format_unknown_and_ok_values(void)
     TEST_ASSERT_STR_EQ("UNKNOWN", fs_errno_name((fs_errno_t)9999));
     TEST_ASSERT_STR_EQ("Unknown errno", fs_errno_desc((fs_errno_t)9999));
 
-    err = FS_ERR(FS_SEV_WARN,
-                 FS_MODULE_MAX,
-                 0xffU,
-                 (fs_errno_t)9999);
+    err = FS_ERR(FS_SEV_WARN, FS_MODULE_MAX, 0xffU, (fs_errno_t)9999);
     text1 = fs_error_str(err);
     text2 = fs_error_str(err);
     TEST_ASSERT_TRUE(text1 != NULL);
@@ -50,23 +45,14 @@ static int test_error_helpers_format_unknown_and_ok_values(void)
 
 
 const test_case_t COMMON_ERROR_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_ERROR,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_ERROR,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_ERROR, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_ERROR, 0x1,
                              0x001),
-                  test_error_layout_round_trip,
-                  "错误码布局往返",
+                  test_error_layout_round_trip, "错误码布局往返",
                   "构造 fs_error_t 并逐字段解码",
                   "severity/module/sub/errno 与构造值完全一致"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_ERROR,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_ERROR,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_ERROR, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_ERROR, 0x1,
                              0x002),
                   test_error_helpers_format_unknown_and_ok_values,
                   "错误 helper 格式化和未知值",
@@ -74,4 +60,5 @@ const test_case_t COMMON_ERROR_CASES[] = {
                   "合法值返回名称，未知值返回 UNKNOWN，错误字符串使用轮转缓冲"),
 };
 
-const size_t COMMON_ERROR_CASE_COUNT = sizeof(COMMON_ERROR_CASES) / sizeof(COMMON_ERROR_CASES[0]);
+const size_t COMMON_ERROR_CASE_COUNT =
+        sizeof(COMMON_ERROR_CASES) / sizeof(COMMON_ERROR_CASES[0]);

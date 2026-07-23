@@ -34,9 +34,7 @@ static int test_runtime_init_rejects_repeat_and_auto_create_only(void)
     test_runtime_cleanup_root();
 
     memset(&cfg, 0, sizeof(cfg));
-    (void)snprintf(namespace_name,
-                   sizeof(namespace_name),
-                   "rt_auto_%ld",
+    (void)snprintf(namespace_name, sizeof(namespace_name), "rt_auto_%ld",
                    (long)getpid());
     cfg.default_namespace = namespace_name;
     cfg.auto_create = true;
@@ -59,28 +57,23 @@ static int test_runtime_init_rejects_repeat_and_auto_create_only(void)
 
 
 const test_case_t RUNTIME_LIFECYCLE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_LIFECYCLE,
+        TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_LIFECYCLE,
                              0x1),
-                  UT_CASE_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_LIFECYCLE,
-                             0x1,
-                             0x001),
+                  UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_LIFECYCLE,
+                             0x1, 0x001),
                   test_runtime_initial_state_is_not_initialized,
-                  "Runtime 初始状态",
-                  "确保 runtime 处于 deinit 状态",
+                  "Runtime 初始状态", "确保 runtime 处于 deinit 状态",
                   "未初始化且没有活动 namespace"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_LIFECYCLE,
+        TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_LIFECYCLE,
                              0x1),
-                  UT_CASE_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_LIFECYCLE,
-                             0x1,
-                             0x002),
+                  UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_LIFECYCLE,
+                             0x1, 0x002),
                   test_runtime_init_rejects_repeat_and_auto_create_only,
                   "Runtime 初始化边界",
                   "使用 auto_create 但不 auto_use 启动后重复 init",
-                  "namespace 被创建但未进入，重复初始化返回 RUNTIME/INIT/EALREADY"),
+                  "namespace 被创建但未进入，重复初始化返回 "
+                  "RUNTIME/INIT/EALREADY"),
 };
 
-const size_t RUNTIME_LIFECYCLE_CASE_COUNT = sizeof(RUNTIME_LIFECYCLE_CASES) / sizeof(RUNTIME_LIFECYCLE_CASES[0]);
+const size_t RUNTIME_LIFECYCLE_CASE_COUNT =
+        sizeof(RUNTIME_LIFECYCLE_CASES) / sizeof(RUNTIME_LIFECYCLE_CASES[0]);

@@ -67,17 +67,13 @@ static int test_namespace_rejects_invalid_inputs_and_deleting_edges(void)
     long_name[sizeof(long_name) - 1U] = 0;
 
     TEST_ASSERT_FALSE(fsc_namespace_name_is_valid(long_name));
-    TEST_ASSERT_EQ_INT(FSC_NAMESPACE_STATE_INVALID,
-                       fsc_namespace_state(NULL));
+    TEST_ASSERT_EQ_INT(FSC_NAMESPACE_STATE_INVALID, fsc_namespace_state(NULL));
     TEST_ASSERT_TRUE(fsc_namespace_state_can_transit(
-                    FSC_NAMESPACE_STATE_INIT,
-                    FSC_NAMESPACE_STATE_ACTIVE));
+            FSC_NAMESPACE_STATE_INIT, FSC_NAMESPACE_STATE_ACTIVE));
     TEST_ASSERT_TRUE(fsc_namespace_state_can_transit(
-                    FSC_NAMESPACE_STATE_ACTIVE,
-                    FSC_NAMESPACE_STATE_DELETING));
+            FSC_NAMESPACE_STATE_ACTIVE, FSC_NAMESPACE_STATE_DELETING));
     TEST_ASSERT_FALSE(fsc_namespace_state_can_transit(
-                    FSC_NAMESPACE_STATE_DELETING,
-                    FSC_NAMESPACE_STATE_ACTIVE));
+            FSC_NAMESPACE_STATE_DELETING, FSC_NAMESPACE_STATE_ACTIVE));
 
     err = fsc_namespace_init(NULL, fsid, "bad", &root, &handle);
     TEST_ASSERT_EQ_INT(FS_MODULE_FSC, fs_err_module(err));
@@ -110,34 +106,21 @@ static int test_namespace_rejects_invalid_inputs_and_deleting_edges(void)
 
 
 const test_case_t FSC_NAMESPACE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_NAMESPACE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_NAMESPACE,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_NAMESPACE, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_NAMESPACE, 0x1,
                              0x001),
                   test_namespace_init_state_and_deinit,
                   "Namespace 初始化和状态机",
                   "初始化后执行 INIT->ACTIVE，再尝试回退",
                   "合法迁移成功，非法迁移返回 EINVAL，deinit 后无效"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_NAMESPACE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_NAMESPACE,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_NAMESPACE, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_NAMESPACE, 0x1,
                              0x002),
                   test_namespace_rejects_invalid_root_fuid,
-                  "Namespace root 校验",
-                  "注入非目录 root 和 fsid 不匹配 root",
+                  "Namespace root 校验", "注入非目录 root 和 fsid 不匹配 root",
                   "返回 FSC/NAMESPACE/EINVAL"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_NAMESPACE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_NAMESPACE,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_NAMESPACE, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_NAMESPACE, 0x1,
                              0x003),
                   test_namespace_rejects_invalid_inputs_and_deleting_edges,
                   "Namespace 参数和删除态边界",
@@ -145,4 +128,5 @@ const test_case_t FSC_NAMESPACE_CASES[] = {
                   "非法输入返回 EINVAL，DELETING 仍是合法生命周期状态"),
 };
 
-const size_t FSC_NAMESPACE_CASE_COUNT = sizeof(FSC_NAMESPACE_CASES) / sizeof(FSC_NAMESPACE_CASES[0]);
+const size_t FSC_NAMESPACE_CASE_COUNT =
+        sizeof(FSC_NAMESPACE_CASES) / sizeof(FSC_NAMESPACE_CASES[0]);

@@ -23,7 +23,8 @@
 #include "object/object_init.h"
 
 /* FSC UT 按 src/fsc 子组件拆分，组件编号参与 0xMMCCLIII 用例编号。 */
-typedef enum test_fsc_component {
+typedef enum test_fsc_component
+{
     TEST_FSC_COMPONENT_ERROR = 0x01,
     TEST_FSC_COMPONENT_FSID = 0x02,
     TEST_FSC_COMPONENT_NAMESPACE = 0x03,
@@ -35,9 +36,9 @@ typedef enum test_fsc_component {
 } test_fsc_component_t;
 
 obj_handle_t test_fsc_make_root_handle(void);
-fuid_t       test_fsc_make_root_fuid(fsc_fsid_t fsid);
-void         test_fsc_prepare_temp_dir(void);
-void         test_fsc_cleanup_sysroot(const char *path);
+fuid_t test_fsc_make_root_fuid(fsc_fsid_t fsid);
+void test_fsc_prepare_temp_dir(void);
+void test_fsc_cleanup_sysroot(const char *path);
 
 extern const test_case_t FSC_ERROR_CASES[];
 extern const size_t FSC_ERROR_CASE_COUNT;

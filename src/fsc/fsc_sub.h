@@ -20,7 +20,8 @@
  * 例如 FSID 分配、Namespace 初始化、FSTable 插入、FSMgr 创建等。
  * fsc_error() 会把它编码进 fs_error_t 的 sub 字段。
  */
-typedef enum fsc_sub {
+typedef enum fsc_sub
+{
 
 #define FSC_SUB_ENUM(name, str) FSC_SUB_##name,
 
@@ -28,7 +29,7 @@ typedef enum fsc_sub {
 
 #undef FSC_SUB_ENUM
 
-    FSC_SUB_MAX
+            FSC_SUB_MAX
 
 } fsc_sub_t;
 

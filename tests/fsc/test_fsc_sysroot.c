@@ -60,8 +60,7 @@ static int test_sysroot_rejects_empty_and_accepts_absolute_path(void)
     TEST_ASSERT_FALSE(fsc_sysroot_is_active());
 
     TEST_ASSERT_TRUE(getcwd(cwd, sizeof(cwd)) != NULL);
-    TEST_ASSERT_TRUE(snprintf(abs_path,
-                              sizeof(abs_path),
+    TEST_ASSERT_TRUE(snprintf(abs_path, sizeof(abs_path),
                               "%s/../output/tests/fsc/sysroot-abs",
                               cwd) < (int)sizeof(abs_path));
     err = fsc_sysroot_init(abs_path);
@@ -76,28 +75,21 @@ static int test_sysroot_rejects_empty_and_accepts_absolute_path(void)
 
 
 const test_case_t FSC_SYSROOT_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_SYSROOT,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_SYSROOT,
-                             0x1,
-                             0x001),
-                  test_sysroot_custom_path_lifecycle_and_getters,
-                  "Sysroot 自定义路径生命周期",
-                  "使用 output/tests/fsc/sysroot 启动并注入未初始化/NULL getter",
-                  "启动后 active 且 FUID/handle 可读，非法 getter 返回 EINVAL"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_SYSROOT,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_SYSROOT,
-                             0x1,
-                             0x002),
-                  test_sysroot_rejects_empty_and_accepts_absolute_path,
-                  "Sysroot 空路径和绝对路径",
-                  "先传入空路径，再传入当前目录拼出的绝对路径",
-                  "空路径返回 EINVAL，绝对路径按原样保存并可反初始化"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_SYSROOT, 0x1),
+                UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_SYSROOT, 0x1, 0x001),
+                test_sysroot_custom_path_lifecycle_and_getters,
+                "Sysroot 自定义路径生命周期",
+                "使用 output/tests/fsc/sysroot 启动并注入未初始化/NULL getter",
+                "启动后 active 且 FUID/handle 可读，非法 getter 返回 EINVAL"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_SYSROOT, 0x1),
+                UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_SYSROOT, 0x1, 0x002),
+                test_sysroot_rejects_empty_and_accepts_absolute_path,
+                "Sysroot 空路径和绝对路径",
+                "先传入空路径，再传入当前目录拼出的绝对路径",
+                "空路径返回 EINVAL，绝对路径按原样保存并可反初始化"),
 };
 
-const size_t FSC_SYSROOT_CASE_COUNT = sizeof(FSC_SYSROOT_CASES) / sizeof(FSC_SYSROOT_CASES[0]);
+const size_t FSC_SYSROOT_CASE_COUNT =
+        sizeof(FSC_SYSROOT_CASES) / sizeof(FSC_SYSROOT_CASES[0]);

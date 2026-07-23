@@ -11,25 +11,25 @@
  * ============================================================
  */
 
-#define OBJ_SUB_TABLE(_)         \
-                                 \
-    _(NONE,     "NONE")          \
-                                 \
-    _(INIT,     "INIT")          \
-                                 \
-    _(CREATE,   "CREATE")        \
-    _(DELETE,   "DELETE")        \
-                                 \
-    _(LOOKUP,   "LOOKUP")        \
-    _(ALLOC,    "ALLOC")         \
-                                 \
-    _(INSERT,   "INSERT")        \
-    _(REMOVE,   "REMOVE")        \
-    _(HANDLE,   "HANDLE")        \
-                                 \
-    _(GET,      "GET")           \
-    _(PUT,      "PUT")           \
-    _(ACQUIRE,  "ACQUIRE")       \
-    _(RELEASE,  "RELEASE")       \
-                                 \
-    _(STATE,    "STATE")
+#define OBJ_SUB_TABLE(_)                                                       \
+                                                                               \
+    _(NONE, "NONE")                                                            \
+                                                                               \
+    _(INIT, "INIT")                                                            \
+                                                                               \
+    _(CREATE, "CREATE")                                                        \
+    _(DELETE, "DELETE")                                                        \
+                                                                               \
+    _(LOOKUP, "LOOKUP")                                                        \
+    _(ALLOC, "ALLOC")                                                          \
+                                                                               \
+    _(INSERT, "INSERT")                                                        \
+    _(REMOVE, "REMOVE")                                                        \
+    _(HANDLE, "HANDLE")                                                        \
+                                                                               \
+    _(GET, "GET")                                                              \
+    _(PUT, "PUT")                                                              \
+    _(ACQUIRE, "ACQUIRE")                                                      \
+    _(RELEASE, "RELEASE")                                                      \
+                                                                               \
+    _(STATE, "STATE")

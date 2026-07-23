@@ -37,19 +37,12 @@ static int test_fops_handle_from_lsa_checked_validates_mount_boundary(void)
     return 0;
 }
 
-const test_case_t FOPS_HANDLE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_HANDLE,
-                         0x1),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_HANDLE,
-                         0x1,
-                         0x001),
-              test_fops_handle_from_lsa_checked_validates_mount_boundary,
-              "FOPS handle 转换边界",
-              "NULL 输出、跨 mount、合法 LSA handle",
-              "非法参数返回 EINVAL/EXDEV，合法时完成字段转换")
-};
+const test_case_t FOPS_HANDLE_CASES[] = {TEST_CASE(
+        UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_HANDLE, 0x1),
+        UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_HANDLE, 0x1, 0x001),
+        test_fops_handle_from_lsa_checked_validates_mount_boundary,
+        "FOPS handle 转换边界", "NULL 输出、跨 mount、合法 LSA handle",
+        "非法参数返回 EINVAL/EXDEV，合法时完成字段转换")};
 
 const size_t FOPS_HANDLE_CASE_COUNT =
         sizeof(FOPS_HANDLE_CASES) / sizeof(FOPS_HANDLE_CASES[0]);

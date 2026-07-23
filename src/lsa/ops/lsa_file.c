@@ -11,17 +11,17 @@
  * ============================================================
  */
 
-lsa_ret_t lsa_close(
-                int fd)
+lsa_ret_t lsa_close(int fd)
 {
     lsa_ret_t err;
 
     FS_LOG_DUMP_INFO("enter: fd=%d", fd);
 
-    if (close(fd) < 0) {
+    if (close(fd) < 0)
+    {
         err = lsa_error(FS_OP_CLOSE, errno);
-        FS_LOG_DUMP_ERROR("close failed: fd=%d, err=%s (0x%x)",
-                          fd, fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("close failed: fd=%d, err=%s (0x%x)", fd,
+                          fs_error_str(err), err);
         return err;
     }
 
@@ -34,37 +34,34 @@ lsa_ret_t lsa_close(
  * ============================================================
  */
 
-lsa_ret_t lsa_read(
-                int fd,
-                void *buf,
-                size_t size,
-                size_t *actual)
+lsa_ret_t lsa_read(int fd, void *buf, size_t size, size_t *actual)
 {
     ssize_t ret;
     lsa_ret_t err;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         err = lsa_error(FS_OP_READ, EINVAL);
         FS_LOG_DUMP_ERROR("read: invalid argument (buf is NULL), "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
-    ret = read(
-                fd,
-                buf,
-                size);
+    ret = read(fd, buf, size);
 
-    if (ret < 0) {
+    if (ret < 0)
+    {
         err = lsa_error(FS_OP_READ, errno);
-        FS_LOG_DUMP_ERROR("read failed: fd=%d, size=%zu, err=%s (0x%x)",
-                          fd, size, fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("read failed: fd=%d, size=%zu, err=%s (0x%x)", fd,
+                          size, fs_error_str(err), err);
         return err;
     }
 
-    if (actual != NULL) {
+    if (actual != NULL)
+    {
         *actual = (size_t)ret;
     }
 
@@ -72,11 +69,7 @@ lsa_ret_t lsa_read(
     return FS_OK;
 }
 
-lsa_ret_t lsa_read_full(
-                int fd,
-                void *buf,
-                size_t size,
-                size_t *actual)
+lsa_ret_t lsa_read_full(int fd, void *buf, size_t size, size_t *actual)
 {
     uint8_t *cursor;
     size_t done;
@@ -85,23 +78,26 @@ lsa_ret_t lsa_read_full(
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         err = lsa_error(FS_OP_READ, EINVAL);
         FS_LOG_DUMP_ERROR("read_full: invalid argument (buf is NULL), "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
     cursor = buf;
     done = 0;
 
-    while (done < size) {
-        ret = read(fd,
-                   cursor + done,
-                   size - done);
+    while (done < size)
+    {
+        ret = read(fd, cursor + done, size - done);
 
-        if (ret < 0) {
-            if (errno == EINTR) {
+        if (ret < 0)
+        {
+            if (errno == EINTR)
+            {
                 continue;
             }
 
@@ -112,14 +108,16 @@ lsa_ret_t lsa_read_full(
             return err;
         }
 
-        if (ret == 0) {
+        if (ret == 0)
+        {
             break;
         }
 
         done += (size_t)ret;
     }
 
-    if (actual != NULL) {
+    if (actual != NULL)
+    {
         *actual = done;
     }
 
@@ -132,37 +130,34 @@ lsa_ret_t lsa_read_full(
  * ============================================================
  */
 
-lsa_ret_t lsa_write(
-                int fd,
-                const void *buf,
-                size_t size,
-                size_t *actual)
+lsa_ret_t lsa_write(int fd, const void *buf, size_t size, size_t *actual)
 {
     ssize_t ret;
     lsa_ret_t err;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         err = lsa_error(FS_OP_WRITE, EINVAL);
         FS_LOG_DUMP_ERROR("write: invalid argument (buf is NULL), "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
-    ret = write(
-                fd,
-                buf,
-                size);
+    ret = write(fd, buf, size);
 
-    if (ret < 0) {
+    if (ret < 0)
+    {
         err = lsa_error(FS_OP_WRITE, errno);
-        FS_LOG_DUMP_ERROR("write failed: fd=%d, size=%zu, err=%s (0x%x)",
-                          fd, size, fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("write failed: fd=%d, size=%zu, err=%s (0x%x)", fd,
+                          size, fs_error_str(err), err);
         return err;
     }
 
-    if (actual != NULL) {
+    if (actual != NULL)
+    {
         *actual = (size_t)ret;
     }
 
@@ -170,11 +165,7 @@ lsa_ret_t lsa_write(
     return FS_OK;
 }
 
-lsa_ret_t lsa_write_full(
-                int fd,
-                const void *buf,
-                size_t size,
-                size_t *actual)
+lsa_ret_t lsa_write_full(int fd, const void *buf, size_t size, size_t *actual)
 {
     const uint8_t *cursor;
     size_t done;
@@ -183,23 +174,26 @@ lsa_ret_t lsa_write_full(
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         err = lsa_error(FS_OP_WRITE, EINVAL);
         FS_LOG_DUMP_ERROR("write_full: invalid argument (buf is NULL), "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
     cursor = buf;
     done = 0;
 
-    while (done < size) {
-        ret = write(fd,
-                    cursor + done,
-                    size - done);
+    while (done < size)
+    {
+        ret = write(fd, cursor + done, size - done);
 
-        if (ret < 0) {
-            if (errno == EINTR) {
+        if (ret < 0)
+        {
+            if (errno == EINTR)
+            {
                 continue;
             }
 
@@ -210,7 +204,8 @@ lsa_ret_t lsa_write_full(
             return err;
         }
 
-        if (ret == 0) {
+        if (ret == 0)
+        {
             err = lsa_error(FS_OP_WRITE, EIO);
             FS_LOG_DUMP_ERROR("write_full stopped without progress: "
                               "fd=%d, done=%zu, size=%zu, err=%s (0x%x)",
@@ -221,7 +216,8 @@ lsa_ret_t lsa_write_full(
         done += (size_t)ret;
     }
 
-    if (actual != NULL) {
+    if (actual != NULL)
+    {
         *actual = done;
     }
 
@@ -234,33 +230,28 @@ lsa_ret_t lsa_write_full(
  * ============================================================
  */
 
-lsa_ret_t lsa_pread(
-                int fd,
-                void *buf,
-                size_t size,
-                off_t offset,
-                size_t *actual)
+lsa_ret_t lsa_pread(int fd, void *buf, size_t size, off_t offset,
+                    size_t *actual)
 {
     ssize_t ret;
     lsa_ret_t err;
 
-    FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu, offset=%ld",
-                     fd, size, (long)offset);
+    FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu, offset=%ld", fd, size,
+                     (long)offset);
 
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         err = lsa_error(FS_OP_READ, EINVAL);
         FS_LOG_DUMP_ERROR("pread: invalid argument (buf is NULL), "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
-    ret = pread(
-                fd,
-                buf,
-                size,
-                offset);
+    ret = pread(fd, buf, size, offset);
 
-    if (ret < 0) {
+    if (ret < 0)
+    {
         err = lsa_error(FS_OP_READ, errno);
         FS_LOG_DUMP_ERROR("pread failed: fd=%d, size=%zu, offset=%ld, "
                           "err=%s (0x%x)",
@@ -268,7 +259,8 @@ lsa_ret_t lsa_pread(
         return err;
     }
 
-    if (actual != NULL) {
+    if (actual != NULL)
+    {
         *actual = (size_t)ret;
     }
 
@@ -281,33 +273,28 @@ lsa_ret_t lsa_pread(
  * ============================================================
  */
 
-lsa_ret_t lsa_pwrite(
-                int fd,
-                const void *buf,
-                size_t size,
-                off_t offset,
-                size_t *actual)
+lsa_ret_t lsa_pwrite(int fd, const void *buf, size_t size, off_t offset,
+                     size_t *actual)
 {
     ssize_t ret;
     lsa_ret_t err;
 
-    FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu, offset=%ld",
-                     fd, size, (long)offset);
+    FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu, offset=%ld", fd, size,
+                     (long)offset);
 
-    if (buf == NULL) {
+    if (buf == NULL)
+    {
         err = lsa_error(FS_OP_WRITE, EINVAL);
         FS_LOG_DUMP_ERROR("pwrite: invalid argument (buf is NULL), "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
-    ret = pwrite(
-                fd,
-                buf,
-                size,
-                offset);
+    ret = pwrite(fd, buf, size, offset);
 
-    if (ret < 0) {
+    if (ret < 0)
+    {
         err = lsa_error(FS_OP_WRITE, errno);
         FS_LOG_DUMP_ERROR("pwrite failed: fd=%d, size=%zu, offset=%ld, "
                           "err=%s (0x%x)",
@@ -315,7 +302,8 @@ lsa_ret_t lsa_pwrite(
         return err;
     }
 
-    if (actual != NULL) {
+    if (actual != NULL)
+    {
         *actual = (size_t)ret;
     }
 
@@ -328,24 +316,18 @@ lsa_ret_t lsa_pwrite(
  * ============================================================
  */
 
-lsa_ret_t lsa_lseek(
-                int fd,
-                off_t offset,
-                int whence,
-                off_t *new_offset)
+lsa_ret_t lsa_lseek(int fd, off_t offset, int whence, off_t *new_offset)
 {
     off_t ret;
     lsa_ret_t err;
 
-    FS_LOG_DUMP_INFO("enter: fd=%d, offset=%ld, whence=%d",
-                     fd, (long)offset, whence);
+    FS_LOG_DUMP_INFO("enter: fd=%d, offset=%ld, whence=%d", fd, (long)offset,
+                     whence);
 
-    ret = lseek(
-                fd,
-                offset,
-                whence);
+    ret = lseek(fd, offset, whence);
 
-    if (ret < 0) {
+    if (ret < 0)
+    {
         err = lsa_error(FS_OP_NONE, errno);
         FS_LOG_DUMP_ERROR("lseek failed: fd=%d, offset=%ld, whence=%d, "
                           "err=%s (0x%x)",
@@ -353,7 +335,8 @@ lsa_ret_t lsa_lseek(
         return err;
     }
 
-    if (new_offset != NULL) {
+    if (new_offset != NULL)
+    {
         *new_offset = ret;
     }
 
@@ -366,17 +349,17 @@ lsa_ret_t lsa_lseek(
  * ============================================================
  */
 
-lsa_ret_t lsa_fsync(
-                int fd)
+lsa_ret_t lsa_fsync(int fd)
 {
     lsa_ret_t err;
 
     FS_LOG_DUMP_INFO("enter: fd=%d", fd);
 
-    if (fsync(fd) < 0) {
+    if (fsync(fd) < 0)
+    {
         err = lsa_error(FS_OP_WRITE, errno);
-        FS_LOG_DUMP_ERROR("fsync failed: fd=%d, err=%s (0x%x)",
-                          fd, fs_error_str(err), err);
+        FS_LOG_DUMP_ERROR("fsync failed: fd=%d, err=%s (0x%x)", fd,
+                          fs_error_str(err), err);
         return err;
     }
 
@@ -389,17 +372,14 @@ lsa_ret_t lsa_fsync(
  * ============================================================
  */
 
-lsa_ret_t lsa_ftruncate(
-                int fd,
-                off_t length)
+lsa_ret_t lsa_ftruncate(int fd, off_t length)
 {
     lsa_ret_t err;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, length=%ld", fd, (long)length);
 
-    if (ftruncate(
-                fd,
-                length) < 0) {
+    if (ftruncate(fd, length) < 0)
+    {
         err = lsa_error(FS_OP_TRUNCATE, errno);
         FS_LOG_DUMP_ERROR("ftruncate failed: fd=%d, length=%ld, "
                           "err=%s (0x%x)",

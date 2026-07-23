@@ -18,19 +18,12 @@ static int test_fops_make_child_fuid_inherits_parent_view(void)
     return 0;
 }
 
-const test_case_t FOPS_IDENTITY_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_IDENTITY,
-                         0x1),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_IDENTITY,
-                         0x1,
-                         0x001),
-              test_fops_make_child_fuid_inherits_parent_view,
-              "FOPS 子 FUID 构造",
-              "从父目录 FUID 派生普通文件 FUID",
-              "继承 fsid/view 字段并设置 child identity")
-};
+const test_case_t FOPS_IDENTITY_CASES[] = {TEST_CASE(
+        UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_IDENTITY, 0x1),
+        UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_IDENTITY, 0x1, 0x001),
+        test_fops_make_child_fuid_inherits_parent_view, "FOPS 子 FUID 构造",
+        "从父目录 FUID 派生普通文件 FUID",
+        "继承 fsid/view 字段并设置 child identity")};
 
 const size_t FOPS_IDENTITY_CASE_COUNT =
         sizeof(FOPS_IDENTITY_CASES) / sizeof(FOPS_IDENTITY_CASES[0]);

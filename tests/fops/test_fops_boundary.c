@@ -38,8 +38,8 @@ static int test_fops_boundary_parent_type_and_lookup_dot(void)
     memset(&attr, 0, sizeof(attr));
     attr.valid_mask = FOPS_CREATE_ATTR_SIZE;
     attr.size = 1U;
-    err = fops_mkdir_plus(&env.root_fuid, "bad_size", &attr,
-                          FS_FLAG_DIRECTORY, &result);
+    err = fops_mkdir_plus(&env.root_fuid, "bad_size", &attr, FS_FLAG_DIRECTORY,
+                          &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
     test_fops_env_teardown(&env);
@@ -77,8 +77,7 @@ static int test_fops_boundary_create_existing_flag_matrix(void)
     TEST_ASSERT_EQ_INT(fs_err_errno(err), EEXIST);
 
     err = fops_create_plus(&env.root_fuid, "existing.txt", NULL,
-                           FS_FLAG_REPLACE | FS_FLAG_TRUNCATE,
-                           &second);
+                           FS_FLAG_REPLACE | FS_FLAG_TRUNCATE, &second);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_EQ_INT(second.fuid.objectid, first.fuid.objectid);
 
@@ -86,11 +85,11 @@ static int test_fops_boundary_create_existing_flag_matrix(void)
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_EQ_INT(attr.size, 0U);
 
-    err = fops_mkdir_plus(&env.root_fuid, "as_dir", NULL,
-                          FS_FLAG_DIRECTORY, &dir_out);
+    err = fops_mkdir_plus(&env.root_fuid, "as_dir", NULL, FS_FLAG_DIRECTORY,
+                          &dir_out);
     TEST_ASSERT_EQ_INT(err, FS_OK);
-    err = fops_create_plus(&env.root_fuid, "as_dir", NULL,
-                           FS_FLAG_REPLACE, &second);
+    err = fops_create_plus(&env.root_fuid, "as_dir", NULL, FS_FLAG_REPLACE,
+                           &second);
     TEST_ASSERT_EQ_INT(fs_err_errno(err), EISDIR);
 
     err = fops_unlink(&env.root_fuid, "existing.txt", FS_FLAG_NONE);
@@ -111,8 +110,8 @@ static int test_fops_boundary_mkdir_existing_and_wrapper(void)
 
     TEST_ASSERT_EQ_INT(test_fops_env_setup(&env), 0);
 
-    err = fops_mkdir(&env.root_fuid, "child_dir", NULL,
-                     FS_FLAG_DIRECTORY, &out_fuid);
+    err = fops_mkdir(&env.root_fuid, "child_dir", NULL, FS_FLAG_DIRECTORY,
+                     &out_fuid);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_TRUE(fuid_is_dir(&out_fuid));
 
@@ -120,8 +119,7 @@ static int test_fops_boundary_mkdir_existing_and_wrapper(void)
                           FS_FLAG_EXCLUSIVE | FS_FLAG_DIRECTORY, &first);
     TEST_ASSERT_EQ_INT(fs_err_errno(err), EEXIST);
 
-    err = fops_mkdir_plus(&env.root_fuid, ".", NULL,
-                          FS_FLAG_DIRECTORY, &first);
+    err = fops_mkdir_plus(&env.root_fuid, ".", NULL, FS_FLAG_DIRECTORY, &first);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
     err = fops_rmdir(&env.root_fuid, "child_dir", FS_FLAG_DIRECTORY);
@@ -143,21 +141,21 @@ static int test_fops_boundary_link_and_rename_conflicts(void)
 
     TEST_ASSERT_EQ_INT(test_fops_env_setup(&env), 0);
 
-    err = fops_create_plus(&env.root_fuid, "base.txt", NULL,
-                           FS_FLAG_EXCLUSIVE, &base);
+    err = fops_create_plus(&env.root_fuid, "base.txt", NULL, FS_FLAG_EXCLUSIVE,
+                           &base);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     err = fops_create_plus(&env.root_fuid, "target.txt", NULL,
                            FS_FLAG_EXCLUSIVE, &target);
     TEST_ASSERT_EQ_INT(err, FS_OK);
 
-    err = fops_link(&env.root_fuid, "base.txt", &env.root_fuid,
-                    "ignored.txt", FS_FLAG_NONE, NULL);
+    err = fops_link(&env.root_fuid, "base.txt", &env.root_fuid, "ignored.txt",
+                    FS_FLAG_NONE, NULL);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
     cross_parent = env.root_fuid;
     cross_parent.fsid += 1U;
-    err = fops_link_plus(&env.root_fuid, "base.txt", &cross_parent,
-                         "cross.txt", FS_FLAG_NONE, &linked);
+    err = fops_link_plus(&env.root_fuid, "base.txt", &cross_parent, "cross.txt",
+                         FS_FLAG_NONE, &linked);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
     err = fops_link_plus(&env.root_fuid, "base.txt", &env.root_fuid,
@@ -172,19 +170,17 @@ static int test_fops_boundary_link_and_rename_conflicts(void)
                       "rename_missing.txt", FS_FLAG_NONE);
     TEST_ASSERT_EQ_INT(fs_err_errno(err), ENOENT);
 
-    err = fops_rename(&env.root_fuid, "base.txt", &env.root_fuid,
-                      "target.txt", FS_FLAG_NONE);
+    err = fops_rename(&env.root_fuid, "base.txt", &env.root_fuid, "target.txt",
+                      FS_FLAG_NONE);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EEXIST);
 
-    err = fops_rename(&env.root_fuid, "base.txt", &env.root_fuid,
-                      "target.txt", FS_FLAG_REPLACE);
+    err = fops_rename(&env.root_fuid, "base.txt", &env.root_fuid, "target.txt",
+                      FS_FLAG_REPLACE);
     TEST_ASSERT_EQ_INT(err, FS_OK);
 
-    err = fops_lookup(&env.root_fuid, "target.txt", FS_FLAG_REGULAR,
-                      &out_fuid);
+    err = fops_lookup(&env.root_fuid, "target.txt", FS_FLAG_REGULAR, &out_fuid);
     TEST_ASSERT_EQ_INT(err, FS_OK);
-    err = fops_lookup(&env.root_fuid, "base.txt", FS_FLAG_REGULAR,
-                      &out_fuid);
+    err = fops_lookup(&env.root_fuid, "base.txt", FS_FLAG_REGULAR, &out_fuid);
     TEST_ASSERT_EQ_INT(fs_err_errno(err), ENOENT);
 
     err = fops_unlink(&env.root_fuid, "target.txt", FS_FLAG_NONE);
@@ -216,20 +212,17 @@ static int test_fops_boundary_internal_helper_edges(void)
                                      FS_OP_LOOKUP);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
-    linux_flags = fops_linux_open_flags(FS_FLAG_READ | FS_FLAG_WRITE |
-                                        FS_FLAG_APPEND | FS_FLAG_TRUNCATE |
-                                        FS_FLAG_SYNC | FS_FLAG_DIRECT |
-                                        FS_FLAG_DIRECTORY);
+    linux_flags = fops_linux_open_flags(
+            FS_FLAG_READ | FS_FLAG_WRITE | FS_FLAG_APPEND | FS_FLAG_TRUNCATE |
+            FS_FLAG_SYNC | FS_FLAG_DIRECT | FS_FLAG_DIRECTORY);
     TEST_ASSERT_TRUE((linux_flags & O_DIRECT) != 0);
 
     TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_FIFO),
                        FUID_TYPE_FIFO);
     TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_SOCK),
                        FUID_TYPE_SOCK);
-    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_BLK),
-                       FUID_TYPE_BLK);
-    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_CHR),
-                       FUID_TYPE_CHR);
+    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_BLK), FUID_TYPE_BLK);
+    TEST_ASSERT_EQ_INT(fops_fuid_type_from_fs_type(FS_TYPE_CHR), FUID_TYPE_CHR);
 
     memset(&st, 0, sizeof(st));
     memset(&attr, 0xff, sizeof(attr));
@@ -291,9 +284,8 @@ static int test_fops_boundary_attr_handle_mknod_edges(void)
     TEST_ASSERT_EQ_INT(test_fops_env_setup(&env), 0);
 
     memset(&create_attr, 0, sizeof(create_attr));
-    create_attr.valid_mask = FOPS_CREATE_ATTR_MODE |
-                             FOPS_CREATE_ATTR_UID |
-                             FOPS_CREATE_ATTR_GID;
+    create_attr.valid_mask =
+            FOPS_CREATE_ATTR_MODE | FOPS_CREATE_ATTR_UID | FOPS_CREATE_ATTR_GID;
     create_attr.mode = 0640;
     create_attr.uid = getuid();
     create_attr.gid = getgid();
@@ -302,10 +294,8 @@ static int test_fops_boundary_attr_handle_mknod_edges(void)
     TEST_ASSERT_EQ_INT(err, FS_OK);
 
     memset(&setattr, 0, sizeof(setattr));
-    setattr.valid_mask = FOPS_SETATTR_MODE |
-                         FOPS_SETATTR_UID |
-                         FOPS_SETATTR_GID |
-                         FOPS_SETATTR_SIZE;
+    setattr.valid_mask = FOPS_SETATTR_MODE | FOPS_SETATTR_UID |
+                         FOPS_SETATTR_GID | FOPS_SETATTR_SIZE;
     setattr.mode = 0600;
     setattr.uid = getuid();
     setattr.gid = getgid();
@@ -325,8 +315,8 @@ static int test_fops_boundary_attr_handle_mknod_edges(void)
 
     entry_nr = 1U;
     eof = true;
-    err = fops_readdir(&created.fuid, FS_FLAG_NONE, entries,
-                       1U, &entry_nr, &eof);
+    err = fops_readdir(&created.fuid, FS_FLAG_NONE, entries, 1U, &entry_nr,
+                       &eof);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, ENOTDIR);
 
     err = fops_getattr(&created.fuid, FS_FLAG_DIRECTORY, &attr);
@@ -368,8 +358,7 @@ static int test_fops_boundary_attr_handle_mknod_edges(void)
     err = fops_mknod_plus(&req, &fifo_result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EEXIST);
 
-    (void)snprintf(fifo_path, sizeof(fifo_path), "%s/%s", env.path,
-                   req.name);
+    (void)snprintf(fifo_path, sizeof(fifo_path), "%s/%s", env.path, req.name);
     (void)unlink(fifo_path);
     err = fops_unlink(&env.root_fuid, "owned.txt", FS_FLAG_NONE);
     TEST_ASSERT_EQ_INT(err, FS_OK);
@@ -399,31 +388,29 @@ static int test_fops_boundary_wrapper_and_validation_edges(void)
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_TRUE(fuid_is_file(&file_fuid));
 
-    err = fops_symlink(&env.root_fuid, "sym_wrapper",
-                       "wrapper_create.txt", FS_FLAG_EXCLUSIVE,
-                       &sym_fuid);
+    err = fops_symlink(&env.root_fuid, "sym_wrapper", "wrapper_create.txt",
+                       FS_FLAG_EXCLUSIVE, &sym_fuid);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_TRUE(fuid_is_symlink(&sym_fuid));
 
     memset(&result, 0, sizeof(result));
-    err = fops_symlink_plus(&env.root_fuid, "sym_wrapper",
-                            "wrapper_create.txt", FS_FLAG_EXCLUSIVE,
-                            &result);
+    err = fops_symlink_plus(&env.root_fuid, "sym_wrapper", "wrapper_create.txt",
+                            FS_FLAG_EXCLUSIVE, &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EEXIST);
 
     actual = 99U;
-    err = fops_readlink(&env.root_fuid, "sym_wrapper", FS_FLAG_NONE,
-                        NULL, sizeof(link_buf), &actual);
+    err = fops_readlink(&env.root_fuid, "sym_wrapper", FS_FLAG_NONE, NULL,
+                        sizeof(link_buf), &actual);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
     TEST_ASSERT_EQ_INT(actual, 0U);
 
-    err = fops_readlink(&env.root_fuid, "bad/name", FS_FLAG_NONE,
-                        link_buf, sizeof(link_buf), &actual);
+    err = fops_readlink(&env.root_fuid, "bad/name", FS_FLAG_NONE, link_buf,
+                        sizeof(link_buf), &actual);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
     memset(link_buf, 0, sizeof(link_buf));
-    err = fops_readlink(&env.root_fuid, "sym_wrapper", FS_FLAG_NONE,
-                        link_buf, sizeof(link_buf), &actual);
+    err = fops_readlink(&env.root_fuid, "sym_wrapper", FS_FLAG_NONE, link_buf,
+                        sizeof(link_buf), &actual);
     TEST_ASSERT_EQ_INT(err, FS_OK);
     TEST_ASSERT_TRUE(actual > 0U);
 
@@ -465,54 +452,50 @@ static int test_fops_boundary_wrapper_and_validation_edges(void)
     err = fops_mknod_plus(&req, &result);
     TEST_ASSERT_TRUE((err == FS_OK) || fs_failed(err));
 
-    if (err == FS_OK) {
+    if (err == FS_OK)
+    {
         err = fops_unlink(&env.root_fuid, "char_device", FS_FLAG_NONE);
         TEST_ASSERT_EQ_INT(err, FS_OK);
     }
 
-    err = fops_link_plus(&env.root_fuid, "wrapper_create.txt",
-                         &env.root_fuid, "bad_link", 0x80000000U,
-                         &result);
+    err = fops_link_plus(&env.root_fuid, "wrapper_create.txt", &env.root_fuid,
+                         "bad_link", 0x80000000U, &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
-    err = fops_link_plus(&env.root_fuid, "bad/name",
-                         &env.root_fuid, "bad_link", FS_FLAG_NONE,
-                         &result);
-    TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
-
-    err = fops_link_plus(&env.root_fuid, "wrapper_create.txt",
-                         &env.root_fuid, "bad/name", FS_FLAG_NONE,
-                         &result);
-    TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
-
-    err = fops_link_plus(&file_fuid, "missing",
-                         &env.root_fuid, "old_parent_file",
+    err = fops_link_plus(&env.root_fuid, "bad/name", &env.root_fuid, "bad_link",
                          FS_FLAG_NONE, &result);
+    TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
+
+    err = fops_link_plus(&env.root_fuid, "wrapper_create.txt", &env.root_fuid,
+                         "bad/name", FS_FLAG_NONE, &result);
+    TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
+
+    err = fops_link_plus(&file_fuid, "missing", &env.root_fuid,
+                         "old_parent_file", FS_FLAG_NONE, &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, ENOTDIR);
 
-    err = fops_link_plus(&env.root_fuid, "wrapper_create.txt",
-                         &file_fuid, "new_parent_file", FS_FLAG_NONE,
-                         &result);
+    err = fops_link_plus(&env.root_fuid, "wrapper_create.txt", &file_fuid,
+                         "new_parent_file", FS_FLAG_NONE, &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, ENOTDIR);
 
-    err = fops_symlink_plus(&env.root_fuid, "target_null", NULL,
-                            FS_FLAG_NONE, &result);
+    err = fops_symlink_plus(&env.root_fuid, "target_null", NULL, FS_FLAG_NONE,
+                            &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
     err = fops_symlink_plus(&env.root_fuid, "bad_flag_sym", "target",
                             0x80000000U, &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
-    err = fops_symlink_plus(&env.root_fuid, "bad/name", "target",
-                            FS_FLAG_NONE, &result);
+    err = fops_symlink_plus(&env.root_fuid, "bad/name", "target", FS_FLAG_NONE,
+                            &result);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
-    err = fops_symlink(&env.root_fuid, "bad/name", "target",
-                       FS_FLAG_NONE, &sym_fuid);
+    err = fops_symlink(&env.root_fuid, "bad/name", "target", FS_FLAG_NONE,
+                       &sym_fuid);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, EINVAL);
 
-    err = fops_readlink(&file_fuid, "sym_wrapper", FS_FLAG_NONE,
-                        link_buf, sizeof(link_buf), &actual);
+    err = fops_readlink(&file_fuid, "sym_wrapper", FS_FLAG_NONE, link_buf,
+                        sizeof(link_buf), &actual);
     TEST_FOPS_EXPECT_FOPS_ERRNO(err, ENOTDIR);
 
     err = fops_unlink(&env.root_fuid, "sym_wrapper", FS_FLAG_NONE);
@@ -525,90 +508,68 @@ static int test_fops_boundary_wrapper_and_validation_edges(void)
 }
 
 const test_case_t FOPS_BOUNDARY_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x1),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x1,
-                         0x001),
-              test_fops_boundary_parent_type_and_lookup_dot,
-              "FOPS 父对象类型与点目录边界",
-              "注入非目录父 FUID、点目录 lookup、wrapper 输出参数为空和 mkdir size attr",
-              "非法父对象和非法输出被拒绝，点目录按类型约束返回预期结果"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x2),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x2,
-                         0x001),
-              test_fops_boundary_create_existing_flag_matrix,
-              "FOPS create 已存在目标 flag 矩阵",
-              "同一文件分别使用 EXCLUSIVE、REPLACE/TRUNCATE，并对目录执行 REPLACE create",
-              "已存在文件按 flag 返回 EEXIST 或复用并截断，目录类型冲突返回 EISDIR"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x3),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x3,
-                         0x001),
-              test_fops_boundary_mkdir_existing_and_wrapper,
-              "FOPS mkdir 已存在和 wrapper 边界",
-              "通过 wrapper 创建目录，再重复 mkdir 和使用点目录名称",
-              "首次创建成功，重复创建返回 EEXIST，非法名称在 syscall 前被拒绝"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x4),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x4,
-                         0x001),
-              test_fops_boundary_link_and_rename_conflicts,
-              "FOPS link/rename 冲突矩阵",
-              "注入空输出、跨 fsid、缺失 source、已存在 target 和 REPLACE rename",
-              "link/rename 按冲突类型返回结构化错误，REPLACE 成功替换目标"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x1),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x1,
+                             0x001),
+                  test_fops_boundary_parent_type_and_lookup_dot,
+                  "FOPS 父对象类型与点目录边界",
+                  "注入非目录父 FUID、点目录 lookup、wrapper 输出参数为空和 "
+                  "mkdir size attr",
+                  "非法父对象和非法输出被拒绝，点目录按类型约束返回预期结果"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x2),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x2,
+                             0x001),
+                  test_fops_boundary_create_existing_flag_matrix,
+                  "FOPS create 已存在目标 flag 矩阵",
+                  "同一文件分别使用 EXCLUSIVE、REPLACE/TRUNCATE，并对目录执行 "
+                  "REPLACE create",
+                  "已存在文件按 flag 返回 EEXIST "
+                  "或复用并截断，目录类型冲突返回 EISDIR"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x3),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x3,
+                             0x001),
+                  test_fops_boundary_mkdir_existing_and_wrapper,
+                  "FOPS mkdir 已存在和 wrapper 边界",
+                  "通过 wrapper 创建目录，再重复 mkdir 和使用点目录名称",
+                  "首次创建成功，重复创建返回 EEXIST，非法名称在 syscall "
+                  "前被拒绝"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x4),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x4,
+                             0x001),
+                  test_fops_boundary_link_and_rename_conflicts,
+                  "FOPS link/rename 冲突矩阵",
+                  "注入空输出、跨 fsid、缺失 source、已存在 target 和 REPLACE "
+                  "rename",
+                  "link/rename 按冲突类型返回结构化错误，REPLACE 成功替换目标"),
 
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x5),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x5,
-                         0x001),
-              test_fops_boundary_internal_helper_edges,
-              "FOPS helper 内部边界",
-              "注入未知 flag、互斥类型 flag、"
-              "空 handle 输入、无效 FUID 和缺失对象",
-              "helper 函数在 syscall 前返回结构化错误，"
-              "DIRECT/FIFO/SOCK/BLK/CHR 映射符合预期"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x6),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x6,
-                         0x001),
-              test_fops_boundary_attr_handle_mknod_edges,
-              "FOPS attr/handle/mknod 综合边界",
-              "使用真实 LSA 临时目录注入 UID/GID setattr、"
-              "类型冲突 open/openhandle 和 FIFO mknod wrapper",
-              "属性修改成功，类型冲突返回 ENOTDIR，"
-              "FIFO wrapper 创建成功且重复创建被拒绝"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x5),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x5,
+                             0x001),
+                  test_fops_boundary_internal_helper_edges,
+                  "FOPS helper 内部边界",
+                  "注入未知 flag、互斥类型 flag、"
+                  "空 handle 输入、无效 FUID 和缺失对象",
+                  "helper 函数在 syscall 前返回结构化错误，"
+                  "DIRECT/FIFO/SOCK/BLK/CHR 映射符合预期"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x6),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x6,
+                             0x001),
+                  test_fops_boundary_attr_handle_mknod_edges,
+                  "FOPS attr/handle/mknod 综合边界",
+                  "使用真实 LSA 临时目录注入 UID/GID setattr、"
+                  "类型冲突 open/openhandle 和 FIFO mknod wrapper",
+                  "属性修改成功，类型冲突返回 ENOTDIR，"
+                  "FIFO wrapper 创建成功且重复创建被拒绝"),
 
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x7),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_BOUNDARY,
-                         0x7,
-                         0x001),
-              test_fops_boundary_wrapper_and_validation_edges,
-              "FOPS wrapper 与校验边界",
-              "注入 create/symlink/readlink/mknod wrapper 成功与早期校验异常",
-              "wrapper 返回 FUID，重复 symlink 返回 EEXIST，"
-              "mknod 非法 flag/attr/name/out 在 syscall 前被拒绝"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x7),
+                UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_BOUNDARY, 0x7,
+                           0x001),
+                test_fops_boundary_wrapper_and_validation_edges,
+                "FOPS wrapper 与校验边界",
+                "注入 create/symlink/readlink/mknod wrapper 成功与早期校验异常",
+                "wrapper 返回 FUID，重复 symlink 返回 EEXIST，"
+                "mknod 非法 flag/attr/name/out 在 syscall 前被拒绝"),
 };
 
 const size_t FOPS_BOUNDARY_CASE_COUNT =

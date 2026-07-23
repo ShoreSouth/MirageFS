@@ -10,8 +10,8 @@
 
 #define NAMEI_SYMLINK_MAX 40U
 
-typedef struct namei_ctx {
-
+typedef struct namei_ctx
+{
     fuid_t root_fuid;
     fuid_t cwd_fuid;
 
@@ -19,16 +19,16 @@ typedef struct namei_ctx {
 
 } namei_ctx_t;
 
-typedef struct namei_parent_result {
-
+typedef struct namei_parent_result
+{
     fuid_t parent_fuid;
     char name[FS_MAX_NAME_LEN + 1U];
 
 } namei_parent_result_t;
 
 /* 目录读取参数，避免公开 API 参数过长。 */
-typedef struct namei_readdir_args {
-
+typedef struct namei_readdir_args
+{
     fops_dirent_t *entries;
     uint32_t entry_cap;
     uint32_t *out_entry_nr;
@@ -37,8 +37,8 @@ typedef struct namei_readdir_args {
 } namei_readdir_args_t;
 
 /* 带属性的目录读取参数。 */
-typedef struct namei_readdirplus_args {
-
+typedef struct namei_readdirplus_args
+{
     fops_dirent_plus_t *entries;
     uint32_t entry_cap;
     uint32_t *out_entry_nr;

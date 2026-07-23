@@ -18,8 +18,8 @@
  * ============================================================
  */
 
-typedef struct ns_pool {
-
+typedef struct ns_pool
+{
     fs_mempool_t *namespace_pool;
 
 } ns_pool_t;
@@ -46,7 +46,8 @@ fs_error_t nspool_init(void)
     cfg.flags = FS_MP_F_THREAD_SAFE;
 
     g_nspool.namespace_pool = fs_mp_create(&cfg);
-    if (g_nspool.namespace_pool == NULL) {
+    if (g_nspool.namespace_pool == NULL)
+    {
         err = fsc_error(FSC_SUB_NSPOOL, FS_ERRNO_ENOMEM);
         FS_LOG_DUMP_ERROR("create namespace pool failed, err=%s (0x%x)",
                           fs_error_str(err), err);
@@ -61,7 +62,8 @@ void nspool_deinit(void)
 {
     FS_LOG_DUMP_INFO("enter");
 
-    if (g_nspool.namespace_pool != NULL) {
+    if (g_nspool.namespace_pool != NULL)
+    {
         fs_mp_destroy(g_nspool.namespace_pool);
         g_nspool.namespace_pool = NULL;
     }
@@ -82,7 +84,8 @@ fsc_namespace_t *nspool_alloc(void)
 
     FS_LOG_DUMP_INFO("enter");
 
-    if (g_nspool.namespace_pool == NULL) {
+    if (g_nspool.namespace_pool == NULL)
+    {
         err = fsc_error(FSC_SUB_ALLOC, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("namespace pool not initialized, err=%s (0x%x)",
                           fs_error_str(err), err);
@@ -90,7 +93,8 @@ fsc_namespace_t *nspool_alloc(void)
     }
 
     ns = fs_mp_calloc(g_nspool.namespace_pool, 1, sizeof(*ns));
-    if (ns == NULL) {
+    if (ns == NULL)
+    {
         err = fsc_error(FSC_SUB_ALLOC, FS_ERRNO_ENOMEM);
         FS_LOG_DUMP_ERROR("allocate namespace failed, err=%s (0x%x)",
                           fs_error_str(err), err);
@@ -101,12 +105,12 @@ fsc_namespace_t *nspool_alloc(void)
     return ns;
 }
 
-void nspool_free(
-                fsc_namespace_t *ns)
+void nspool_free(fsc_namespace_t *ns)
 {
     FS_LOG_DUMP_INFO("enter: ns=%p", (void *)ns);
 
-    if (ns == NULL) {
+    if (ns == NULL)
+    {
         FS_LOG_DUMP_INFO("exit: ns is NULL");
         return;
     }

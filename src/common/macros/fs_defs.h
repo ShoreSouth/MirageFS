@@ -9,10 +9,10 @@
  * 基础容量单位
  * ============================================================ */
 
-#define FS_KB                  (1024UL)
-#define FS_MB                  (1024UL * FS_KB)
-#define FS_GB                  (1024UL * FS_MB)
-#define FS_TB                  (1024UL * FS_GB)
+#define FS_KB (1024UL)
+#define FS_MB (1024UL * FS_KB)
+#define FS_GB (1024UL * FS_MB)
+#define FS_TB (1024UL * FS_GB)
 
 /* ============================================================
  * Page 定义
@@ -24,10 +24,10 @@
  * PAGE_SHIFT:
  *      2^12 = 4096
  */
-#define MP_PAGE_SHIFT          (12UL)
+#define MP_PAGE_SHIFT (12UL)
 
-#define MP_PAGE_SIZE           (1UL << MP_PAGE_SHIFT)
-#define MP_PAGE_MASK           (MP_PAGE_SIZE - 1)
+#define MP_PAGE_SIZE (1UL << MP_PAGE_SHIFT)
+#define MP_PAGE_MASK (MP_PAGE_SIZE - 1)
 
 /* ============================================================
  * Buddy Allocator 定义
@@ -41,12 +41,12 @@
  * ...
  * order 10 -> 4MB
  */
-#define MP_MAX_ORDER           (10U)
+#define MP_MAX_ORDER (10U)
 
 /*
  * 最大 block 大小
  */
-#define MP_MAX_BLOCK_SIZE      (MP_PAGE_SIZE << MP_MAX_ORDER)
+#define MP_MAX_BLOCK_SIZE (MP_PAGE_SIZE << MP_MAX_ORDER)
 
 /* ============================================================
  * 文件系统基础限制
@@ -56,12 +56,12 @@
  * 文件名最大长度
  * 不含 '\0'
  */
-#define FS_MAX_NAME_LEN                (255U)
+#define FS_MAX_NAME_LEN (255U)
 
 /*
  * 路径最大长度
  */
-#define FS_MAX_PATH_LEN                (4096U)
+#define FS_MAX_PATH_LEN (4096U)
 
 /* ============================================================
  * 默认配置
@@ -71,10 +71,10 @@
  * 默认内存池大小:
  * 128MB
  */
-#define FS_DEFAULT_MEMPOOL_SIZE    (128UL * FS_MB)
+#define FS_DEFAULT_MEMPOOL_SIZE (128UL * FS_MB)
 
 /*
  * 默认工作线程数量:
  * 暂时固定为1
  */
-#define FS_DEFAULT_WORKER_NR       (1)
+#define FS_DEFAULT_WORKER_NR (1)

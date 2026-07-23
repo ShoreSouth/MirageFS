@@ -3,7 +3,7 @@
 static int test_msh_meta_dispatch_and_main_errors(void)
 {
     msh_context_t ctx;
-    char *bad_argv[] = { "msh", "--bad" };
+    char *bad_argv[] = {"msh", "--bad"};
 
     memset(&ctx, 0, sizeof(ctx));
     /* meta 命令不依赖 runtime 会话；quit 只改变 context 的退出标志。 */
@@ -31,9 +31,7 @@ static int test_msh_fs_commands_manage_namespace(void)
     test_msh_cleanup_root();
     memset(&ctx, 0, sizeof(ctx));
     TEST_ASSERT_EQ_INT(runtime_init(NULL), FS_OK);
-    (void)snprintf(namespace_name,
-                   sizeof(namespace_name),
-                   "msh_%ld",
+    (void)snprintf(namespace_name, sizeof(namespace_name), "msh_%ld",
                    (long)getpid());
 
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs current"), 0);
@@ -52,8 +50,7 @@ static int test_msh_fs_commands_manage_namespace(void)
                        namespace_name);
         TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 0);
         TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 1);
-        (void)snprintf(command, sizeof(command), "fs use %s",
-                       namespace_name);
+        (void)snprintf(command, sizeof(command), "fs use %s", namespace_name);
         TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 0);
     }
 
@@ -82,9 +79,7 @@ static int test_msh_file_commands_round_trip(void)
     test_msh_cleanup_root();
     memset(&ctx, 0, sizeof(ctx));
     memset(&cfg, 0, sizeof(cfg));
-    (void)snprintf(namespace_name,
-                   sizeof(namespace_name),
-                   "msh_%ld",
+    (void)snprintf(namespace_name, sizeof(namespace_name), "msh_%ld",
                    (long)getpid());
     cfg.default_namespace = namespace_name;
     cfg.auto_create = true;
@@ -106,14 +101,12 @@ static int test_msh_file_commands_round_trip(void)
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "ll /dir/file.txt"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rm /dir"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rmdir /dir/file.txt"), 1);
-    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx,
-                                         "mv /dir/file.txt /missing/file.txt"),
-                       1);
+    TEST_ASSERT_EQ_INT(
+            test_msh_run_line(&ctx, "mv /dir/file.txt /missing/file.txt"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "cd /dir"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "pwd"), 0);
-    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx,
-                                         "mv /dir/file.txt /dir/moved.txt"),
-                       0);
+    TEST_ASSERT_EQ_INT(
+            test_msh_run_line(&ctx, "mv /dir/file.txt /dir/moved.txt"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rm /dir/moved.txt"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "cd /"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rmdir /dir"), 0);
@@ -176,9 +169,9 @@ static int test_msh_repl_handles_eof_errors_and_long_lines(void)
 static int test_msh_main_command_argument_paths(void)
 {
     char long_arg[MSH_LINE_MAX + 8U];
-    char *version_argv[] = { "msh", "-c", "version" };
-    char *unknown_argv[] = { "msh", "-c", "unknown" };
-    char *long_argv[] = { "msh", "-c", long_arg };
+    char *version_argv[] = {"msh", "-c", "version"};
+    char *unknown_argv[] = {"msh", "-c", "unknown"};
+    char *long_argv[] = {"msh", "-c", long_arg};
 
     runtime_deinit();
     test_msh_cleanup_root();
@@ -199,72 +192,47 @@ static int test_msh_main_command_argument_paths(void)
 
 
 const test_case_t MSH_COMMAND_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1,
-                             0x001),
-                  test_msh_meta_dispatch_and_main_errors,
-                  "MSH meta 命令和入口错误",
-                  "执行 help/version/quit/unknown，并向 main 注入非法参数",
-                  "元命令成功，未知命令和非法 argv 返回失败"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1,
-                             0x002),
-                  test_msh_fs_commands_manage_namespace,
-                  "MSH fs 命令 namespace 生命周期",
-                  "通过 fs create/use/current/leave 管理真实 namespace",
-                  "namespace 可创建、进入、查询、退出并销毁"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1,
-                             0x003),
-                  test_msh_file_commands_round_trip,
-                  "MSH 文件命令回环",
-                  "进入真实 namespace 后执行 pwd/mkdir/touch/stat/ls/ll/cd/mv/rm/rmdir",
-                  "文件命令经 runtime 主链路成功完成并清理 namespace"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1,
-                             0x004),
-                  test_msh_command_error_paths,
-                  "MSH 命令错误路径",
-                  "注入无会话、缺参数、过多参数、缺失 namespace 和幂等 leave",
-                  "错误输入返回失败，幂等 leave 成功且 runtime 可正常反初始化"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1,
-                             0x005),
-                  test_msh_repl_handles_eof_errors_and_long_lines,
-                  "MSH REPL 输入循环边界",
-                  "注入 EOF、未知命令、交互模式继续执行和超长输入行",
-                  "REPL 按交互/非交互语义返回，超长行被消费后继续到 EOF"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_MSH,
-                             TEST_MSH_COMPONENT_COMMAND,
-                             0x1,
-                             0x006),
-                  test_msh_main_command_argument_paths,
-                  "MSH -c 命令入口",
-                  "通过 msh_main 执行成功命令、未知命令和超长命令参数",
-                  "-c 成功时返回 0，命令失败或命令过长时返回 1"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1),
+                UT_CASE_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1, 0x001),
+                test_msh_meta_dispatch_and_main_errors,
+                "MSH meta 命令和入口错误",
+                "执行 help/version/quit/unknown，并向 main 注入非法参数",
+                "元命令成功，未知命令和非法 argv 返回失败"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1),
+                UT_CASE_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1, 0x002),
+                test_msh_fs_commands_manage_namespace,
+                "MSH fs 命令 namespace 生命周期",
+                "通过 fs create/use/current/leave 管理真实 namespace",
+                "namespace 可创建、进入、查询、退出并销毁"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1),
+                UT_CASE_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1, 0x003),
+                test_msh_file_commands_round_trip, "MSH 文件命令回环",
+                "进入真实 namespace 后执行 "
+                "pwd/mkdir/touch/stat/ls/ll/cd/mv/rm/rmdir",
+                "文件命令经 runtime 主链路成功完成并清理 namespace"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1),
+                UT_CASE_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1, 0x004),
+                test_msh_command_error_paths, "MSH 命令错误路径",
+                "注入无会话、缺参数、过多参数、缺失 namespace 和幂等 leave",
+                "错误输入返回失败，幂等 leave 成功且 runtime 可正常反初始化"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1),
+                UT_CASE_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1, 0x005),
+                test_msh_repl_handles_eof_errors_and_long_lines,
+                "MSH REPL 输入循环边界",
+                "注入 EOF、未知命令、交互模式继续执行和超长输入行",
+                "REPL 按交互/非交互语义返回，超长行被消费后继续到 EOF"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1),
+                UT_CASE_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1, 0x006),
+                test_msh_main_command_argument_paths, "MSH -c 命令入口",
+                "通过 msh_main 执行成功命令、未知命令和超长命令参数",
+                "-c 成功时返回 0，命令失败或命令过长时返回 1"),
 };
 
-const size_t MSH_COMMAND_CASE_COUNT = sizeof(MSH_COMMAND_CASES) / sizeof(MSH_COMMAND_CASES[0]);
+const size_t MSH_COMMAND_CASE_COUNT =
+        sizeof(MSH_COMMAND_CASES) / sizeof(MSH_COMMAND_CASES[0]);

@@ -19,22 +19,22 @@ fs_error_t object_init(void)
     /*
      * 注册 COMMON 模块的 sub-error → name 转换函数。
      */
-    fs_sub_register(FS_MODULE_COMMON,
-                    (fs_sub_name_fn)fs_common_sub_name);
+    fs_sub_register(FS_MODULE_COMMON, (fs_sub_name_fn)fs_common_sub_name);
 
     /*
      * 注册 Object Layer 的 sub-error → name 转换函数。
      */
-    fs_sub_register(FS_MODULE_OBJECT,
-                    (fs_sub_name_fn)obj_sub_name);
+    fs_sub_register(FS_MODULE_OBJECT, (fs_sub_name_fn)obj_sub_name);
 
     ret = objpool_init();
-    if (ret != FS_OK) {
+    if (ret != FS_OK)
+    {
         return ret;
     }
 
     ret = objmgr_init();
-    if (ret != FS_OK) {
+    if (ret != FS_OK)
+    {
         objpool_deinit();
         return ret;
     }

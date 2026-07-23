@@ -18,7 +18,7 @@
  * 当前支持约 4096 个 obj_runtime_t。
  * 后续可改为配置文件读取。
  */
-#define OBJPOOL_DEFAULT_OBJECTS    4096U
+#define OBJPOOL_DEFAULT_OBJECTS 4096U
 
 /*
  * ============================================================
@@ -50,33 +50,25 @@ fs_error_t objpool_init(void)
 
     memset(&cfg, 0, sizeof(cfg));
 
-    cfg.total_size =
-            sizeof(obj_runtime_t) *
-            OBJPOOL_DEFAULT_OBJECTS;
+    cfg.total_size = sizeof(obj_runtime_t) * OBJPOOL_DEFAULT_OBJECTS;
 
     cfg.max_order = FS_MP_MAX_ORDER;
 
     cfg.flags = FS_MP_F_THREAD_SAFE;
 
-    g_objpool.meta_pool =
-            fs_mp_create(&cfg);
+    g_objpool.meta_pool = fs_mp_create(&cfg);
 
-    if (g_objpool.meta_pool == NULL) {
+    if (g_objpool.meta_pool == NULL)
+    {
+        err = obj_error(OBJ_SUB_INIT, ENOMEM);
 
-        err = obj_error(
-                    OBJ_SUB_INIT,
-                    ENOMEM);
-
-        FS_LOG_DUMP_ERROR(
-                "create obj runtime pool failed, err=%s (0x%x)",
-                fs_error_str(err),
-                err);
+        FS_LOG_DUMP_ERROR("create obj runtime pool failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
 
         return err;
     }
 
-    FS_LOG_DUMP_INFO(
-            "exit: ok");
+    FS_LOG_DUMP_INFO("exit: ok");
 
     return FS_OK;
 }
@@ -85,10 +77,9 @@ void objpool_deinit(void)
 {
     FS_LOG_DUMP_INFO("enter");
 
-    if (g_objpool.meta_pool != NULL) {
-
-        fs_mp_destroy(
-                g_objpool.meta_pool);
+    if (g_objpool.meta_pool != NULL)
+    {
+        fs_mp_destroy(g_objpool.meta_pool);
 
         g_objpool.meta_pool = NULL;
     }
@@ -110,64 +101,45 @@ obj_runtime_t *objpool_alloc(void)
 
     FS_LOG_DUMP_INFO("enter");
 
-    if (g_objpool.meta_pool == NULL) {
+    if (g_objpool.meta_pool == NULL)
+    {
+        err = obj_error(OBJ_SUB_CREATE, EINVAL);
 
-        err = obj_error(
-                    OBJ_SUB_CREATE,
-                    EINVAL);
-
-        FS_LOG_DUMP_ERROR(
-                "obj pool not initialized, err=%s (0x%x)",
-                fs_error_str(err),
-                err);
+        FS_LOG_DUMP_ERROR("obj pool not initialized, err=%s (0x%x)",
+                          fs_error_str(err), err);
 
         return NULL;
     }
 
-    rt = fs_mp_calloc(
-                g_objpool.meta_pool,
-                1,
-                sizeof(*rt));
+    rt = fs_mp_calloc(g_objpool.meta_pool, 1, sizeof(*rt));
 
-    if (rt == NULL) {
+    if (rt == NULL)
+    {
+        err = obj_error(OBJ_SUB_CREATE, ENOMEM);
 
-        err = obj_error(
-                    OBJ_SUB_CREATE,
-                    ENOMEM);
-
-        FS_LOG_DUMP_ERROR(
-                "allocate obj runtime failed, err=%s (0x%x)",
-                fs_error_str(err),
-                err);
+        FS_LOG_DUMP_ERROR("allocate obj runtime failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
 
         return NULL;
     }
 
-    FS_LOG_DUMP_INFO(
-            "exit: rt=%p",
-            (void *)rt);
+    FS_LOG_DUMP_INFO("exit: rt=%p", (void *)rt);
 
     return rt;
 }
 
-void objpool_free(
-                obj_runtime_t *rt)
+void objpool_free(obj_runtime_t *rt)
 {
-    FS_LOG_DUMP_INFO(
-            "enter: rt=%p",
-            (void *)rt);
+    FS_LOG_DUMP_INFO("enter: rt=%p", (void *)rt);
 
-    if (rt == NULL) {
-
-        FS_LOG_DUMP_INFO(
-                "exit: rt is NULL");
+    if (rt == NULL)
+    {
+        FS_LOG_DUMP_INFO("exit: rt is NULL");
 
         return;
     }
 
-    fs_mp_free(
-            g_objpool.meta_pool,
-            rt);
+    fs_mp_free(g_objpool.meta_pool, rt);
 
     FS_LOG_DUMP_INFO("exit");
 }

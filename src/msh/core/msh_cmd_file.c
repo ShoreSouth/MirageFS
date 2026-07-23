@@ -6,7 +6,8 @@
 
 static int msh_need_session(void)
 {
-    if (!runtime_fs_is_active()) {
+    if (!runtime_fs_is_active())
+    {
         fprintf(stderr, "msh: no filesystem selected\n");
         return 1;
     }
@@ -14,11 +15,10 @@ static int msh_need_session(void)
     return 0;
 }
 
-static int msh_need_argc(const msh_argv_t *args,
-                         int argc,
-                         const char *usage)
+static int msh_need_argc(const msh_argv_t *args, int argc, const char *usage)
 {
-    if ((args == NULL) || (args->argc != argc)) {
+    if ((args == NULL) || (args->argc != argc))
+    {
         fprintf(stderr, "usage: %s\n", usage);
         return 1;
     }
@@ -28,15 +28,24 @@ static int msh_need_argc(const msh_argv_t *args,
 
 static char msh_type_char(fs_type_t type)
 {
-    switch (type) {
-        case FS_TYPE_DIR: return 'd';
-        case FS_TYPE_LNK: return 'l';
-        case FS_TYPE_FIFO: return 'p';
-        case FS_TYPE_SOCK: return 's';
-        case FS_TYPE_BLK: return 'b';
-        case FS_TYPE_CHR: return 'c';
-        case FS_TYPE_REG: return '-';
-        default: return '?';
+    switch (type)
+    {
+    case FS_TYPE_DIR:
+        return 'd';
+    case FS_TYPE_LNK:
+        return 'l';
+    case FS_TYPE_FIFO:
+        return 'p';
+    case FS_TYPE_SOCK:
+        return 's';
+    case FS_TYPE_BLK:
+        return 'b';
+    case FS_TYPE_CHR:
+        return 'c';
+    case FS_TYPE_REG:
+        return '-';
+    default:
+        return '?';
     }
 }
 
@@ -60,12 +69,14 @@ static int msh_pwd(const msh_argv_t *args)
     char cwd[FS_MAX_PATH_LEN + 1U];
     fs_error_t err;
 
-    if (msh_need_argc(args, 1, "pwd") != 0 || msh_need_session() != 0) {
+    if (msh_need_argc(args, 1, "pwd") != 0 || msh_need_session() != 0)
+    {
         return 1;
     }
 
     err = runtime_getcwd(cwd, sizeof(cwd));
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("pwd", err);
         return 1;
     }
@@ -78,12 +89,14 @@ static int msh_cd(const msh_argv_t *args)
 {
     fs_error_t err;
 
-    if (msh_need_argc(args, 2, "cd PATH") != 0 || msh_need_session() != 0) {
+    if (msh_need_argc(args, 2, "cd PATH") != 0 || msh_need_session() != 0)
+    {
         return 1;
     }
 
     err = runtime_chdir(args->argv[1]);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("cd", err);
         return 1;
     }
@@ -96,8 +109,8 @@ static int msh_mkdir(const msh_argv_t *args)
     fops_create_attr_t attr;
     fs_error_t err;
 
-    if (msh_need_argc(args, 2, "mkdir PATH") != 0 ||
-        msh_need_session() != 0) {
+    if (msh_need_argc(args, 2, "mkdir PATH") != 0 || msh_need_session() != 0)
+    {
         return 1;
     }
 
@@ -106,7 +119,8 @@ static int msh_mkdir(const msh_argv_t *args)
     attr.mode = FS_MODE_DIR_DEFAULT;
 
     err = runtime_mkdir(args->argv[1], &attr, FS_FLAG_NONE, NULL);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("mkdir", err);
         return 1;
     }
@@ -119,8 +133,8 @@ static int msh_touch(const msh_argv_t *args)
     fops_create_attr_t attr;
     fs_error_t err;
 
-    if (msh_need_argc(args, 2, "touch PATH") != 0 ||
-        msh_need_session() != 0) {
+    if (msh_need_argc(args, 2, "touch PATH") != 0 || msh_need_session() != 0)
+    {
         return 1;
     }
 
@@ -129,7 +143,8 @@ static int msh_touch(const msh_argv_t *args)
     attr.mode = FS_MODE_FILE_DEFAULT;
 
     err = runtime_create(args->argv[1], &attr, FS_FLAG_NONE, NULL);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("touch", err);
         return 1;
     }
@@ -141,12 +156,14 @@ static int msh_rm(const msh_argv_t *args)
 {
     fs_error_t err;
 
-    if (msh_need_argc(args, 2, "rm PATH") != 0 || msh_need_session() != 0) {
+    if (msh_need_argc(args, 2, "rm PATH") != 0 || msh_need_session() != 0)
+    {
         return 1;
     }
 
     err = runtime_unlink(args->argv[1], FS_FLAG_NONE);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("rm", err);
         return 1;
     }
@@ -158,13 +175,14 @@ static int msh_rmdir(const msh_argv_t *args)
 {
     fs_error_t err;
 
-    if (msh_need_argc(args, 2, "rmdir PATH") != 0 ||
-        msh_need_session() != 0) {
+    if (msh_need_argc(args, 2, "rmdir PATH") != 0 || msh_need_session() != 0)
+    {
         return 1;
     }
 
     err = runtime_rmdir(args->argv[1], FS_FLAG_NONE);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("rmdir", err);
         return 1;
     }
@@ -177,12 +195,14 @@ static int msh_mv(const msh_argv_t *args)
     fs_error_t err;
 
     if (msh_need_argc(args, 3, "mv OLD_PATH NEW_PATH") != 0 ||
-        msh_need_session() != 0) {
+        msh_need_session() != 0)
+    {
         return 1;
     }
 
     err = runtime_rename(args->argv[1], args->argv[2], FS_FLAG_REPLACE);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("mv", err);
         return 1;
     }
@@ -194,7 +214,8 @@ static void msh_print_attr(const fops_attr_t *attr)
 {
     char mode[11];
 
-    if (attr == NULL) {
+    if (attr == NULL)
+    {
         return;
     }
 
@@ -212,13 +233,14 @@ static int msh_stat(const msh_argv_t *args)
     fops_attr_t attr;
     fs_error_t err;
 
-    if (msh_need_argc(args, 2, "stat PATH") != 0 ||
-        msh_need_session() != 0) {
+    if (msh_need_argc(args, 2, "stat PATH") != 0 || msh_need_session() != 0)
+    {
         return 1;
     }
 
     err = runtime_getattr(args->argv[1], FS_FLAG_NONE, &attr);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         msh_print_error("stat", err);
         return 1;
     }
@@ -234,14 +256,16 @@ static int msh_ls_plain(const char *path)
     bool eof;
     fs_error_t err;
 
-    err = runtime_readdir(path, FS_FLAG_DIRECTORY, entries,
-                          MSH_DIR_BATCH, &nr, &eof);
-    if (fs_failed(err)) {
+    err = runtime_readdir(path, FS_FLAG_DIRECTORY, entries, MSH_DIR_BATCH, &nr,
+                          &eof);
+    if (fs_failed(err))
+    {
         msh_print_error("ls", err);
         return 1;
     }
 
-    for (uint32_t i = 0; i < nr; i++) {
+    for (uint32_t i = 0; i < nr; i++)
+    {
         printf("%s\n", entries[i].name);
     }
 
@@ -257,17 +281,18 @@ static int msh_ls_long(const char *path)
     fs_error_t err;
     char mode[11];
 
-    err = runtime_readdirplus(path, FS_FLAG_DIRECTORY, entries,
-                              MSH_DIR_BATCH, &nr, &eof);
-    if (fs_failed(err)) {
+    err = runtime_readdirplus(path, FS_FLAG_DIRECTORY, entries, MSH_DIR_BATCH,
+                              &nr, &eof);
+    if (fs_failed(err))
+    {
         msh_print_error("ll", err);
         return 1;
     }
 
-    for (uint32_t i = 0; i < nr; i++) {
+    for (uint32_t i = 0; i < nr; i++)
+    {
         msh_mode_string(entries[i].attr.mode, mode);
-        printf("%s %8llu %s\n", mode,
-               (unsigned long long)entries[i].attr.size,
+        printf("%s %8llu %s\n", mode, (unsigned long long)entries[i].attr.size,
                entries[i].entry.name);
     }
 
@@ -279,11 +304,13 @@ static int msh_ls(const msh_argv_t *args, bool long_format)
 {
     const char *path;
 
-    if ((args == NULL) || args->argc > 2) {
+    if ((args == NULL) || args->argc > 2)
+    {
         fprintf(stderr, "usage: %s [PATH]\n", long_format ? "ll" : "ls");
         return 1;
     }
-    if (msh_need_session() != 0) {
+    if (msh_need_session() != 0)
+    {
         return 1;
     }
 
@@ -297,21 +324,32 @@ int msh_cmd_file(msh_context_t *ctx, const msh_argv_t *args)
 
     (void)ctx;
 
-    if ((args == NULL) || (args->argc == 0)) {
+    if ((args == NULL) || (args->argc == 0))
+    {
         return 0;
     }
 
     cmd = args->argv[0];
-    if (strcmp(cmd, "pwd") == 0) return msh_pwd(args);
-    if (strcmp(cmd, "cd") == 0) return msh_cd(args);
-    if (strcmp(cmd, "mkdir") == 0) return msh_mkdir(args);
-    if (strcmp(cmd, "touch") == 0) return msh_touch(args);
-    if (strcmp(cmd, "rm") == 0) return msh_rm(args);
-    if (strcmp(cmd, "rmdir") == 0) return msh_rmdir(args);
-    if (strcmp(cmd, "mv") == 0) return msh_mv(args);
-    if (strcmp(cmd, "stat") == 0) return msh_stat(args);
-    if (strcmp(cmd, "ls") == 0) return msh_ls(args, false);
-    if (strcmp(cmd, "ll") == 0) return msh_ls(args, true);
+    if (strcmp(cmd, "pwd") == 0)
+        return msh_pwd(args);
+    if (strcmp(cmd, "cd") == 0)
+        return msh_cd(args);
+    if (strcmp(cmd, "mkdir") == 0)
+        return msh_mkdir(args);
+    if (strcmp(cmd, "touch") == 0)
+        return msh_touch(args);
+    if (strcmp(cmd, "rm") == 0)
+        return msh_rm(args);
+    if (strcmp(cmd, "rmdir") == 0)
+        return msh_rmdir(args);
+    if (strcmp(cmd, "mv") == 0)
+        return msh_mv(args);
+    if (strcmp(cmd, "stat") == 0)
+        return msh_stat(args);
+    if (strcmp(cmd, "ls") == 0)
+        return msh_ls(args, false);
+    if (strcmp(cmd, "ll") == 0)
+        return msh_ls(args, true);
 
     fprintf(stderr, "msh: unknown command: %s\n", cmd);
     return 1;

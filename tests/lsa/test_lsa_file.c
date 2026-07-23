@@ -10,7 +10,8 @@ static int test_lsa_create_write_read_round_trip(void)
     char buf[16];
     fs_error_t err;
 
-    TEST_ASSERT_EQ_INT(test_lsa_open_tmp_root(dir_path, sizeof(dir_path), &dirfd), 0);
+    TEST_ASSERT_EQ_INT(
+            test_lsa_open_tmp_root(dir_path, sizeof(dir_path), &dirfd), 0);
     TEST_ASSERT_EQ_INT(test_lsa_create_file(dirfd, "hello.txt", &filefd), 0);
 
     err = lsa_write_full(filefd, "abc", 3, &actual);
@@ -52,17 +53,13 @@ static int test_lsa_create_write_read_round_trip(void)
 
 
 const test_case_t LSA_FILE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_LSA,
-                                 TEST_LSA_COMPONENT_FILE,
-                                 0x1),
-                      UT_CASE_NO(UT_MOD_LSA,
-                                 TEST_LSA_COMPONENT_FILE,
-                                 0x1,
-                                 0x001),
-                      test_lsa_create_write_read_round_trip,
-                      "在项目 output 临时目录创建文件并完成读写回环",
-                      "使用真实 LSA 后端执行 write/read/pwrite/pread/truncate",
-                      "所有 IO 路径返回 FS_OK，内容和实际字节数符合预期"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_LSA, TEST_LSA_COMPONENT_FILE, 0x1),
+                  UT_CASE_NO(UT_MOD_LSA, TEST_LSA_COMPONENT_FILE, 0x1, 0x001),
+                  test_lsa_create_write_read_round_trip,
+                  "在项目 output 临时目录创建文件并完成读写回环",
+                  "使用真实 LSA 后端执行 write/read/pwrite/pread/truncate",
+                  "所有 IO 路径返回 FS_OK，内容和实际字节数符合预期"),
 };
 
-const size_t LSA_FILE_CASE_COUNT = sizeof(LSA_FILE_CASES) / sizeof(LSA_FILE_CASES[0]);
+const size_t LSA_FILE_CASE_COUNT =
+        sizeof(LSA_FILE_CASES) / sizeof(LSA_FILE_CASES[0]);

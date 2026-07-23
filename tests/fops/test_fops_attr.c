@@ -39,18 +39,11 @@ static int test_fops_type_and_attr_helpers_convert_linux_stat(void)
 }
 
 const test_case_t FOPS_ATTR_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_ATTR,
-                         0x1),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_ATTR,
-                         0x1,
-                         0x001),
-              test_fops_type_and_attr_helpers_convert_linux_stat,
-              "FOPS stat 属性转换",
-              "构造 Linux struct stat",
-              "type/mode/uid/gid/size/time 字段正确映射")
-};
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_ATTR, 0x1),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_ATTR, 0x1, 0x001),
+                  test_fops_type_and_attr_helpers_convert_linux_stat,
+                  "FOPS stat 属性转换", "构造 Linux struct stat",
+                  "type/mode/uid/gid/size/time 字段正确映射")};
 
 const size_t FOPS_ATTR_CASE_COUNT =
         sizeof(FOPS_ATTR_CASES) / sizeof(FOPS_ATTR_CASES[0]);

@@ -192,7 +192,8 @@ static int test_fops_dispatch_file_attr_xattr_round_trip(void)
     args.u.setxattr.value = "v1";
     args.u.setxattr.size = 2U;
     err = fops_dispatch(&args);
-    if (err == FS_OK) {
+    if (err == FS_OK)
+    {
         memset(xattr_buf, 0, sizeof(xattr_buf));
         memset(&args, 0, sizeof(args));
         args.op = FS_OP_GETXATTR;
@@ -222,7 +223,9 @@ static int test_fops_dispatch_file_attr_xattr_round_trip(void)
         args.name = "user.miragefs.dispatch";
         err = fops_dispatch(&args);
         TEST_ASSERT_EQ_INT(err, FS_OK);
-    } else {
+    }
+    else
+    {
         TEST_ASSERT_TRUE(fs_err_errno(err) == ENOTSUP ||
                          fs_err_errno(err) == EOPNOTSUPP ||
                          fs_err_errno(err) == EPERM);
@@ -386,39 +389,29 @@ static int test_fops_dispatch_namespace_round_trip(void)
 }
 
 const test_case_t FOPS_DISPATCH_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_DISPATCH,
-                         0x3),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_DISPATCH,
-                         0x3,
-                         0x001),
-              test_fops_dispatch_rejects_bad_request,
-              "FOPS dispatch 入参防御",
-              "向统一入口注入 NULL、非法 op 和缺失必填字段",
-              "dispatch 在分发前返回 FOPS 参数错误"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_DISPATCH,
-                         0x4),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_DISPATCH,
-                         0x4,
-                         0x001),
-              test_fops_dispatch_file_attr_xattr_round_trip,
-              "FOPS dispatch 文件、属性和 xattr 回环",
-              "通过统一入口执行 create/lookup/open/read/write/attr/handle/xattr/fs",
-              "正式 dispatch 路径能驱动真实后端并保持对象状态一致"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_DISPATCH,
-                         0x4),
-              UT_CASE_NO(UT_MOD_FOPS,
-                         TEST_FOPS_COMPONENT_DISPATCH,
-                         0x4,
-                         0x002),
-              test_fops_dispatch_namespace_round_trip,
-              "FOPS dispatch 命名空间回环",
-              "通过统一入口执行 mkdir/mknod/link/rename/symlink/readdir/rmdir",
-              "命名空间变更成功，目录项可枚举，退出时临时 root 可清理"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_DISPATCH, 0x3),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_DISPATCH, 0x3,
+                             0x001),
+                  test_fops_dispatch_rejects_bad_request,
+                  "FOPS dispatch 入参防御",
+                  "向统一入口注入 NULL、非法 op 和缺失必填字段",
+                  "dispatch 在分发前返回 FOPS 参数错误"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_DISPATCH, 0x4),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_DISPATCH, 0x4,
+                             0x001),
+                  test_fops_dispatch_file_attr_xattr_round_trip,
+                  "FOPS dispatch 文件、属性和 xattr 回环",
+                  "通过统一入口执行 "
+                  "create/lookup/open/read/write/attr/handle/xattr/fs",
+                  "正式 dispatch 路径能驱动真实后端并保持对象状态一致"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_DISPATCH, 0x4),
+                  UT_CASE_NO(UT_MOD_FOPS, TEST_FOPS_COMPONENT_DISPATCH, 0x4,
+                             0x002),
+                  test_fops_dispatch_namespace_round_trip,
+                  "FOPS dispatch 命名空间回环",
+                  "通过统一入口执行 "
+                  "mkdir/mknod/link/rename/symlink/readdir/rmdir",
+                  "命名空间变更成功，目录项可枚举，退出时临时 root 可清理"),
 };
 
 const size_t FOPS_DISPATCH_CASE_COUNT =

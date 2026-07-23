@@ -46,5 +46,4 @@ fsc_namespace_t *nspool_alloc(void);
  * 参数：
  *      [IN] ns     : nspool_alloc() 返回的 namespace，可为 NULL
  */
-void nspool_free(
-                fsc_namespace_t *ns);
+void nspool_free(fsc_namespace_t *ns);

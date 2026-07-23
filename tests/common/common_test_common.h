@@ -10,7 +10,8 @@
 #include "common/fs_common.h"
 
 /* Common UT 按 src/common 基础设施组件拆分，编号组件位与本 enum 对齐。 */
-typedef enum test_common_component {
+typedef enum test_common_component
+{
     TEST_COMMON_COMPONENT_ERROR = 0x01,
     TEST_COMMON_COMPONENT_MODULE = 0x02,
     TEST_COMMON_COMPONENT_FLAG = 0x03,

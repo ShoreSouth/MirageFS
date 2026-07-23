@@ -25,17 +25,17 @@ uint32_t fs_mp_calc_order(size_t size)
     uint64_t need_size;
     uint32_t order;
 
-    if (size > SIZE_MAX - sizeof(fs_mp_hdr_t)) {
+    if (size > SIZE_MAX - sizeof(fs_mp_hdr_t))
+    {
         return UINT32_MAX;
     }
 
     need_size = size + sizeof(fs_mp_hdr_t);
 
-    for (order = FS_MP_MIN_ORDER;
-         order <= FS_MP_MAX_ORDER;
-         order++) {
-
-        if (FS_MP_ORDER_SIZE(order) >= need_size) {
+    for (order = FS_MP_MIN_ORDER; order <= FS_MP_MAX_ORDER; order++)
+    {
+        if (FS_MP_ORDER_SIZE(order) >= need_size)
+        {
             return order;
         }
     }
@@ -43,42 +43,42 @@ uint32_t fs_mp_calc_order(size_t size)
     return UINT32_MAX;
 }
 
-static uint32_t fs_mp_calc_order_align(
-                size_t size,
-                size_t align)
+static uint32_t fs_mp_calc_order_align(size_t size, size_t align)
 {
     uint64_t user_offset;
     uint64_t need_size;
     uint64_t block_size;
     uint32_t order;
 
-    if (align == 0) {
+    if (align == 0)
+    {
         return UINT32_MAX;
     }
 
-    if (sizeof(fs_mp_hdr_t) > UINT64_MAX - (align - 1)) {
+    if (sizeof(fs_mp_hdr_t) > UINT64_MAX - (align - 1))
+    {
         return UINT32_MAX;
     }
 
-    user_offset = FS_ALIGN_UP((uint64_t)sizeof(fs_mp_hdr_t),
-                              (uint64_t)align);
-    if (size > UINT64_MAX - user_offset) {
+    user_offset = FS_ALIGN_UP((uint64_t)sizeof(fs_mp_hdr_t), (uint64_t)align);
+    if (size > UINT64_MAX - user_offset)
+    {
         return UINT32_MAX;
     }
 
     need_size = user_offset + size;
 
-    for (order = FS_MP_MIN_ORDER;
-         order <= FS_MP_MAX_ORDER;
-         order++) {
-
+    for (order = FS_MP_MIN_ORDER; order <= FS_MP_MAX_ORDER; order++)
+    {
         block_size = FS_MP_ORDER_SIZE(order);
 
-        if (block_size < align) {
+        if (block_size < align)
+        {
             continue;
         }
 
-        if (block_size >= need_size) {
+        if (block_size >= need_size)
+        {
             return order;
         }
     }
@@ -90,15 +90,15 @@ static uint32_t fs_mp_calc_pool_order(uint64_t total_size)
 {
     uint32_t order;
 
-    if (total_size == 0) {
+    if (total_size == 0)
+    {
         return UINT32_MAX;
     }
 
-    for (order = FS_MP_MIN_ORDER;
-         order <= FS_MP_MAX_ORDER;
-         order++) {
-
-        if (FS_MP_ORDER_SIZE(order) >= total_size) {
+    for (order = FS_MP_MIN_ORDER; order <= FS_MP_MAX_ORDER; order++)
+    {
+        if (FS_MP_ORDER_SIZE(order) >= total_size)
+        {
             return order;
         }
     }
@@ -125,8 +125,7 @@ void *fs_mp_hdr_to_ptr(fs_mp_hdr_t *hdr)
 /*
  * ptr -> offset
  */
-static inline uintptr_t fs_mp_offset(fs_mempool_t *mp,
-             void *ptr)
+static inline uintptr_t fs_mp_offset(fs_mempool_t *mp, void *ptr)
 {
     return ((uintptr_t)ptr - (uintptr_t)mp->base);
 }
@@ -136,9 +135,7 @@ static inline uintptr_t fs_mp_offset(fs_mempool_t *mp,
  *
  * buddy = offset ^ block_size
  */
-void *fs_mp_buddy_ptr(fs_mempool_t *mp,
-                void *ptr,
-                uint32_t order)
+void *fs_mp_buddy_ptr(fs_mempool_t *mp, void *ptr, uint32_t order)
 {
     uintptr_t offset;
     uintptr_t buddy_offset;
@@ -157,36 +154,31 @@ void *fs_mp_buddy_ptr(fs_mempool_t *mp,
 /*
  * 插入free list
  */
-void fs_mp_push_block(fs_mempool_t *mp,
-                 uint32_t order,
-                 void *ptr)
+void fs_mp_push_block(fs_mempool_t *mp, uint32_t order, void *ptr)
 {
     fs_mp_block_t *block;
 
     block = (fs_mp_block_t *)ptr;
 
-    fs_list_add(&block->node,
-                &mp->free_area[order]);
+    fs_list_add(&block->node, &mp->free_area[order]);
 }
 
 /*
  * 弹出free block
  */
-void *fs_mp_pop_block(fs_mempool_t *mp,
-                uint32_t order)
+void *fs_mp_pop_block(fs_mempool_t *mp, uint32_t order)
 {
     fs_list_head_t *head;
     fs_mp_block_t *block;
 
     head = &mp->free_area[order];
 
-    if (fs_list_empty(head)) {
+    if (fs_list_empty(head))
+    {
         return NULL;
     }
 
-    block = FS_LIST_ENTRY(head->next,
-                          fs_mp_block_t,
-                          node);
+    block = FS_LIST_ENTRY(head->next, fs_mp_block_t, node);
 
     fs_list_del(&block->node);
 
@@ -196,21 +188,17 @@ void *fs_mp_pop_block(fs_mempool_t *mp,
 /*
  * 从free list移除指定block
  */
-bool fs_mp_remove_block(fs_mempool_t *mp,
-                   uint32_t order,
-                   void *ptr)
+bool fs_mp_remove_block(fs_mempool_t *mp, uint32_t order, void *ptr)
 {
     fs_list_head_t *pos, *next;
     fs_mp_block_t *block;
 
-    FS_LIST_FOR_EACH_SAFE(pos, next, &mp->free_area[order]) {
+    FS_LIST_FOR_EACH_SAFE(pos, next, &mp->free_area[order])
+    {
+        block = FS_LIST_ENTRY(pos, fs_mp_block_t, node);
 
-        block = FS_LIST_ENTRY(pos,
-                              fs_mp_block_t,
-                              node);
-
-        if ((void *)block == ptr) {
-
+        if ((void *)block == ptr)
+        {
             fs_list_del(&block->node);
 
             return true;
@@ -231,20 +219,19 @@ fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg)
     uint32_t pool_order;
     uint64_t pool_size;
 
-    if (cfg == NULL) {
+    if (cfg == NULL)
+    {
         FS_LOG_DUMP_ERROR("create mempool failed: cfg is NULL");
         return NULL;
     }
 
     pool_order = fs_mp_calc_pool_order(cfg->total_size);
-    if (pool_order == UINT32_MAX ||
-        cfg->max_order > FS_MP_MAX_ORDER ||
-        pool_order > cfg->max_order) {
-
+    if (pool_order == UINT32_MAX || cfg->max_order > FS_MP_MAX_ORDER ||
+        pool_order > cfg->max_order)
+    {
         FS_LOG_DUMP_ERROR("create mempool failed: invalid config "
                           "total_size=%llu max_order=%u",
-                          (unsigned long long)cfg->total_size,
-                          cfg->max_order);
+                          (unsigned long long)cfg->total_size, cfg->max_order);
         return NULL;
     }
 
@@ -252,51 +239,47 @@ fs_mempool_t *fs_mp_create(const fs_mp_config_t *cfg)
 
     FS_LOG_DUMP_INFO("enter: total_size=%llu pool_size=%llu max_order=%u",
                      (unsigned long long)cfg->total_size,
-                     (unsigned long long)pool_size,
-                     pool_order);
+                     (unsigned long long)pool_size, pool_order);
 
     mp = calloc(1, sizeof(*mp));
-    if (mp == NULL) {
+    if (mp == NULL)
+    {
         FS_LOG_DUMP_ERROR("calloc mp failed");
         return NULL;
     }
 
-    mp->base = aligned_alloc(FS_MP_PAGE_SIZE,
-                             pool_size);
-    if (mp->base == NULL) {
+    mp->base = aligned_alloc(FS_MP_PAGE_SIZE, pool_size);
+    if (mp->base == NULL)
+    {
         FS_LOG_DUMP_ERROR("aligned_alloc failed");
         free(mp);
         return NULL;
     }
 
     mp->total_size = pool_size;
-    mp->max_order  = pool_order;
-    mp->flags      = cfg->flags;
+    mp->max_order = pool_order;
+    mp->flags = cfg->flags;
 
-    for (i = 0; i <= FS_MP_MAX_ORDER; i++) {
+    for (i = 0; i <= FS_MP_MAX_ORDER; i++)
+    {
         fs_list_init(&mp->free_area[i]);
     }
 
-    if (fs_failed(fs_mutex_init(&mp->lock,
-                                "mempool",
-                                FS_LOCK_F_DEBUG))) {
-
+    if (fs_failed(fs_mutex_init(&mp->lock, "mempool", FS_LOCK_F_DEBUG)))
+    {
         FS_LOG_DUMP_ERROR("mutex init failed");
         free(mp->base);
         free(mp);
         return NULL;
     }
 
-    fs_mp_push_block(mp,
-                     mp->max_order,
-                     mp->base);
+    fs_mp_push_block(mp, mp->max_order, mp->base);
 
     mp->stats.total_bytes = pool_size;
-    mp->stats.free_bytes  = pool_size;
+    mp->stats.free_bytes = pool_size;
 
     FS_LOG_DUMP_INFO("exit: ok pool_size=%llu max_order=%u",
-                     (unsigned long long)pool_size,
-                     pool_order);
+                     (unsigned long long)pool_size, pool_order);
 
     return mp;
 }
@@ -305,7 +288,8 @@ void fs_mp_destroy(fs_mempool_t *mp)
 {
     FS_LOG_DUMP_INFO("enter: mp=%p", (void *)mp);
 
-    if (mp == NULL) {
+    if (mp == NULL)
+    {
         return;
     }
 
@@ -324,11 +308,8 @@ void fs_mp_destroy(fs_mempool_t *mp)
  * Allocation
  * ============================================================ */
 
-static void *fs_mp_alloc_with_order(
-                fs_mempool_t *mp,
-                size_t size,
-                uint32_t order,
-                size_t align)
+static void *fs_mp_alloc_with_order(fs_mempool_t *mp, size_t size,
+                                    uint32_t order, size_t align)
 {
     uint32_t cur_order;
 
@@ -340,58 +321,57 @@ static void *fs_mp_alloc_with_order(
     fs_mp_hdr_t *hdr;
     uintptr_t user_addr;
 
-    FS_LOG_DUMP_INFO("enter: mp=%p size=%zu align=%zu",
-                     (void *)mp, size, align);
+    FS_LOG_DUMP_INFO("enter: mp=%p size=%zu align=%zu", (void *)mp, size,
+                     align);
 
     ret = NULL;
 
-    if (mp == NULL || size == 0) {
+    if (mp == NULL || size == 0)
+    {
         goto out;
     }
 
-    if (order == UINT32_MAX || order > mp->max_order) {
-        FS_LOG_DUMP_WARN("size too large size=%zu align=%zu",
-                         size, align);
+    if (order == UINT32_MAX || order > mp->max_order)
+    {
+        FS_LOG_DUMP_WARN("size too large size=%zu align=%zu", size, align);
         goto out;
     }
 
     FS_MP_LOCK(mp);
 
-    for (cur_order = order;
-         cur_order <= mp->max_order;
-         cur_order++) {
-
+    for (cur_order = order; cur_order <= mp->max_order; cur_order++)
+    {
         block = fs_mp_pop_block(mp, cur_order);
-        if (block != NULL) {
+        if (block != NULL)
+        {
             break;
         }
     }
 
-    if (cur_order > mp->max_order) {
+    if (cur_order > mp->max_order)
+    {
         mp->stats.alloc_fail_count++;
         FS_LOG_DUMP_WARN("alloc failed size=%zu", size);
         goto unlock;
     }
 
-    while (cur_order > order) {
+    while (cur_order > order)
+    {
         cur_order--;
 
-        buddy = ((uint8_t *)block +
-                 FS_MP_ORDER_SIZE(cur_order));
+        buddy = ((uint8_t *)block + FS_MP_ORDER_SIZE(cur_order));
 
-        fs_mp_push_block(mp,
-                         cur_order,
-                         buddy);
+        fs_mp_push_block(mp, cur_order, buddy);
 
         mp->stats.split_count++;
     }
 
-    if (align == 0) {
+    if (align == 0)
+    {
         align = 1;
     }
 
-    user_addr = FS_ALIGN_UP((uintptr_t)block + sizeof(*hdr),
-                            (uintptr_t)align);
+    user_addr = FS_ALIGN_UP((uintptr_t)block + sizeof(*hdr), (uintptr_t)align);
     hdr = (fs_mp_hdr_t *)(user_addr - sizeof(*hdr));
 
     hdr->magic = FS_MP_MAGIC_ALLOC;
@@ -402,10 +382,9 @@ static void *fs_mp_alloc_with_order(
 
     user_ptr = fs_mp_hdr_to_ptr(hdr);
 
-    if (mp->flags & FS_MP_F_POISON) {
-        memset(user_ptr,
-               FS_MP_POISON_ALLOC,
-               size);
+    if (mp->flags & FS_MP_F_POISON)
+    {
+        memset(user_ptr, FS_MP_POISON_ALLOC, size);
     }
 
     mp->stats.alloc_count++;
@@ -413,11 +392,9 @@ static void *fs_mp_alloc_with_order(
     mp->stats.free_bytes -= FS_MP_ORDER_SIZE(order);
     mp->stats.current_allocs++;
 
-    if (mp->stats.used_bytes >
-        mp->stats.peak_used_bytes) {
-
-        mp->stats.peak_used_bytes =
-            mp->stats.used_bytes;
+    if (mp->stats.used_bytes > mp->stats.peak_used_bytes)
+    {
+        mp->stats.peak_used_bytes = mp->stats.used_bytes;
     }
 
     ret = user_ptr;
@@ -430,78 +407,67 @@ out:
     return ret;
 }
 
-void *fs_mp_alloc(fs_mempool_t *mp,
-            size_t size)
+void *fs_mp_alloc(fs_mempool_t *mp, size_t size)
 {
     uint32_t order;
 
     order = fs_mp_calc_order(size);
 
-    return fs_mp_alloc_with_order(mp,
-                                  size,
-                                  order,
-                                  1);
+    return fs_mp_alloc_with_order(mp, size, order, 1);
 }
 
-void *fs_mp_alloc_align(fs_mempool_t *mp,
-                  size_t size,
-                  size_t align)
+void *fs_mp_alloc_align(fs_mempool_t *mp, size_t size, size_t align)
 {
     uint32_t order;
 
-    if (mp == NULL || size == 0) {
+    if (mp == NULL || size == 0)
+    {
         FS_LOG_DUMP_WARN("alloc_align: invalid param "
-                    "mp=%p size=%zu align=%zu",
-                    (void *)mp, size, align);
+                         "mp=%p size=%zu align=%zu",
+                         (void *)mp, size, align);
         return NULL;
     }
 
-    if (align == 0 ||
-        (align & (align - 1)) != 0) {
-
+    if (align == 0 || (align & (align - 1)) != 0)
+    {
         FS_LOG_DUMP_WARN("alloc_align: align not power of 2 "
-                    "align=%zu",
-                    align);
+                         "align=%zu",
+                         align);
         return NULL;
     }
 
     order = fs_mp_calc_order_align(size, align);
-    if (order == UINT32_MAX) {
+    if (order == UINT32_MAX)
+    {
         FS_LOG_DUMP_WARN("alloc_align: size too large "
-                    "size=%zu",
-                    size);
+                         "size=%zu",
+                         size);
         return NULL;
     }
 
-    return fs_mp_alloc_with_order(mp,
-                                  size,
-                                  order,
-                                  align);
+    return fs_mp_alloc_with_order(mp, size, order, align);
 }
 
-void *fs_mp_calloc(fs_mempool_t *mp,
-             size_t n,
-             size_t size)
+void *fs_mp_calloc(fs_mempool_t *mp, size_t n, size_t size)
 {
     size_t total;
 
     void *ptr;
 
-    FS_LOG_DUMP_INFO("enter: mp=%p n=%zu size=%zu",
-                     (void *)mp, n, size);
+    FS_LOG_DUMP_INFO("enter: mp=%p n=%zu size=%zu", (void *)mp, n, size);
 
-    if (mp == NULL || n == 0 || size == 0) {
-
+    if (mp == NULL || n == 0 || size == 0)
+    {
         FS_LOG_DUMP_WARN("calloc: invalid param");
 
         return NULL;
     }
 
-    if (n > SIZE_MAX / size) {
-
+    if (n > SIZE_MAX / size)
+    {
         FS_LOG_DUMP_WARN("calloc: overflow "
-                    "n=%zu size=%zu",
-                    n, size);
+                         "n=%zu size=%zu",
+                         n, size);
 
         return NULL;
     }
@@ -510,8 +476,8 @@ void *fs_mp_calloc(fs_mempool_t *mp,
 
     ptr = fs_mp_alloc(mp, total);
 
-    if (ptr == NULL) {
-
+    if (ptr == NULL)
+    {
         FS_LOG_DUMP_WARN("calloc: alloc failed");
 
         return NULL;
@@ -524,9 +490,7 @@ void *fs_mp_calloc(fs_mempool_t *mp,
     return ptr;
 }
 
-void *fs_mp_realloc(fs_mempool_t *mp,
-              void *ptr,
-              size_t new_size)
+void *fs_mp_realloc(fs_mempool_t *mp, void *ptr, size_t new_size)
 {
     void *new_ptr;
 
@@ -534,21 +498,20 @@ void *fs_mp_realloc(fs_mempool_t *mp,
 
     size_t copy_size;
 
-    FS_LOG_DUMP_INFO("enter: mp=%p ptr=%p new_size=%zu",
-                     (void *)mp, ptr, new_size);
+    FS_LOG_DUMP_INFO("enter: mp=%p ptr=%p new_size=%zu", (void *)mp, ptr,
+                     new_size);
 
-    if (ptr == NULL) {
-
+    if (ptr == NULL)
+    {
         new_ptr = fs_mp_alloc(mp, new_size);
 
-        FS_LOG_DUMP_INFO("exit: alloc new ptr=%p",
-                         new_ptr);
+        FS_LOG_DUMP_INFO("exit: alloc new ptr=%p", new_ptr);
 
         return new_ptr;
     }
 
-    if (new_size == 0) {
-
+    if (new_size == 0)
+    {
         fs_mp_free(mp, ptr);
 
         FS_LOG_DUMP_INFO("exit: freed");
@@ -560,14 +523,15 @@ void *fs_mp_realloc(fs_mempool_t *mp,
 
     copy_size = hdr->req_size;
 
-    if (copy_size > new_size) {
+    if (copy_size > new_size)
+    {
         copy_size = new_size;
     }
 
     new_ptr = fs_mp_alloc(mp, new_size);
 
-    if (new_ptr == NULL) {
-
+    if (new_ptr == NULL)
+    {
         FS_LOG_DUMP_WARN("realloc: alloc failed");
 
         return NULL;
@@ -582,8 +546,7 @@ void *fs_mp_realloc(fs_mempool_t *mp,
     return new_ptr;
 }
 
-void fs_mp_free(fs_mempool_t *mp,
-           void *ptr)
+void fs_mp_free(fs_mempool_t *mp, void *ptr)
 {
     fs_mp_hdr_t *hdr;
 
@@ -593,23 +556,22 @@ void fs_mp_free(fs_mempool_t *mp,
     void *block;
     void *buddy;
 
-    FS_LOG_DUMP_INFO("enter: mp=%p ptr=%p",
-                     (void *)mp, ptr);
+    FS_LOG_DUMP_INFO("enter: mp=%p ptr=%p", (void *)mp, ptr);
 
-    if (mp == NULL || ptr == NULL) {
+    if (mp == NULL || ptr == NULL)
+    {
         return;
     }
 
     hdr = fs_mp_ptr_to_hdr(ptr);
 
     FS_ASSERT_MSG(hdr->magic == FS_MP_MAGIC_ALLOC ||
-                  hdr->magic == FS_MP_MAGIC_FREE,
+                          hdr->magic == FS_MP_MAGIC_FREE,
                   "invalid mempool magic");
 
-    if (hdr->magic == FS_MP_MAGIC_FREE) {
-
-        FS_LOG_DUMP_WARN("double free ptr=%p",
-                         ptr);
+    if (hdr->magic == FS_MP_MAGIC_FREE)
+    {
+        FS_LOG_DUMP_WARN("double free ptr=%p", ptr);
 
         FS_ASSERT(false);
 
@@ -623,11 +585,9 @@ void fs_mp_free(fs_mempool_t *mp,
 
     FS_MP_LOCK(mp);
 
-    if (mp->flags & FS_MP_F_POISON) {
-
-        memset(ptr,
-               FS_MP_POISON_FREE,
-               hdr->req_size);
+    if (mp->flags & FS_MP_F_POISON)
+    {
+        memset(ptr, FS_MP_POISON_FREE, hdr->req_size);
     }
 
     hdr->magic = FS_MP_MAGIC_FREE;
@@ -635,22 +595,20 @@ void fs_mp_free(fs_mempool_t *mp,
     /*
      * buddy merge
      */
-    while (order < mp->max_order) {
+    while (order < mp->max_order)
+    {
+        buddy = fs_mp_buddy_ptr(mp, block, order);
 
-        buddy = fs_mp_buddy_ptr(mp,
-                                block,
-                                order);
-
-        if (!fs_mp_remove_block(mp,
-                                order,
-                                buddy)) {
+        if (!fs_mp_remove_block(mp, order, buddy))
+        {
             break;
         }
 
         /*
          * 取较低地址作为merge后block
          */
-        if (buddy < block) {
+        if (buddy < block)
+        {
             block = buddy;
         }
 
@@ -659,17 +617,13 @@ void fs_mp_free(fs_mempool_t *mp,
         mp->stats.merge_count++;
     }
 
-    fs_mp_push_block(mp,
-                     order,
-                     block);
+    fs_mp_push_block(mp, order, block);
 
     mp->stats.free_count++;
 
-    mp->stats.used_bytes -=
-        FS_MP_ORDER_SIZE(origin_order);
+    mp->stats.used_bytes -= FS_MP_ORDER_SIZE(origin_order);
 
-    mp->stats.free_bytes +=
-        FS_MP_ORDER_SIZE(origin_order);
+    mp->stats.free_bytes += FS_MP_ORDER_SIZE(origin_order);
 
     mp->stats.current_allocs--;
 
@@ -682,14 +636,14 @@ size_t fs_mp_usable_size(const void *ptr)
 {
     fs_mp_hdr_t *hdr;
 
-    if (ptr == NULL) {
+    if (ptr == NULL)
+    {
         return 0;
     }
 
     hdr = fs_mp_ptr_to_hdr((void *)ptr);
 
-    return FS_MP_ORDER_SIZE(hdr->order) -
-           sizeof(fs_mp_hdr_t) -
+    return FS_MP_ORDER_SIZE(hdr->order) - sizeof(fs_mp_hdr_t) -
            hdr->block_offset;
 }
 
@@ -701,8 +655,9 @@ fs_error_t fs_mp_global_init(const fs_mp_config_t *cfg)
 {
     g_mp = fs_mp_create(cfg);
 
-    return (g_mp != NULL) ? FS_OK :
-           fs_common_error(FS_COMMON_SUB_MEMPOOL, FS_ERRNO_ENOMEM);
+    return (g_mp != NULL)
+                   ? FS_OK
+                   : fs_common_error(FS_COMMON_SUB_MEMPOOL, FS_ERRNO_ENOMEM);
 }
 
 void fs_mp_global_fini(void)
@@ -732,26 +687,27 @@ void *fs_zalloc(size_t size)
 
     ptr = fs_malloc(size);
 
-    if (ptr != NULL) {
+    if (ptr != NULL)
+    {
         memset(ptr, 0, size);
     }
 
     return ptr;
 }
 
-void *fs_realloc(void *ptr,
-           size_t new_size)
+void *fs_realloc(void *ptr, size_t new_size)
 {
     void *new_ptr;
     fs_mp_hdr_t *hdr;
     size_t copy_size;
 
-    if (ptr == NULL) {
+    if (ptr == NULL)
+    {
         return fs_malloc(new_size);
     }
 
-    if (new_size == 0) {
-
+    if (new_size == 0)
+    {
         fs_free(ptr);
 
         return NULL;
@@ -761,19 +717,19 @@ void *fs_realloc(void *ptr,
 
     copy_size = hdr->req_size;
 
-    if (copy_size > new_size) {
+    if (copy_size > new_size)
+    {
         copy_size = new_size;
     }
 
     new_ptr = fs_malloc(new_size);
 
-    if (new_ptr == NULL) {
+    if (new_ptr == NULL)
+    {
         return NULL;
     }
 
-    memcpy(new_ptr,
-           ptr,
-           copy_size);
+    memcpy(new_ptr, ptr, copy_size);
 
     fs_free(ptr);
 
@@ -789,10 +745,10 @@ void fs_free(void *ptr)
  * Debug APIs
  * ============================================================ */
 
-void fs_mp_get_stats(fs_mempool_t *mp,
-                fs_mp_stats_t *stats)
+void fs_mp_get_stats(fs_mempool_t *mp, fs_mp_stats_t *stats)
 {
-    if (mp == NULL || stats == NULL) {
+    if (mp == NULL || stats == NULL)
+    {
         return;
     }
 
@@ -803,19 +759,19 @@ void fs_mp_get_stats(fs_mempool_t *mp,
     FS_MP_UNLOCK(mp);
 }
 
-bool fs_mp_contains(fs_mempool_t *mp,
-               const void *ptr)
+bool fs_mp_contains(fs_mempool_t *mp, const void *ptr)
 {
     uintptr_t start;
     uintptr_t end;
     uintptr_t addr;
 
-    if (mp == NULL || ptr == NULL) {
+    if (mp == NULL || ptr == NULL)
+    {
         return false;
     }
 
     start = (uintptr_t)mp->base;
-    end   = start + mp->total_size;
+    end = start + mp->total_size;
 
     addr = (uintptr_t)ptr;
 
@@ -826,7 +782,8 @@ bool fs_mp_is_freed(const void *ptr)
 {
     fs_mp_hdr_t *hdr;
 
-    if (ptr == NULL) {
+    if (ptr == NULL)
+    {
         return false;
     }
 
@@ -842,7 +799,8 @@ void fs_mp_dump(fs_mempool_t *mp)
 
     fs_list_head_t *pos;
 
-    if (mp == NULL) {
+    if (mp == NULL)
+    {
         return;
     }
 
@@ -851,43 +809,42 @@ void fs_mp_dump(fs_mempool_t *mp)
     FS_LOG_DUMP_INFO("========== mempool dump ==========");
 
     FS_LOG_DUMP_INFO("total_bytes=%llu",
-                (unsigned long long)mp->stats.total_bytes);
+                     (unsigned long long)mp->stats.total_bytes);
 
     FS_LOG_DUMP_INFO("used_bytes=%llu",
-                (unsigned long long)mp->stats.used_bytes);
+                     (unsigned long long)mp->stats.used_bytes);
 
     FS_LOG_DUMP_INFO("free_bytes=%llu",
-                (unsigned long long)mp->stats.free_bytes);
+                     (unsigned long long)mp->stats.free_bytes);
 
     FS_LOG_DUMP_INFO("alloc_count=%llu",
-                (unsigned long long)mp->stats.alloc_count);
+                     (unsigned long long)mp->stats.alloc_count);
 
     FS_LOG_DUMP_INFO("free_count=%llu",
-                (unsigned long long)mp->stats.free_count);
+                     (unsigned long long)mp->stats.free_count);
 
     FS_LOG_DUMP_INFO("current_allocs=%llu",
-                (unsigned long long)mp->stats.current_allocs);
+                     (unsigned long long)mp->stats.current_allocs);
 
     FS_LOG_DUMP_INFO("split_count=%llu",
-                (unsigned long long)mp->stats.split_count);
+                     (unsigned long long)mp->stats.split_count);
 
     FS_LOG_DUMP_INFO("merge_count=%llu",
-                (unsigned long long)mp->stats.merge_count);
+                     (unsigned long long)mp->stats.merge_count);
 
-    for (i = 0; i <= mp->max_order; i++) {
-
+    for (i = 0; i <= mp->max_order; i++)
+    {
         count = 0;
 
-        FS_LIST_FOR_EACH(pos, &mp->free_area[i]) {
+        FS_LIST_FOR_EACH(pos, &mp->free_area[i])
+        {
             count++;
         }
 
         FS_LOG_DUMP_INFO("order=%u "
-                    "block_size=%llu "
-                    "free_count=%u",
-                    i,
-                    (unsigned long long)FS_MP_ORDER_SIZE(i),
-                    count);
+                         "block_size=%llu "
+                         "free_count=%u",
+                         i, (unsigned long long)FS_MP_ORDER_SIZE(i), count);
     }
 
     FS_MP_UNLOCK(mp);
@@ -901,28 +858,26 @@ bool fs_mp_verify(fs_mempool_t *mp)
 
     fs_mp_block_t *block;
 
-    if (mp == NULL) {
+    if (mp == NULL)
+    {
         return false;
     }
 
     FS_MP_LOCK(mp);
 
-    for (i = 0; i <= mp->max_order; i++) {
+    for (i = 0; i <= mp->max_order; i++)
+    {
+        FS_LIST_FOR_EACH(pos, &mp->free_area[i])
+        {
+            block = FS_LIST_ENTRY(pos, fs_mp_block_t, node);
 
-        FS_LIST_FOR_EACH(pos, &mp->free_area[i]) {
-
-            block = FS_LIST_ENTRY(pos,
-                                  fs_mp_block_t,
-                                  node);
-
-            if (!fs_mp_contains(mp, block)) {
-
+            if (!fs_mp_contains(mp, block))
+            {
                 FS_MP_UNLOCK(mp);
 
-                FS_LOG_DUMP_ERROR(
-                        "verify: block %p "
-                        "not in pool range",
-                        (void *)block);
+                FS_LOG_DUMP_ERROR("verify: block %p "
+                                  "not in pool range",
+                                  (void *)block);
 
                 return false;
             }

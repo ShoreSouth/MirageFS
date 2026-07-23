@@ -5,7 +5,8 @@
 
 #include "common/op/fs_op_table.h"
 
-typedef enum {
+typedef enum
+{
 
 #define FS_OP_ENUM(name, str) FS_OP_##name,
 
@@ -13,7 +14,7 @@ typedef enum {
 
 #undef FS_OP_ENUM
 
-    FS_OP_MAX
+            FS_OP_MAX
 
 } fs_op_t;
 

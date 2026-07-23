@@ -3,7 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef enum namei_sub {
+typedef enum namei_sub
+{
 
     NAMEI_SUB_NONE = 0,
     NAMEI_SUB_INIT,

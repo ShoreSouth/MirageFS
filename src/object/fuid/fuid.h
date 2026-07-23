@@ -23,7 +23,8 @@ typedef uint32_t ShardId_t;
  * 文件类型
  * ============================================================ */
 
-typedef enum {
+typedef enum
+{
 
     FUID_TYPE_INVALID = 0,
 
@@ -43,20 +44,20 @@ typedef enum {
  * FUID flags
  * ============================================================ */
 
-#define FUID_FLAG_NONE        ((uint16_t)0x0000)
+#define FUID_FLAG_NONE ((uint16_t)0x0000)
 
-#define FUID_FLAG_COMPRESSED  ((uint16_t)0x0001)
-#define FUID_FLAG_ENCRYPTED   ((uint16_t)0x0002)
-#define FUID_FLAG_CLONED      ((uint16_t)0x0004)
+#define FUID_FLAG_COMPRESSED ((uint16_t)0x0001)
+#define FUID_FLAG_ENCRYPTED ((uint16_t)0x0002)
+#define FUID_FLAG_CLONED ((uint16_t)0x0004)
 
 /* ============================================================
  * 常量定义
  * ============================================================ */
 
-#define FUID_CURRENT_VERSION  1
+#define FUID_CURRENT_VERSION 1
 
-#define FUID_INVALID_FSID      ((Fsid_t)0)
-#define FUID_INVALID_OBJECTID  ((ObjectId_t)0)
+#define FUID_INVALID_FSID ((Fsid_t)0)
+#define FUID_INVALID_OBJECTID ((ObjectId_t)0)
 
 /* ============================================================
  * File Unique Identity
@@ -76,31 +77,31 @@ typedef enum {
  *     - 支持 stale 检测
  * ============================================================ */
 
-typedef struct fuid {
-
+typedef struct fuid
+{
     /* ---------- identity ---------- */
 
-    Fsid_t         fsid;      /* 文件系统ID */
+    Fsid_t fsid; /* 文件系统ID */
 
-    ObjectId_t objectid;      /* 对象唯一ID */
-    GenId_t         gen;      /* generation */
+    ObjectId_t objectid; /* 对象唯一ID */
+    GenId_t gen;         /* generation */
 
     /* ---------- view ---------- */
 
-    QtreeId_t   qtreeid;      /* qtree / tenant */
-    SnapId_t     snapid;      /* snapshot */
-    ShardId_t   shardid;      /* shard */
+    QtreeId_t qtreeid; /* qtree / tenant */
+    SnapId_t snapid;   /* snapshot */
+    ShardId_t shardid; /* shard */
 
     /* ---------- attributes ---------- */
 
-    uint8_t         type;     /* fuid_type_t */
-    uint8_t      version;     /* 结构版本 */
+    uint8_t type;    /* fuid_type_t */
+    uint8_t version; /* 结构版本 */
 
-    uint16_t       flags;     /* FUID_FLAG_* */
+    uint16_t flags; /* FUID_FLAG_* */
 
     /* ---------- reserved ---------- */
 
-    uint8_t  reserved0[12];
+    uint8_t reserved0[12];
     uint64_t reserved1[2];
 
 } fuid_t;
@@ -111,8 +112,7 @@ typedef struct fuid {
 
 #define FUID_SIZE 64
 
-_Static_assert(sizeof(fuid_t) == FUID_SIZE,
-    "fuid_t size invalid");
+_Static_assert(sizeof(fuid_t) == FUID_SIZE, "fuid_t size invalid");
 
 /* ============================================================
  * 基础接口
@@ -134,10 +134,8 @@ bool fuid_equal(const fuid_t *a, const fuid_t *b);
 uint64_t fuid_hash(const fuid_t *fuid);
 
 /* 构造 */
-fuid_t fuid_make(Fsid_t fsid,
-    ObjectId_t objectid,
-    GenId_t gen,
-    fuid_type_t type);
+fuid_t fuid_make(Fsid_t fsid, ObjectId_t objectid, GenId_t gen,
+                 fuid_type_t type);
 
 /* 类型字符串 */
 const char *fuid_type_str(fuid_type_t type);

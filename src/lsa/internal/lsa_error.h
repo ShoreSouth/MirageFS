@@ -8,6 +8,4 @@
  * ============================================================
  */
 
-fs_error_t lsa_error(
-                fs_op_t sub,
-                int err);
+fs_error_t lsa_error(fs_op_t sub, int err);

@@ -24,12 +24,8 @@ static int test_type_helpers_convert_modes_and_unknowns(void)
 
 
 const test_case_t COMMON_TYPE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_TYPE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_TYPE,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_TYPE, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_TYPE, 0x1,
                              0x001),
                   test_type_helpers_convert_modes_and_unknowns,
                   "文件类型 helper",
@@ -37,4 +33,5 @@ const test_case_t COMMON_TYPE_CASES[] = {
                   "所有已知类型返回预期值，未知类型返回 UNKNOWN"),
 };
 
-const size_t COMMON_TYPE_CASE_COUNT = sizeof(COMMON_TYPE_CASES) / sizeof(COMMON_TYPE_CASES[0]);
+const size_t COMMON_TYPE_CASE_COUNT =
+        sizeof(COMMON_TYPE_CASES) / sizeof(COMMON_TYPE_CASES[0]);

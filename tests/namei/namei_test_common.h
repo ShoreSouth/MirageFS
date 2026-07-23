@@ -14,7 +14,8 @@
 #include "runtime/include/runtime.h"
 
 /* NAMEI UT 按生命周期、上下文、lookup 和真实路径流程拆分。 */
-typedef enum test_namei_component {
+typedef enum test_namei_component
+{
     TEST_NAMEI_COMPONENT_LIFECYCLE = 0x01,
     TEST_NAMEI_COMPONENT_CTX = 0x02,
     TEST_NAMEI_COMPONENT_LOOKUP = 0x03,

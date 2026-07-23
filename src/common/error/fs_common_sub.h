@@ -19,23 +19,23 @@
  * ============================================================
  */
 
-#define FS_COMMON_SUB_TABLE(_)   \
-                                   \
-    _(NONE,     "NONE")            \
-                                   \
-    _(HASH,     "HASH")            \
-    _(LOCK,     "LOCK")            \
-    _(PATH,     "PATH")            \
-    _(MEMPOOL,  "MEMPOOL")         \
-    _(ATOMIC,   "ATOMIC")          \
-    _(LIST,     "LIST")            \
-    _(LOG,      "LOG")             \
-    _(OS,       "OS")              \
-    _(TRACE,    "TRACE")           \
-    _(UTILS,    "UTILS")           \
-    _(ERROR,    "ERROR")           \
-    _(MODULE,   "MODULE")          \
-    _(OP,       "OP")
+#define FS_COMMON_SUB_TABLE(_)                                                 \
+                                                                               \
+    _(NONE, "NONE")                                                            \
+                                                                               \
+    _(HASH, "HASH")                                                            \
+    _(LOCK, "LOCK")                                                            \
+    _(PATH, "PATH")                                                            \
+    _(MEMPOOL, "MEMPOOL")                                                      \
+    _(ATOMIC, "ATOMIC")                                                        \
+    _(LIST, "LIST")                                                            \
+    _(LOG, "LOG")                                                              \
+    _(OS, "OS")                                                                \
+    _(TRACE, "TRACE")                                                          \
+    _(UTILS, "UTILS")                                                          \
+    _(ERROR, "ERROR")                                                          \
+    _(MODULE, "MODULE")                                                        \
+    _(OP, "OP")
 
 /*
  * ============================================================
@@ -43,7 +43,8 @@
  * ============================================================
  */
 
-typedef enum fs_common_sub {
+typedef enum fs_common_sub
+{
 
 #define FS_COMMON_SUB_ENUM(name, str) FS_COMMON_SUB_##name,
 
@@ -51,7 +52,7 @@ typedef enum fs_common_sub {
 
 #undef FS_COMMON_SUB_ENUM
 
-    FS_COMMON_SUB_MAX
+            FS_COMMON_SUB_MAX
 
 } fs_common_sub_t;
 
@@ -61,24 +62,24 @@ typedef enum fs_common_sub {
  * ============================================================
  */
 
-static inline const char *
-fs_common_sub_name(uint32_t sub)
+static inline const char *fs_common_sub_name(uint32_t sub)
 {
-    switch (sub) {
+    switch (sub)
+    {
+#define FS_COMMON_SUB_CASE(name, str)                                          \
+    case FS_COMMON_SUB_##name:                                                 \
+        return str;
 
-#define FS_COMMON_SUB_CASE(name, str) \
-    case FS_COMMON_SUB_##name: return str;
-
-    FS_COMMON_SUB_TABLE(FS_COMMON_SUB_CASE)
+        FS_COMMON_SUB_TABLE(FS_COMMON_SUB_CASE)
 
 #undef FS_COMMON_SUB_CASE
 
-    default: return "UNKNOWN";
+    default:
+        return "UNKNOWN";
     }
 }
 
-static inline bool
-fs_common_sub_valid(uint32_t sub)
+static inline bool fs_common_sub_valid(uint32_t sub)
 {
     return sub < FS_COMMON_SUB_MAX;
 }
@@ -95,12 +96,7 @@ fs_common_sub_valid(uint32_t sub)
  * ============================================================
  */
 
-static inline fs_error_t
-fs_common_error(uint32_t sub, int err)
+static inline fs_error_t fs_common_error(uint32_t sub, int err)
 {
-    return FS_ERR(
-                FS_SEV_ERROR,
-                FS_MODULE_COMMON,
-                sub,
-                (uint8_t)err);
+    return FS_ERR(FS_SEV_ERROR, FS_MODULE_COMMON, sub, (uint8_t)err);
 }

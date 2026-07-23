@@ -21,17 +21,14 @@ static int test_objpool_standalone_lifecycle_edges(void)
 }
 
 const test_case_t OBJECT_OBJPOOL_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJPOOL,
-                         0x1),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJPOOL,
-                         0x1,
-                         0x001),
-              test_objpool_standalone_lifecycle_edges,
-              "ObjPool 独立生命周期",
-              "未初始化申请、NULL free、初始化后申请释放和重复 deinit",
-              "未初始化申请失败，释放和重复销毁安全"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJPOOL, 0x1),
+                  UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJPOOL, 0x1,
+                             0x001),
+                  test_objpool_standalone_lifecycle_edges,
+                  "ObjPool 独立生命周期",
+                  "未初始化申请、NULL free、初始化后申请释放和重复 deinit",
+                  "未初始化申请失败，释放和重复销毁安全"),
 };
 
-const size_t OBJECT_OBJPOOL_CASE_COUNT = sizeof(OBJECT_OBJPOOL_CASES) / sizeof(OBJECT_OBJPOOL_CASES[0]);
+const size_t OBJECT_OBJPOOL_CASE_COUNT =
+        sizeof(OBJECT_OBJPOOL_CASES) / sizeof(OBJECT_OBJPOOL_CASES[0]);

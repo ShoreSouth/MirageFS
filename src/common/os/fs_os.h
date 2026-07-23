@@ -10,10 +10,10 @@
 uint64_t fs_get_tid(void);
 
 /* 获取线程名（带缓存，线程安全） */
-const char* fs_get_thread_name(void);
+const char *fs_get_thread_name(void);
 
 /* 获取进程名（进程级缓存） */
-const char* fs_get_process_name(void);
+const char *fs_get_process_name(void);
 
 /* =========================
  * 时间
@@ -44,4 +44,4 @@ uint64_t fs_get_monotonic_us(void);
 uint64_t fs_get_monotonic_ns(void);
 
 /* 获取当前时间的格式化字符串，格式: YYYY-MM-DD HH:MM:SS.mmm */
-const char* fs_time_str(void);
+const char *fs_time_str(void);

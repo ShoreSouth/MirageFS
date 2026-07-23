@@ -25,7 +25,7 @@
  */
 
 /* sysroot 绝对路径缓冲区大小。 */
-#define FSC_SYSROOT_PATH_MAX     4096U
+#define FSC_SYSROOT_PATH_MAX 4096U
 
 /*
  * sysroot 的保留 FUID。
@@ -34,12 +34,13 @@
  * 小整数 ID 冲突。ObjectId/GenId 固定为 1，因为 sysroot 全局唯一，
  * 生命周期也跟随 FSC 模块。
  */
-#define FSC_SYSROOT_FSID      ((Fsid_t)0xffffffffffffffffULL)
+#define FSC_SYSROOT_FSID ((Fsid_t)0xffffffffffffffffULL)
 #define FSC_SYSROOT_OBJECT_ID ((ObjectId_t)1ULL)
-#define FSC_SYSROOT_GEN       ((GenId_t)1U)
+#define FSC_SYSROOT_GEN ((GenId_t)1U)
 
 /* sysroot 生命周期状态。 */
-typedef enum fsc_sysroot_state {
+typedef enum fsc_sysroot_state
+{
     FSC_SYSROOT_STATE_INVALID = 0,
     FSC_SYSROOT_STATE_INIT,
     FSC_SYSROOT_STATE_ACTIVE,

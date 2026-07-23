@@ -22,8 +22,7 @@ static int test_lock_wrappers_cover_mutex_and_rwlock(void)
     fs_mutex_destroy(&mutex);
     fs_mutex_destroy(NULL);
 
-    err = fs_mutex_init(&mutex, "common-test-recursive",
-                        FS_LOCK_F_RECURSIVE);
+    err = fs_mutex_init(&mutex, "common-test-recursive", FS_LOCK_F_RECURSIVE);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     fs_mutex_lock(&mutex);
     TEST_ASSERT_TRUE(fs_mutex_trylock(&mutex));
@@ -51,12 +50,8 @@ static int test_lock_wrappers_cover_mutex_and_rwlock(void)
 
 
 const test_case_t COMMON_LOCK_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_LOCK,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_LOCK,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_LOCK, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_LOCK, 0x1,
                              0x001),
                   test_lock_wrappers_cover_mutex_and_rwlock,
                   "锁包装器生命周期和 trylock",
@@ -64,4 +59,5 @@ const test_case_t COMMON_LOCK_CASES[] = {
                   "正常路径成功，NULL 初始化返回 COMMON/LOCK/EINVAL"),
 };
 
-const size_t COMMON_LOCK_CASE_COUNT = sizeof(COMMON_LOCK_CASES) / sizeof(COMMON_LOCK_CASES[0]);
+const size_t COMMON_LOCK_CASE_COUNT =
+        sizeof(COMMON_LOCK_CASES) / sizeof(COMMON_LOCK_CASES[0]);

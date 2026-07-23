@@ -20,11 +20,11 @@
  * runtime 指向 pool 统一管理的 obj_runtime_t 实例，
  * objtable 不持有数据副本，仅做索引引用。
  */
-typedef struct objtable_entry {
+typedef struct objtable_entry
+{
+    obj_runtime_t *runtime; /* 运行时对象（pool 统一管理） */
 
-    obj_runtime_t  *runtime; /* 运行时对象（pool 统一管理） */
-
-    fs_list_head_t  node;    /* hash 冲突链表节点 */
+    fs_list_head_t node; /* hash 冲突链表节点 */
 
 } objtable_entry_t;
 
@@ -44,8 +44,8 @@ typedef struct objtable_entry {
  * 内部基于 fs_hash 实现，
  * 不直接管理 Bucket 和链表。
  */
-typedef struct obj_table {
-
+typedef struct obj_table
+{
     fs_hash_t table;
 
 } obj_table_t;
@@ -65,9 +65,7 @@ typedef struct obj_table {
  *      FS_OK       : 成功
  *      fs_error_t  : 失败
  */
-fs_error_t objtable_init(
-            obj_table_t *table,
-            uint32_t bucket_nr);
+fs_error_t objtable_init(obj_table_t *table, uint32_t bucket_nr);
 
 /*
  * 销毁对象表。
@@ -80,8 +78,7 @@ fs_error_t objtable_init(
  * 参数：
  *      [IN/OUT] table  : 对象表（资源将被释放并置零）
  */
-void objtable_destroy(
-            obj_table_t *table);
+void objtable_destroy(obj_table_t *table);
 
 /* ============================================================
  * 基础操作
@@ -100,9 +97,7 @@ void objtable_destroy(
  *      FS_OK       : 成功
  *      fs_error_t  : 失败（已存在或参数无效）
  */
-fs_error_t objtable_insert(
-            obj_table_t *table,
-            obj_runtime_t *runtime);
+fs_error_t objtable_insert(obj_table_t *table, obj_runtime_t *runtime);
 
 /*
  * 删除对象。
@@ -115,9 +110,7 @@ fs_error_t objtable_insert(
  *      FS_OK       : 成功
  *      fs_error_t  : 失败（不存在或参数无效）
  */
-fs_error_t objtable_remove(
-            obj_table_t *table,
-            const obj_key_t *key);
+fs_error_t objtable_remove(obj_table_t *table, const obj_key_t *key);
 
 /*
  * 查找对象。
@@ -130,9 +123,7 @@ fs_error_t objtable_remove(
  *      NULL        : 未找到
  *      非 NULL     : 运行时对象指针（由 objtable 索引，pool 管理生命周期）
  */
-obj_runtime_t *objtable_lookup(
-                obj_table_t *table,
-                const obj_key_t *key);
+obj_runtime_t *objtable_lookup(obj_table_t *table, const obj_key_t *key);
 
 /*
  * 判断对象是否存在。
@@ -141,9 +132,7 @@ obj_runtime_t *objtable_lookup(
  *      [IN] table  : 对象表
  *      [IN] key    : 对象标识
  */
-bool objtable_exists(
-            obj_table_t *table,
-            const obj_key_t *key);
+bool objtable_exists(obj_table_t *table, const obj_key_t *key);
 
 /* ============================================================
  * 统计
@@ -155,5 +144,4 @@ bool objtable_exists(
  * 参数：
  *      [IN] table  : 对象表
  */
-uint64_t objtable_count(
-            const obj_table_t *table);
+uint64_t objtable_count(const obj_table_t *table);

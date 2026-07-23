@@ -29,7 +29,8 @@ int test_msh_repl_with_stdin(const char *input, bool interactive)
     TEST_ASSERT_TRUE(saved_stdin >= 0);
     tmp = tmpfile();
     TEST_ASSERT_TRUE(tmp != NULL);
-    if (input != NULL) {
+    if (input != NULL)
+    {
         TEST_ASSERT_EQ_INT(fwrite(input, 1U, strlen(input), tmp),
                            strlen(input));
     }

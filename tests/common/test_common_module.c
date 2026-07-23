@@ -17,17 +17,13 @@ static int test_module_and_op_helpers_handle_valid_and_invalid_values(void)
 
 
 const test_case_t COMMON_MODULE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_MODULE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_MODULE,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_MODULE, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_MODULE, 0x1,
                              0x001),
                   test_module_and_op_helpers_handle_valid_and_invalid_values,
-                  "模块和操作名 helper",
-                  "传入合法枚举、NONE/MAX 边界值",
+                  "模块和操作名 helper", "传入合法枚举、NONE/MAX 边界值",
                   "合法值返回名称，非法值返回 UNKNOWN 或 false"),
 };
 
-const size_t COMMON_MODULE_CASE_COUNT = sizeof(COMMON_MODULE_CASES) / sizeof(COMMON_MODULE_CASES[0]);
+const size_t COMMON_MODULE_CASE_COUNT =
+        sizeof(COMMON_MODULE_CASES) / sizeof(COMMON_MODULE_CASES[0]);

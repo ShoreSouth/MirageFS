@@ -32,55 +32,64 @@ fs_error_t fsc_init(void)
 
     FS_LOG_DUMP_INFO("enter");
 
-    fs_sub_register(FS_MODULE_FSC,
-                    (fs_sub_name_fn)fsc_sub_name);
+    fs_sub_register(FS_MODULE_FSC, (fs_sub_name_fn)fsc_sub_name);
 
     err = fsc_sysroot_init(NULL);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         FS_LOG_DUMP_ERROR("fsc_sysroot_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
         goto out;
     }
 
 #ifdef FS_TEST_FAULTS
-    if (fsc_test_fault_enabled("fsid")) {
+    if (fsc_test_fault_enabled("fsid"))
+    {
         err = fsc_error(FSC_SUB_FSID, FS_ERRNO_ENOMEM);
-    } else
+    }
+    else
 #endif
     {
         err = fsid_init();
     }
-    if (fs_failed(err)) {
-        FS_LOG_DUMP_ERROR("fsid_init failed, err=%s (0x%x)",
-                          fs_error_str(err), err);
+    if (fs_failed(err))
+    {
+        FS_LOG_DUMP_ERROR("fsid_init failed, err=%s (0x%x)", fs_error_str(err),
+                          err);
         goto err_sysroot;
     }
 
 #ifdef FS_TEST_FAULTS
-    if (fsc_test_fault_enabled("nspool")) {
+    if (fsc_test_fault_enabled("nspool"))
+    {
         err = fsc_error(FSC_SUB_NSPOOL, FS_ERRNO_ENOMEM);
-    } else
+    }
+    else
 #endif
     {
         err = nspool_init();
     }
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         FS_LOG_DUMP_ERROR("nspool_init failed, err=%s (0x%x)",
                           fs_error_str(err), err);
         goto err_fsid;
     }
 
 #ifdef FS_TEST_FAULTS
-    if (fsc_test_fault_enabled("fsmgr")) {
+    if (fsc_test_fault_enabled("fsmgr"))
+    {
         err = fsc_error(FSC_SUB_INIT, FS_ERRNO_ENOMEM);
-    } else
+    }
+    else
 #endif
     {
         err = fsmgr_init();
     }
-    if (fs_failed(err)) {
-        FS_LOG_DUMP_ERROR("fsmgr_init failed, err=%s (0x%x)",
-                          fs_error_str(err), err);
+    if (fs_failed(err))
+    {
+        FS_LOG_DUMP_ERROR("fsmgr_init failed, err=%s (0x%x)", fs_error_str(err),
+                          err);
         goto err_nspool;
     }
 

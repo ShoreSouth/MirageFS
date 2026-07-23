@@ -33,17 +33,14 @@ static int test_os_helpers_return_cached_names_and_times(void)
 
 
 const test_case_t COMMON_OS_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_OS,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_OS,
-                             0x1,
-                             0x001),
-                  test_os_helpers_return_cached_names_and_times,
-                  "OS helper 线程进程名和时间",
-                  "读取线程名、进程名、实时时间、单调时间和格式化时间",
-                  "返回非空名称和合理时间值，并命中线程名缓存"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_OS, 0x1),
+                UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_OS, 0x1, 0x001),
+                test_os_helpers_return_cached_names_and_times,
+                "OS helper 线程进程名和时间",
+                "读取线程名、进程名、实时时间、单调时间和格式化时间",
+                "返回非空名称和合理时间值，并命中线程名缓存"),
 };
 
-const size_t COMMON_OS_CASE_COUNT = sizeof(COMMON_OS_CASES) / sizeof(COMMON_OS_CASES[0]);
+const size_t COMMON_OS_CASE_COUNT =
+        sizeof(COMMON_OS_CASES) / sizeof(COMMON_OS_CASES[0]);

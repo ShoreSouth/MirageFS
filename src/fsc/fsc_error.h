@@ -22,6 +22,4 @@
  * 返回：
  *      fs_error_t : 编码后的 FSC 错误
  */
-fs_error_t fsc_error(
-                fsc_sub_t sub,
-                int err);
+fs_error_t fsc_error(fsc_sub_t sub, int err);

@@ -9,7 +9,8 @@ static int test_lsa_attr_and_fs_ops(void)
     struct statfs fsst;
     fs_error_t err;
 
-    TEST_ASSERT_EQ_INT(test_lsa_open_tmp_root(dir_path, sizeof(dir_path), &dirfd), 0);
+    TEST_ASSERT_EQ_INT(
+            test_lsa_open_tmp_root(dir_path, sizeof(dir_path), &dirfd), 0);
     TEST_ASSERT_EQ_INT(test_lsa_create_file(dirfd, "attr.txt", &fd), 0);
 
     TEST_ASSERT_EQ_INT(lsa_fstat(fd, &st), FS_OK);
@@ -31,17 +32,12 @@ static int test_lsa_attr_and_fs_ops(void)
 
 
 const test_case_t LSA_ATTR_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_LSA,
-                                 TEST_LSA_COMPONENT_ATTR,
-                                 0x1),
-                      UT_CASE_NO(UT_MOD_LSA,
-                                 TEST_LSA_COMPONENT_ATTR,
-                                 0x1,
-                                 0x001),
-                      test_lsa_attr_and_fs_ops,
-                      "属性和文件系统级操作真实后端验证",
-                      "执行 fstat/fchmod/fchown/faccess/fstatat/statfs/syncfs",
-                      "属性与文件系统信息可读取，允许 syncfs 返回结构化失败"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_LSA, TEST_LSA_COMPONENT_ATTR, 0x1),
+                  UT_CASE_NO(UT_MOD_LSA, TEST_LSA_COMPONENT_ATTR, 0x1, 0x001),
+                  test_lsa_attr_and_fs_ops, "属性和文件系统级操作真实后端验证",
+                  "执行 fstat/fchmod/fchown/faccess/fstatat/statfs/syncfs",
+                  "属性与文件系统信息可读取，允许 syncfs 返回结构化失败"),
 };
 
-const size_t LSA_ATTR_CASE_COUNT = sizeof(LSA_ATTR_CASES) / sizeof(LSA_ATTR_CASES[0]);
+const size_t LSA_ATTR_CASE_COUNT =
+        sizeof(LSA_ATTR_CASES) / sizeof(LSA_ATTR_CASES[0]);

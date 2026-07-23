@@ -74,11 +74,11 @@ typedef enum obj_state
  * Cache、Storage、Journal 等一级模块通过 obj_runtime_t *
  * 与对象建立关联，不直接修改 obj_meta_t。
  */
-typedef struct obj_runtime {
-
-    obj_meta_t       meta;   /* 对象元数据（key + handle） */
-    fs_atomic32_t   refcnt; /* 引用计数，原子操作 */
-    uint32_t         state; /* 生命周期状态，见 obj_state_t */
+typedef struct obj_runtime
+{
+    obj_meta_t meta;      /* 对象元数据（key + handle） */
+    fs_atomic32_t refcnt; /* 引用计数，原子操作 */
+    uint32_t state;       /* 生命周期状态，见 obj_state_t */
 
 } obj_runtime_t;
 
@@ -102,8 +102,7 @@ _Static_assert(sizeof(obj_runtime_t) == OBJRUNTIME_SIZE,
  * 参数：
  *      [IN] rt     : 运行时对象
  */
-static inline obj_state_t objruntime_state(
-                const obj_runtime_t *rt)
+static inline obj_state_t objruntime_state(const obj_runtime_t *rt)
 {
     return (obj_state_t)rt->state;
 }
@@ -121,5 +120,4 @@ static inline obj_state_t objruntime_state(
  * 参数：
  *      [IN] rt     : 待打印的运行时对象
  */
-void objruntime_dump(
-                const obj_runtime_t *rt);
+void objruntime_dump(const obj_runtime_t *rt);

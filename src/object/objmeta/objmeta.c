@@ -9,14 +9,15 @@
  * 内部函数
  * ============================================================ */
 
-static bool objmeta_handle_valid(
-                    uint16_t handle_bytes)
+static bool objmeta_handle_valid(uint16_t handle_bytes)
 {
-    if (handle_bytes == 0) {
+    if (handle_bytes == 0)
+    {
         return false;
     }
 
-    if (handle_bytes > OBJMETA_MAX_HANDLE_SIZE) {
+    if (handle_bytes > OBJMETA_MAX_HANDLE_SIZE)
+    {
         return false;
     }
 
@@ -27,36 +28,37 @@ static bool objmeta_handle_valid(
  * 对外接口
  * ============================================================ */
 
-fs_error_t objmeta_handle_from_lsa(
-                obj_handle_t *out,
-                const lsa_file_handle_t *handle,
-                int32_t mount_id)
+fs_error_t objmeta_handle_from_lsa(obj_handle_t *out,
+                                   const lsa_file_handle_t *handle,
+                                   int32_t mount_id)
 {
     fs_error_t err;
 
-    if ((out == NULL) || (handle == NULL)) {
+    if ((out == NULL) || (handle == NULL))
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: null pointer, "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
-    if (OBJMETA_MAX_HANDLE_SIZE < handle->handle_bytes) {
+    if (OBJMETA_MAX_HANDLE_SIZE < handle->handle_bytes)
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EOVERFLOW);
         FS_LOG_DUMP_ERROR("handle convert failed: too large, "
                           "bytes=%u, err=%s (0x%x)",
-                          handle->handle_bytes,
-                          fs_error_str(err), err);
+                          handle->handle_bytes, fs_error_str(err), err);
         return err;
     }
 
     if ((handle->handle_type < 0) ||
-        (UINT16_MAX < (uint32_t)handle->handle_type)) {
+        (UINT16_MAX < (uint32_t)handle->handle_type))
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EOVERFLOW);
         FS_LOG_DUMP_ERROR("handle convert failed: invalid type=%d, "
                           "err=%s (0x%x)",
-                          handle->handle_type,
-                          fs_error_str(err), err);
+                          handle->handle_type, fs_error_str(err), err);
         return err;
     }
 
@@ -70,34 +72,35 @@ fs_error_t objmeta_handle_from_lsa(
     return FS_OK;
 }
 
-fs_error_t objmeta_handle_to_lsa(
-                lsa_file_handle_t *out,
-                const obj_handle_t *handle)
+fs_error_t objmeta_handle_to_lsa(lsa_file_handle_t *out,
+                                 const obj_handle_t *handle)
 {
     fs_error_t err;
 
-    if ((out == NULL) || (handle == NULL)) {
+    if ((out == NULL) || (handle == NULL))
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: null pointer, "
-                          "err=%s (0x%x)", fs_error_str(err), err);
+                          "err=%s (0x%x)",
+                          fs_error_str(err), err);
         return err;
     }
 
-    if (!objmeta_handle_valid(handle->len)) {
+    if (!objmeta_handle_valid(handle->len))
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("handle convert failed: invalid len=%u, "
                           "err=%s (0x%x)",
-                          (unsigned int)handle->len,
-                          fs_error_str(err), err);
+                          (unsigned int)handle->len, fs_error_str(err), err);
         return err;
     }
 
-    if (LSA_HANDLE_MAX_SIZE < handle->len) {
+    if (LSA_HANDLE_MAX_SIZE < handle->len)
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EOVERFLOW);
         FS_LOG_DUMP_ERROR("handle convert failed: lsa overflow, "
                           "len=%u, err=%s (0x%x)",
-                          (unsigned int)handle->len,
-                          fs_error_str(err), err);
+                          (unsigned int)handle->len, fs_error_str(err), err);
         return err;
     }
 
@@ -110,51 +113,52 @@ fs_error_t objmeta_handle_to_lsa(
     return FS_OK;
 }
 
-fs_error_t objmeta_init(
-                obj_meta_t *meta,
-                const fuid_t *fuid,
-                const obj_handle_t *handle)
+fs_error_t objmeta_init(obj_meta_t *meta, const fuid_t *fuid,
+                        const obj_handle_t *handle)
 {
     fs_error_t err;
 
-    FS_LOG_DUMP_INFO("enter: meta=%p, fuid=%p, handle=%p",
-                     (void *)meta, (const void *)fuid,
-                     (const void *)handle);
+    FS_LOG_DUMP_INFO("enter: meta=%p, fuid=%p, handle=%p", (void *)meta,
+                     (const void *)fuid, (const void *)handle);
 
-    if (meta == NULL) {
+    if (meta == NULL)
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: meta is NULL, err=%s (0x%x)",
                           fs_error_str(err), err);
         return err;
     }
 
-    if (fuid == NULL) {
+    if (fuid == NULL)
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: fuid is NULL, err=%s (0x%x)",
                           fs_error_str(err), err);
         return err;
     }
 
-    if (!fuid_is_valid(fuid)) {
+    if (!fuid_is_valid(fuid))
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: invalid fuid, err=%s (0x%x)",
                           fs_error_str(err), err);
         return err;
     }
 
-    if (handle == NULL) {
+    if (handle == NULL)
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR("param check failed: handle is NULL, err=%s (0x%x)",
                           fs_error_str(err), err);
         return err;
     }
 
-    if (!objmeta_handle_valid(handle->len)) {
+    if (!objmeta_handle_valid(handle->len))
+    {
         err = obj_error(OBJ_SUB_INIT, FS_ERRNO_EINVAL);
         FS_LOG_DUMP_ERROR(
                 "param check failed: invalid handle_len=%u, err=%s (0x%x)",
-                (unsigned int)handle->len,
-                fs_error_str(err), err);
+                (unsigned int)handle->len, fs_error_str(err), err);
         return err;
     }
 
@@ -167,48 +171,45 @@ fs_error_t objmeta_init(
     return FS_OK;
 }
 
-void objmeta_deinit(
-            obj_meta_t *meta)
+void objmeta_deinit(obj_meta_t *meta)
 {
     FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
 
-    if (meta == NULL) {
+    if (meta == NULL)
+    {
         return;
     }
 
-    memset(meta,
-           0,
-           sizeof(obj_meta_t));
+    memset(meta, 0, sizeof(obj_meta_t));
 
     FS_LOG_DUMP_INFO("exit: done");
 }
 
-void objmeta_reset(
-            obj_meta_t *meta)
+void objmeta_reset(obj_meta_t *meta)
 {
     objmeta_deinit(meta);
 }
 
-bool objmeta_is_valid(
-                const obj_meta_t *meta)
+bool objmeta_is_valid(const obj_meta_t *meta)
 {
     bool valid;
 
     FS_LOG_DUMP_INFO("enter: meta=%p", (const void *)meta);
 
-    if (meta == NULL) {
+    if (meta == NULL)
+    {
         valid = false;
         goto out;
     }
 
-    if (!objkey_is_valid(
-            &meta->key)) {
+    if (!objkey_is_valid(&meta->key))
+    {
         valid = false;
         goto out;
     }
 
-    if (!objmeta_handle_valid(
-            meta->handle.len)) {
+    if (!objmeta_handle_valid(meta->handle.len))
+    {
         valid = false;
         goto out;
     }
@@ -216,51 +217,49 @@ bool objmeta_is_valid(
     valid = true;
 
 out:
-    FS_LOG_DUMP_INFO("exit: %s",
-                     valid ? "true" : "false");
+    FS_LOG_DUMP_INFO("exit: %s", valid ? "true" : "false");
     return valid;
 }
 
-bool objmeta_equal(
-                const obj_meta_t *lhs,
-                const obj_meta_t *rhs)
+bool objmeta_equal(const obj_meta_t *lhs, const obj_meta_t *rhs)
 {
     bool equal;
 
-    FS_LOG_DUMP_INFO("enter: lhs=%p, rhs=%p",
-                     (const void *)lhs, (const void *)rhs);
+    FS_LOG_DUMP_INFO("enter: lhs=%p, rhs=%p", (const void *)lhs,
+                     (const void *)rhs);
 
-    if ((lhs == NULL) ||
-        (rhs == NULL)) {
+    if ((lhs == NULL) || (rhs == NULL))
+    {
         equal = false;
         goto out;
     }
 
-    if (!objkey_equal(
-            &lhs->key,
-            &rhs->key)) {
+    if (!objkey_equal(&lhs->key, &rhs->key))
+    {
         equal = false;
         goto out;
     }
 
-    if (lhs->handle.mount_id != rhs->handle.mount_id) {
+    if (lhs->handle.mount_id != rhs->handle.mount_id)
+    {
         equal = false;
         goto out;
     }
 
-    if (lhs->handle.type != rhs->handle.type) {
+    if (lhs->handle.type != rhs->handle.type)
+    {
         equal = false;
         goto out;
     }
 
-    if (lhs->handle.len != rhs->handle.len) {
+    if (lhs->handle.len != rhs->handle.len)
+    {
         equal = false;
         goto out;
     }
 
-    if (memcmp(lhs->handle.data,
-               rhs->handle.data,
-               lhs->handle.len) != 0) {
+    if (memcmp(lhs->handle.data, rhs->handle.data, lhs->handle.len) != 0)
+    {
         equal = false;
         goto out;
     }
@@ -268,20 +267,19 @@ bool objmeta_equal(
     equal = true;
 
 out:
-    FS_LOG_DUMP_INFO("exit: %s",
-                     equal ? "true" : "false");
+    FS_LOG_DUMP_INFO("exit: %s", equal ? "true" : "false");
     return equal;
 }
 
-void objmeta_dump(
-            const obj_meta_t *meta)
+void objmeta_dump(const obj_meta_t *meta)
 {
     uint32_t i;
     uint32_t offset;
 
     char handle_buf[128];
 
-    if (meta == NULL) {
+    if (meta == NULL)
+    {
         FS_LOG_DUMP_INFO("objmeta: null");
         return;
     }
@@ -290,17 +288,13 @@ void objmeta_dump(
 
     offset = 0;
 
-    for (i = 0;
-         i < meta->handle.len;
-         i++) {
+    for (i = 0; i < meta->handle.len; i++)
+    {
+        offset += snprintf(handle_buf + offset, sizeof(handle_buf) - offset,
+                           "%02x", meta->handle.data[i]);
 
-        offset += snprintf(
-                    handle_buf + offset,
-                    sizeof(handle_buf) - offset,
-                    "%02x",
-                    meta->handle.data[i]);
-
-        if (offset >= sizeof(handle_buf)) {
+        if (offset >= sizeof(handle_buf))
+        {
             break;
         }
     }
@@ -308,9 +302,7 @@ void objmeta_dump(
     FS_LOG_DUMP_INFO("objmeta: objectid=%lu, gen=%u, mount_id=%d, "
                      "handle_type=%u, handle_bytes=%u, file_handle=%s",
                      (unsigned long)meta->key.objectid,
-                     (unsigned int)meta->key.gen,
-                     (int)meta->handle.mount_id,
+                     (unsigned int)meta->key.gen, (int)meta->handle.mount_id,
                      (unsigned int)meta->handle.type,
-                     (unsigned int)meta->handle.len,
-                     handle_buf);
+                     (unsigned int)meta->handle.len, handle_buf);
 }

@@ -32,7 +32,8 @@ obj_handle_t test_fops_make_handle(int32_t mount_id)
 
 static int test_fops_mkdir_if_missing(const char *path)
 {
-    if (mkdir(path, 0775) == 0) {
+    if (mkdir(path, 0775) == 0)
+    {
         return 0;
     }
     return errno == EEXIST ? 0 : -1;
@@ -44,30 +45,34 @@ static int test_fops_make_tmp_root(char *path, size_t size)
     int written;
 
     base = "../output/tests/fops";
-    if (access("../output", F_OK) != 0) {
+    if (access("../output", F_OK) != 0)
+    {
         base = "output/tests/fops";
     }
 
-    if (strcmp(base, "../output/tests/fops") == 0) {
+    if (strcmp(base, "../output/tests/fops") == 0)
+    {
         if ((test_fops_mkdir_if_missing("../output") != 0) ||
             (test_fops_mkdir_if_missing("../output/tests") != 0) ||
-            (test_fops_mkdir_if_missing("../output/tests/fops") != 0)) {
+            (test_fops_mkdir_if_missing("../output/tests/fops") != 0))
+        {
             return -1;
         }
-    } else {
+    }
+    else
+    {
         if ((test_fops_mkdir_if_missing("output") != 0) ||
             (test_fops_mkdir_if_missing("output/tests") != 0) ||
-            (test_fops_mkdir_if_missing("output/tests/fops") != 0)) {
+            (test_fops_mkdir_if_missing("output/tests/fops") != 0))
+        {
             return -1;
         }
     }
 
-    written = snprintf(path,
-                       size,
-                       "%s/miragefs-fops-test-%ld-XXXXXX",
-                       base,
+    written = snprintf(path, size, "%s/miragefs-fops-test-%ld-XXXXXX", base,
                        (long)getpid());
-    if ((written < 0) || ((size_t)written >= size)) {
+    if ((written < 0) || ((size_t)written >= size))
+    {
         return -1;
     }
 
@@ -80,22 +85,26 @@ int test_fops_env_setup(test_fops_env_t *env)
     obj_handle_t handle;
     fs_error_t err;
 
-    if (env == NULL) {
+    if (env == NULL)
+    {
         return -1;
     }
 
     memset(env, 0, sizeof(*env));
-    if (test_fops_make_tmp_root(env->path, sizeof(env->path)) != 0) {
+    if (test_fops_make_tmp_root(env->path, sizeof(env->path)) != 0)
+    {
         return -1;
     }
 
     err = object_init();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         (void)rmdir(env->path);
         return -1;
     }
     err = fops_init();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         object_deinit();
         (void)rmdir(env->path);
         return -1;
@@ -103,7 +112,8 @@ int test_fops_env_setup(test_fops_env_t *env)
 
     memset(&lsa_handle, 0, sizeof(lsa_handle));
     err = lsa_bootstrap_root(env->path, &lsa_handle, &env->mount_id);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         fops_deinit();
         object_deinit();
         (void)rmdir(env->path);
@@ -111,7 +121,8 @@ int test_fops_env_setup(test_fops_env_t *env)
     }
 
     err = objmeta_handle_from_lsa(&handle, &lsa_handle, env->mount_id);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         (void)lsa_release_mount(env->mount_id);
         fops_deinit();
         object_deinit();
@@ -120,7 +131,8 @@ int test_fops_env_setup(test_fops_env_t *env)
     }
 
     env->root_fuid = fuid_make(21U, 9000001U, 1U, FUID_TYPE_DIR);
-    if (objmgr_create(&env->root_fuid, &handle) == NULL) {
+    if (objmgr_create(&env->root_fuid, &handle) == NULL)
+    {
         (void)lsa_release_mount(env->mount_id);
         fops_deinit();
         object_deinit();
@@ -133,7 +145,8 @@ int test_fops_env_setup(test_fops_env_t *env)
 
 void test_fops_env_teardown(test_fops_env_t *env)
 {
-    if (env == NULL) {
+    if (env == NULL)
+    {
         return;
     }
 

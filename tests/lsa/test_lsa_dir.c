@@ -13,18 +13,22 @@ static int test_lsa_dir_iterator_cookie_and_plus(void)
     lsa_dir_cookie_t cookie;
     fs_error_t err;
 
-    TEST_ASSERT_EQ_INT(test_lsa_open_tmp_root(dir_path, sizeof(dir_path), &dirfd), 0);
+    TEST_ASSERT_EQ_INT(
+            test_lsa_open_tmp_root(dir_path, sizeof(dir_path), &dirfd), 0);
     TEST_ASSERT_EQ_INT(test_lsa_create_file(dirfd, "a.txt", &fd), 0);
     TEST_ASSERT_EQ_INT(lsa_close(fd), FS_OK);
     TEST_ASSERT_EQ_INT(lsa_mkdir(dirfd, "sub", 0, 0755), FS_OK);
 
     err = lsa_dir_iter_open(dirfd, 0, &iter);
     TEST_ASSERT_EQ_INT(err, FS_OK);
-    while (fs_succeeded(lsa_dir_iter_next(iter, &entry))) {
-        if (strcmp(entry.name, "a.txt") == 0) {
+    while (fs_succeeded(lsa_dir_iter_next(iter, &entry)))
+    {
+        if (strcmp(entry.name, "a.txt") == 0)
+        {
             saw_file = true;
         }
-        if (strcmp(entry.name, "sub") == 0) {
+        if (strcmp(entry.name, "sub") == 0)
+        {
             saw_dir = true;
         }
     }
@@ -48,17 +52,13 @@ static int test_lsa_dir_iterator_cookie_and_plus(void)
 
 
 const test_case_t LSA_DIR_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_LSA,
-                                 TEST_LSA_COMPONENT_DIR,
-                                 0x1),
-                      UT_CASE_NO(UT_MOD_LSA,
-                                 TEST_LSA_COMPONENT_DIR,
-                                 0x1,
-                                 0x001),
-                      test_lsa_dir_iterator_cookie_and_plus,
-                      "目录迭代器 entry、plus 和 cookie 行为",
-                      "创建文件和目录后执行 next/seek/next_plus/get_cookie",
-                      "能枚举目标项，plus 可取 stat，cookie 可用于重新定位"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_LSA, TEST_LSA_COMPONENT_DIR, 0x1),
+                  UT_CASE_NO(UT_MOD_LSA, TEST_LSA_COMPONENT_DIR, 0x1, 0x001),
+                  test_lsa_dir_iterator_cookie_and_plus,
+                  "目录迭代器 entry、plus 和 cookie 行为",
+                  "创建文件和目录后执行 next/seek/next_plus/get_cookie",
+                  "能枚举目标项，plus 可取 stat，cookie 可用于重新定位"),
 };
 
-const size_t LSA_DIR_CASE_COUNT = sizeof(LSA_DIR_CASES) / sizeof(LSA_DIR_CASES[0]);
+const size_t LSA_DIR_CASE_COUNT =
+        sizeof(LSA_DIR_CASES) / sizeof(LSA_DIR_CASES[0]);

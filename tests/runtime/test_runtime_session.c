@@ -129,28 +129,22 @@ static int test_runtime_initialized_without_session_rejects_ctx_ops(void)
 
 
 const test_case_t RUNTIME_SESSION_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_SESSION,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_SESSION,
-                             0x1,
-                             0x001),
-                  test_runtime_requires_init_for_session_ops,
-                  "Runtime 未初始化保护",
-                  "未 init 时调用 getcwd/leave",
-                  "返回 RUNTIME 模块 EINVAL"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_SESSION,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_SESSION,
-                             0x1,
-                             0x002),
-                  test_runtime_initialized_without_session_rejects_ctx_ops,
-                  "Runtime 未进入 namespace 保护",
-                  "已 init 但未 fs use 时读取 ctx/root/cwd",
-                  "返回 RUNTIME/SESSION/ENOENT"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_SESSION, 0x1),
+                UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_SESSION, 0x1,
+                           0x001),
+                test_runtime_requires_init_for_session_ops,
+                "Runtime 未初始化保护", "未 init 时调用 getcwd/leave",
+                "返回 RUNTIME 模块 EINVAL"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_SESSION, 0x1),
+                UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_SESSION, 0x1,
+                           0x002),
+                test_runtime_initialized_without_session_rejects_ctx_ops,
+                "Runtime 未进入 namespace 保护",
+                "已 init 但未 fs use 时读取 ctx/root/cwd",
+                "返回 RUNTIME/SESSION/ENOENT"),
 };
 
-const size_t RUNTIME_SESSION_CASE_COUNT = sizeof(RUNTIME_SESSION_CASES) / sizeof(RUNTIME_SESSION_CASES[0]);
+const size_t RUNTIME_SESSION_CASE_COUNT =
+        sizeof(RUNTIME_SESSION_CASES) / sizeof(RUNTIME_SESSION_CASES[0]);

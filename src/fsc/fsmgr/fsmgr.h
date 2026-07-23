@@ -46,17 +46,14 @@ void fsmgr_deinit(void);
  * 对外输出 root_out，而不是 fd/path/obj_handle。后续业务应拿 FUID
  * 查询对象元数据，再由 LSA 层在边界内打开临时 fd。
  */
-fs_error_t fsmgr_create(
-                const char *name,
-                fuid_t *root_out);
+fs_error_t fsmgr_create(const char *name, fuid_t *root_out);
 
 /*
  * 销毁 namespace，并删除 sysroot 下对应的文件系统根目录。
  *
  * 当前只允许销毁空目录；如果后端目录非空，LSA 会返回 ENOTEMPTY。
  */
-fs_error_t fsmgr_destroy(
-                fsc_fsid_t fsid);
+fs_error_t fsmgr_destroy(fsc_fsid_t fsid);
 
 /*
  * ============================================================
@@ -65,30 +62,23 @@ fs_error_t fsmgr_destroy(
  */
 
 /* 通过名称查找 ACTIVE namespace，返回借用指针。 */
-fsc_namespace_t *fsmgr_lookup(
-                const char *name);
+fsc_namespace_t *fsmgr_lookup(const char *name);
 
 /* 通过 FSID 查找 ACTIVE namespace，返回借用指针。 */
-fsc_namespace_t *fsmgr_lookup_fsid(
-                fsc_fsid_t fsid);
+fsc_namespace_t *fsmgr_lookup_fsid(fsc_fsid_t fsid);
 
 /* 判断指定名称的 namespace 是否存在。 */
-bool fsmgr_exists(
-                const char *name);
+bool fsmgr_exists(const char *name);
 
 /* 获取 namespace 根目录 FUID。 */
-fs_error_t fsmgr_get_root_fuid(
-                fsc_fsid_t fsid,
-                fuid_t *root_out);
+fs_error_t fsmgr_get_root_fuid(fsc_fsid_t fsid, fuid_t *root_out);
 
 /*
  * 获取 namespace 根目录 backend handle。
  *
  * 该接口只用于 FSC/Object 内部衔接，不应作为业务层主入口。
  */
-fs_error_t fsmgr_get_root_handle(
-                fsc_fsid_t fsid,
-                obj_handle_t *handle_out);
+fs_error_t fsmgr_get_root_handle(fsc_fsid_t fsid, obj_handle_t *handle_out);
 
 /*
  * ============================================================

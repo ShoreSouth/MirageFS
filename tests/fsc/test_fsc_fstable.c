@@ -4,7 +4,8 @@ static uint32_t g_fstable_reclaim_count;
 
 static void test_fstable_reclaim_count(fsc_namespace_t *ns)
 {
-    if (ns != NULL) {
+    if (ns != NULL)
+    {
         g_fstable_reclaim_count++;
     }
 }
@@ -145,52 +146,34 @@ static int test_fstable_rejects_zero_bucket_and_invalid_namespace(void)
 }
 
 
-
 const test_case_t FSC_FSTABLE_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1,
-                             0x001),
-                  test_fstable_insert_lookup_remove_by_two_indexes,
-                  "FSTable 双索引",
-                  "插入 ACTIVE namespace 并通过 fsid/name 查找",
-                  "双索引命中，重复插入 EEXIST，删除后计数归零"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1,
-                             0x002),
-                  test_fstable_rejects_invalid_inputs,
-                  "FSTable 参数校验",
-                  "NULL table/ns、删除缺失 fsid、非法 name",
-                  "返回 FSC EINVAL/ENOENT 或安全 NULL"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1,
-                             0x003),
-                  test_fstable_reclaims_remaining_entries_on_deinit,
-                  "FSTable deinit 回收剩余 entry",
-                  "插入两个 namespace，删除一个后 deinit 表并传入回收回调",
-                  "剩余 entry 被回收一次，NULL table deinit 安全返回"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSTABLE,
-                             0x1,
-                             0x004),
-                  test_fstable_rejects_zero_bucket_and_invalid_namespace,
-                  "FSTable 初始化和 namespace 校验",
-                  "使用 0 bucket 初始化，并插入未初始化 namespace",
-                  "非法 hash 参数和非法 namespace 都被拒绝"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1),
+                UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1, 0x001),
+                test_fstable_insert_lookup_remove_by_two_indexes,
+                "FSTable 双索引", "插入 ACTIVE namespace 并通过 fsid/name 查找",
+                "双索引命中，重复插入 EEXIST，删除后计数归零"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1),
+                UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1, 0x002),
+                test_fstable_rejects_invalid_inputs, "FSTable 参数校验",
+                "NULL table/ns、删除缺失 fsid、非法 name",
+                "返回 FSC EINVAL/ENOENT 或安全 NULL"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1),
+                UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1, 0x003),
+                test_fstable_reclaims_remaining_entries_on_deinit,
+                "FSTable deinit 回收剩余 entry",
+                "插入两个 namespace，删除一个后 deinit 表并传入回收回调",
+                "剩余 entry 被回收一次，NULL table deinit 安全返回"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1),
+                UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSTABLE, 0x1, 0x004),
+                test_fstable_rejects_zero_bucket_and_invalid_namespace,
+                "FSTable 初始化和 namespace 校验",
+                "使用 0 bucket 初始化，并插入未初始化 namespace",
+                "非法 hash 参数和非法 namespace 都被拒绝"),
 };
 
-const size_t FSC_FSTABLE_CASE_COUNT = sizeof(FSC_FSTABLE_CASES) / sizeof(FSC_FSTABLE_CASES[0]);
+const size_t FSC_FSTABLE_CASE_COUNT =
+        sizeof(FSC_FSTABLE_CASES) / sizeof(FSC_FSTABLE_CASES[0]);

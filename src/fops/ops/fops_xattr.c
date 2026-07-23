@@ -7,11 +7,8 @@
 #include "fops/internal/fops_internal.h"
 #include "lsa/include/lsa_api.h"
 
-fs_error_t fops_getxattr(const fuid_t *fuid,
-                         const char *name,
-                         void *value,
-                         size_t size,
-                         size_t *actual)
+fs_error_t fops_getxattr(const fuid_t *fuid, const char *name, void *value,
+                         size_t size, size_t *actual)
 {
     fs_error_t err;
     obj_meta_t *meta;
@@ -22,7 +19,8 @@ fs_error_t fops_getxattr(const fuid_t *fuid,
 
     err = fops_open_object(fuid, O_RDONLY | O_CLOEXEC, &meta, &fd,
                            FS_OP_GETXATTR);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -31,11 +29,8 @@ fs_error_t fops_getxattr(const fuid_t *fuid,
     return err;
 }
 
-fs_error_t fops_setxattr(const fuid_t *fuid,
-                         const char *name,
-                         const void *value,
-                         size_t size,
-                         fs_flags_t flags)
+fs_error_t fops_setxattr(const fuid_t *fuid, const char *name,
+                         const void *value, size_t size, fs_flags_t flags)
 {
     fs_error_t err;
     obj_meta_t *meta;
@@ -45,13 +40,15 @@ fs_error_t fops_setxattr(const fuid_t *fuid,
     fd = -1;
 
     err = fops_validate_xattr_flags(flags, FS_OP_SETXATTR);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
     err = fops_open_object(fuid, O_RDWR | O_CLOEXEC, &meta, &fd,
                            FS_OP_SETXATTR);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -60,9 +57,7 @@ fs_error_t fops_setxattr(const fuid_t *fuid,
     return err;
 }
 
-fs_error_t fops_listxattr(const fuid_t *fuid,
-                          char *list,
-                          size_t size,
+fs_error_t fops_listxattr(const fuid_t *fuid, char *list, size_t size,
                           size_t *actual)
 {
     fs_error_t err;
@@ -74,7 +69,8 @@ fs_error_t fops_listxattr(const fuid_t *fuid,
 
     err = fops_open_object(fuid, O_RDONLY | O_CLOEXEC, &meta, &fd,
                            FS_OP_LISTXATTR);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -83,8 +79,7 @@ fs_error_t fops_listxattr(const fuid_t *fuid,
     return err;
 }
 
-fs_error_t fops_removexattr(const fuid_t *fuid,
-                            const char *name)
+fs_error_t fops_removexattr(const fuid_t *fuid, const char *name)
 {
     fs_error_t err;
     obj_meta_t *meta;
@@ -95,7 +90,8 @@ fs_error_t fops_removexattr(const fuid_t *fuid,
 
     err = fops_open_object(fuid, O_RDWR | O_CLOEXEC, &meta, &fd,
                            FS_OP_REMOVEXATTR);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 

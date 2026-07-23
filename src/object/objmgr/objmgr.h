@@ -75,9 +75,7 @@ void objmgr_deinit(void);
  *      non-NULL    : 成功，返回 obj_meta_t 指针
  *      NULL        : 失败
  */
-obj_meta_t *objmgr_create(
-                const fuid_t *fuid,
-                const obj_handle_t *handle);
+obj_meta_t *objmgr_create(const fuid_t *fuid, const obj_handle_t *handle);
 
 /*
  * Allocate an object key from the ObjMgr key allocator.
@@ -89,8 +87,7 @@ obj_meta_t *objmgr_create(
  *      FS_OK       : success
  *      fs_error_t  : invalid argument or no free key slot
  */
-fs_error_t objmgr_alloc_key(
-                obj_key_t *out_key);
+fs_error_t objmgr_alloc_key(obj_key_t *out_key);
 
 /*
  * Free an object key that was allocated but never registered.
@@ -102,8 +99,7 @@ fs_error_t objmgr_alloc_key(
  * Parameters:
  *      [IN] key : key to release
  */
-fs_error_t objmgr_free_key(
-                const obj_key_t *key);
+fs_error_t objmgr_free_key(const obj_key_t *key);
 
 /*
  * 删除对象。
@@ -118,8 +114,7 @@ fs_error_t objmgr_free_key(
  *      FS_OK       : 成功
  *      fs_error_t  : 失败
  */
-fs_error_t objmgr_delete(
-                const fuid_t *fuid);
+fs_error_t objmgr_delete(const fuid_t *fuid);
 
 /*
  * ============================================================
@@ -140,14 +135,12 @@ fs_error_t objmgr_delete(
  *      NULL        : 未找到
  *      非 NULL     : 对象元数据指针（由 objmgr 管理生命周期，调用者不应释放）
  */
-obj_meta_t *objmgr_lookup(
-                const fuid_t *fuid);
+obj_meta_t *objmgr_lookup(const fuid_t *fuid);
 
 /*
  * 判断对象是否存在。
  */
-bool objmgr_exists(
-                const fuid_t *fuid);
+bool objmgr_exists(const fuid_t *fuid);
 
 /*
  * ============================================================
@@ -175,11 +168,9 @@ bool objmgr_exists(
  *      调用成功后，必须对应调用 objmgr_release()
  *      释放引用。
  */
-obj_meta_t *objmgr_acquire(
-                const fuid_t *fuid);
+obj_meta_t *objmgr_acquire(const fuid_t *fuid);
 
-obj_meta_t *objmgr_acquire_by_handle(
-                const obj_handle_t *handle);
+obj_meta_t *objmgr_acquire_by_handle(const obj_handle_t *handle);
 
 /*
  * 释放对象引用。
@@ -194,8 +185,7 @@ obj_meta_t *objmgr_acquire_by_handle(
  * 参数：
  *      [IN/OUT] meta  : acquire() 返回的对象元数据（refcnt 将被递减，可能回收）
  */
-void objmgr_release(
-                obj_meta_t *meta);
+void objmgr_release(obj_meta_t *meta);
 
 /*
  * ============================================================
@@ -210,20 +200,17 @@ void objmgr_release(
  *      FS_OK       : 成功
  *      fs_error_t  : 失败（对象不存在 | 状态不允许）
  */
-fs_error_t objmgr_get(
-                const fuid_t *fuid);
+fs_error_t objmgr_get(const fuid_t *fuid);
 
 /*
  * 释放引用（refcnt--）。
  */
-fs_error_t objmgr_put(
-                const fuid_t *fuid);
+fs_error_t objmgr_put(const fuid_t *fuid);
 
 /*
  * 获取当前引用计数。
  */
-int32_t objmgr_refcnt(
-                const fuid_t *fuid);
+int32_t objmgr_refcnt(const fuid_t *fuid);
 
 /*
  * ============================================================
@@ -236,8 +223,7 @@ int32_t objmgr_refcnt(
  *
  * 返回 obj_state_t 枚举值。
  */
-obj_state_t objmgr_state(
-                const fuid_t *fuid);
+obj_state_t objmgr_state(const fuid_t *fuid);
 
 /*
  * ============================================================

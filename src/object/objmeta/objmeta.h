@@ -79,9 +79,9 @@
 typedef struct obj_handle
 {
     int32_t mount_id; /* Linux mount ID，定位文件系统实例 */
-    uint16_t type; /* file_handle 类型 (FILEID_INO32_GEN 等) */
-    uint16_t len; /* data[] 中实际使用的字节数 */
-    uint8_t  data[OBJMETA_MAX_HANDLE_SIZE]; /* file_handle 原始字节 */
+    uint16_t type;    /* file_handle 类型 (FILEID_INO32_GEN 等) */
+    uint16_t len;     /* data[] 中实际使用的字节数 */
+    uint8_t data[OBJMETA_MAX_HANDLE_SIZE]; /* file_handle 原始字节 */
 
 } obj_handle_t;
 
@@ -96,10 +96,10 @@ typedef struct obj_handle
  * obj_meta_t 仅描述"对象是什么"，不包含运行时状态。
  * 运行时生命周期信息（refcnt、state）由 obj_runtime_t 管理。
  */
-typedef struct obj_meta {
-
-    obj_key_t       key;    /* MirageFS 对象唯一标识 */
-    obj_handle_t   handle; /* Linux backend handle */
+typedef struct obj_meta
+{
+    obj_key_t key;       /* MirageFS 对象唯一标识 */
+    obj_handle_t handle; /* Linux backend handle */
 
 } obj_meta_t;
 
@@ -107,8 +107,7 @@ typedef struct obj_meta {
  * 编译期检查
  * ============================================================ */
 
-_Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
-               "obj_meta_t size invalid");
+_Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE, "obj_meta_t size invalid");
 
 /* ============================================================
  * 对外接口
@@ -129,10 +128,8 @@ _Static_assert(sizeof(obj_meta_t) == OBJMETA_SIZE,
  *      FS_OK           : 成功
  *      >0              : 失败（fs_error_t）
  */
-fs_error_t objmeta_init(
-                obj_meta_t *meta,
-                const fuid_t *fuid,
-                const obj_handle_t *handle);
+fs_error_t objmeta_init(obj_meta_t *meta, const fuid_t *fuid,
+                        const obj_handle_t *handle);
 
 /*
  * 将 LSA 返回的 file handle 转换为 OBJECT 层通用 backend handle。
@@ -140,10 +137,9 @@ fs_error_t objmeta_init(
  * 该函数收敛 LSA/OBJECT 边界转换，避免 FSC、VFS 等业务模块重复
  * 手写字段拷贝和长度检查。
  */
-fs_error_t objmeta_handle_from_lsa(
-                obj_handle_t *out,
-                const lsa_file_handle_t *handle,
-                int32_t mount_id);
+fs_error_t objmeta_handle_from_lsa(obj_handle_t *out,
+                                   const lsa_file_handle_t *handle,
+                                   int32_t mount_id);
 
 /*
  * 将 OBJECT 层 backend handle 转回 LSA file handle。
@@ -151,9 +147,8 @@ fs_error_t objmeta_handle_from_lsa(
  * 调用方仍需要单独传递 handle->mount_id，因为 LSA 的 file handle
  * 本身不包含 mount id。
  */
-fs_error_t objmeta_handle_to_lsa(
-                lsa_file_handle_t *out,
-                const obj_handle_t *handle);
+fs_error_t objmeta_handle_to_lsa(lsa_file_handle_t *out,
+                                 const obj_handle_t *handle);
 
 /*
  * 清空 ObjMeta。
@@ -164,14 +159,12 @@ fs_error_t objmeta_handle_to_lsa(
  * 参数：
  *      [OUT] meta  : 目标对象（内容将被清零）
  */
-void objmeta_deinit(
-                obj_meta_t *meta);
+void objmeta_deinit(obj_meta_t *meta);
 
 /*
  * 兼容旧名称。新代码请使用 objmeta_deinit()。
  */
-void objmeta_reset(
-                obj_meta_t *meta);
+void objmeta_reset(obj_meta_t *meta);
 
 /*
  * 判断 ObjMeta 是否有效。
@@ -179,8 +172,7 @@ void objmeta_reset(
  * 参数：
  *      [IN] meta   : 待检查的对象元数据
  */
-bool objmeta_is_valid(
-                const obj_meta_t *meta);
+bool objmeta_is_valid(const obj_meta_t *meta);
 
 /*
  * 比较两个 ObjMeta 是否相同。
@@ -189,9 +181,7 @@ bool objmeta_is_valid(
  *      [IN] lhs    : 左操作数
  *      [IN] rhs    : 右操作数
  */
-bool objmeta_equal(
-                const obj_meta_t *lhs,
-                const obj_meta_t *rhs);
+bool objmeta_equal(const obj_meta_t *lhs, const obj_meta_t *rhs);
 
 /*
  * 打印 ObjMeta 信息。
@@ -204,5 +194,4 @@ bool objmeta_equal(
  * 参数：
  *      [IN] meta   : 待打印的对象元数据
  */
-void objmeta_dump(
-                const obj_meta_t *meta);
+void objmeta_dump(const obj_meta_t *meta);

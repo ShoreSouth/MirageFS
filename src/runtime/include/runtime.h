@@ -23,8 +23,8 @@
  * Runtime 启动配置。当前用于 V1 控制台启动阶段的默认 namespace
  * 创建/进入策略；未来 CLI、Web UI 或协议适配层可以复用该入口。
  */
-typedef struct runtime_config {
-
+typedef struct runtime_config
+{
     const char *default_namespace; /* 默认 namespace 名称，可为 NULL */
     bool auto_create;              /* 启动时自动创建默认 namespace */
     bool auto_use;                 /* 启动时自动进入默认 namespace */
@@ -172,22 +172,15 @@ fs_error_t runtime_chdir(const char *path);
  *      [IN]  flags    : FS_FLAG_* 约束
  *      [OUT] out_fuid : 输出对象 FUID
  */
-fs_error_t runtime_lookup(
-                const char *path,
-                fs_flags_t flags,
-                fuid_t *out_fuid);
+fs_error_t runtime_lookup(const char *path, fs_flags_t flags, fuid_t *out_fuid);
 
 /* 按路径查找对象 FUID 和属性快照。 */
-fs_error_t runtime_lookup_plus(
-                const char *path,
-                fs_flags_t flags,
-                fops_object_result_t *out);
+fs_error_t runtime_lookup_plus(const char *path, fs_flags_t flags,
+                               fops_object_result_t *out);
 
 /* 按路径解析父目录 FUID 和 leaf name。 */
-fs_error_t runtime_lookup_parent(
-                const char *path,
-                fs_flags_t flags,
-                namei_parent_result_t *out);
+fs_error_t runtime_lookup_parent(const char *path, fs_flags_t flags,
+                                 namei_parent_result_t *out);
 
 /*
  * ============================================================
@@ -196,65 +189,40 @@ fs_error_t runtime_lookup_parent(
  */
 
 /* 创建或复用普通文件。 */
-fs_error_t runtime_create(
-                const char *path,
-                const fops_create_attr_t *attr,
-                fs_flags_t flags,
-                fops_object_result_t *out);
+fs_error_t runtime_create(const char *path, const fops_create_attr_t *attr,
+                          fs_flags_t flags, fops_object_result_t *out);
 
 /* 创建目录。 */
-fs_error_t runtime_mkdir(
-                const char *path,
-                const fops_create_attr_t *attr,
-                fs_flags_t flags,
-                fops_object_result_t *out);
+fs_error_t runtime_mkdir(const char *path, const fops_create_attr_t *attr,
+                         fs_flags_t flags, fops_object_result_t *out);
 
 /* 创建特殊对象，例如 FIFO、block device、char device。 */
-fs_error_t runtime_mknod(
-                const char *path,
-                fs_type_t type,
-                const fops_create_attr_t *attr,
-                const fops_device_t *device,
-                fs_flags_t flags,
-                fops_object_result_t *out);
+fs_error_t runtime_mknod(const char *path, fs_type_t type,
+                         const fops_create_attr_t *attr,
+                         const fops_device_t *device, fs_flags_t flags,
+                         fops_object_result_t *out);
 
 /* 删除非目录对象。 */
-fs_error_t runtime_unlink(
-                const char *path,
-                fs_flags_t flags);
+fs_error_t runtime_unlink(const char *path, fs_flags_t flags);
 
 /* 删除空目录。 */
-fs_error_t runtime_rmdir(
-                const char *path,
-                fs_flags_t flags);
+fs_error_t runtime_rmdir(const char *path, fs_flags_t flags);
 
 /* 重命名或移动对象。 */
-fs_error_t runtime_rename(
-                const char *old_path,
-                const char *new_path,
-                fs_flags_t flags);
+fs_error_t runtime_rename(const char *old_path, const char *new_path,
+                          fs_flags_t flags);
 
 /* 创建硬链接。 */
-fs_error_t runtime_link(
-                const char *old_path,
-                const char *new_path,
-                fs_flags_t flags,
-                fops_object_result_t *out);
+fs_error_t runtime_link(const char *old_path, const char *new_path,
+                        fs_flags_t flags, fops_object_result_t *out);
 
 /* 创建符号链接。 */
-fs_error_t runtime_symlink(
-                const char *target,
-                const char *linkpath,
-                fs_flags_t flags,
-                fops_object_result_t *out);
+fs_error_t runtime_symlink(const char *target, const char *linkpath,
+                           fs_flags_t flags, fops_object_result_t *out);
 
 /* 读取符号链接内容。 */
-fs_error_t runtime_readlink(
-                const char *path,
-                fs_flags_t flags,
-                char *buf,
-                size_t size,
-                size_t *actual);
+fs_error_t runtime_readlink(const char *path, fs_flags_t flags, char *buf,
+                            size_t size, size_t *actual);
 
 /*
  * ============================================================
@@ -263,22 +231,14 @@ fs_error_t runtime_readlink(
  */
 
 /* 读取目录项，不返回属性。 */
-fs_error_t runtime_readdir(
-                const char *path,
-                fs_flags_t flags,
-                fops_dirent_t *entries,
-                uint32_t entry_cap,
-                uint32_t *out_entry_nr,
-                bool *out_eof);
+fs_error_t runtime_readdir(const char *path, fs_flags_t flags,
+                           fops_dirent_t *entries, uint32_t entry_cap,
+                           uint32_t *out_entry_nr, bool *out_eof);
 
 /* 读取目录项，并返回属性。 */
-fs_error_t runtime_readdirplus(
-                const char *path,
-                fs_flags_t flags,
-                fops_dirent_plus_t *entries,
-                uint32_t entry_cap,
-                uint32_t *out_entry_nr,
-                bool *out_eof);
+fs_error_t runtime_readdirplus(const char *path, fs_flags_t flags,
+                               fops_dirent_plus_t *entries, uint32_t entry_cap,
+                               uint32_t *out_entry_nr, bool *out_eof);
 
 /*
  * ============================================================
@@ -287,28 +247,18 @@ fs_error_t runtime_readdirplus(
  */
 
 /* 读取对象属性。 */
-fs_error_t runtime_getattr(
-                const char *path,
-                fs_flags_t flags,
-                fops_attr_t *out_attr);
+fs_error_t runtime_getattr(const char *path, fs_flags_t flags,
+                           fops_attr_t *out_attr);
 
 /* 修改对象属性。 */
-fs_error_t runtime_setattr(
-                const char *path,
-                const fops_setattr_t *attr,
-                fs_flags_t flags);
+fs_error_t runtime_setattr(const char *path, const fops_setattr_t *attr,
+                           fs_flags_t flags);
 
 /* 检查对象访问权限。 */
-fs_error_t runtime_access(
-                const char *path,
-                int mask,
-                fs_flags_t flags);
+fs_error_t runtime_access(const char *path, int mask, fs_flags_t flags);
 
 /* 修改对象大小。 */
-fs_error_t runtime_truncate(
-                const char *path,
-                uint64_t size,
-                fs_flags_t flags);
+fs_error_t runtime_truncate(const char *path, uint64_t size, fs_flags_t flags);
 
 /*
  * ============================================================
@@ -317,27 +267,19 @@ fs_error_t runtime_truncate(
  */
 
 /* 打开路径对象，返回 opaque FOPS 文件句柄。 */
-fs_error_t runtime_open(
-                const char *path,
-                fs_flags_t flags,
-                fops_file_t **out_file);
+fs_error_t runtime_open(const char *path, fs_flags_t flags,
+                        fops_file_t **out_file);
 
 /* 关闭 Runtime/FOPS 文件句柄。 */
 fs_error_t runtime_close(fops_file_t *file);
 
 /* 从已打开文件句柄读取数据。 */
-fs_error_t runtime_read(
-                fops_file_t *file,
-                void *buf,
-                size_t size,
-                size_t *actual);
+fs_error_t runtime_read(fops_file_t *file, void *buf, size_t size,
+                        size_t *actual);
 
 /* 向已打开文件句柄写入数据。 */
-fs_error_t runtime_write(
-                fops_file_t *file,
-                const void *buf,
-                size_t size,
-                size_t *actual);
+fs_error_t runtime_write(fops_file_t *file, const void *buf, size_t size,
+                         size_t *actual);
 
 /*
  * ============================================================
@@ -346,27 +288,16 @@ fs_error_t runtime_write(
  */
 
 /* 读取扩展属性。 */
-fs_error_t runtime_getxattr(
-                const char *path,
-                const char *name,
-                void *value,
-                size_t size,
-                size_t *actual);
+fs_error_t runtime_getxattr(const char *path, const char *name, void *value,
+                            size_t size, size_t *actual);
 
 /* 设置扩展属性。 */
-fs_error_t runtime_setxattr(
-                const char *path,
-                const char *name,
-                const void *value,
-                size_t size,
-                fs_flags_t flags);
+fs_error_t runtime_setxattr(const char *path, const char *name,
+                            const void *value, size_t size, fs_flags_t flags);
 
 /* 列出扩展属性名称。 */
-fs_error_t runtime_listxattr(
-                const char *path,
-                char *list,
-                size_t size,
-                size_t *actual);
+fs_error_t runtime_listxattr(const char *path, char *list, size_t size,
+                             size_t *actual);
 
 /* 删除扩展属性。 */
 fs_error_t runtime_removexattr(const char *path, const char *name);
@@ -378,9 +309,7 @@ fs_error_t runtime_removexattr(const char *path, const char *name);
  */
 
 /* 读取文件系统统计信息。 */
-fs_error_t runtime_statfs(
-                const char *path,
-                fops_statfs_t *out_statfs);
+fs_error_t runtime_statfs(const char *path, fops_statfs_t *out_statfs);
 
 /* 同步对象所在文件系统。 */
 fs_error_t runtime_syncfs(const char *path);
@@ -389,7 +318,5 @@ fs_error_t runtime_syncfs(const char *path);
 fs_error_t runtime_gethandle(const char *path, obj_handle_t *out_handle);
 
 /* 通过已注册后端 handle 打开对象。 */
-fs_error_t runtime_openhandle(
-                const obj_handle_t *handle,
-                fs_flags_t flags,
-                fops_file_t **out_file);
+fs_error_t runtime_openhandle(const obj_handle_t *handle, fs_flags_t flags,
+                              fops_file_t **out_file);

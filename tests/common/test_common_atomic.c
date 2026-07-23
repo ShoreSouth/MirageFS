@@ -38,12 +38,8 @@ static int test_atomic_wrappers_update_and_compare_values(void)
 
 
 const test_case_t COMMON_ATOMIC_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_ATOMIC,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_ATOMIC,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_ATOMIC, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_ATOMIC, 0x1,
                              0x001),
                   test_atomic_wrappers_update_and_compare_values,
                   "Atomic 包装器读写和 CAS",
@@ -51,4 +47,5 @@ const test_case_t COMMON_ATOMIC_CASES[] = {
                   "返回修改后的值，CAS 成功替换、失败回写 expected"),
 };
 
-const size_t COMMON_ATOMIC_CASE_COUNT = sizeof(COMMON_ATOMIC_CASES) / sizeof(COMMON_ATOMIC_CASES[0]);
+const size_t COMMON_ATOMIC_CASE_COUNT =
+        sizeof(COMMON_ATOMIC_CASES) / sizeof(COMMON_ATOMIC_CASES[0]);

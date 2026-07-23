@@ -17,17 +17,12 @@ static int test_fsc_error_encodes_module_sub_errno(void)
 
 
 const test_case_t FSC_ERROR_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_ERROR,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_ERROR,
-                             0x1,
-                             0x001),
-                  test_fsc_error_encodes_module_sub_errno,
-                  "FSC 错误码布局",
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_ERROR, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_ERROR, 0x1, 0x001),
+                  test_fsc_error_encodes_module_sub_errno, "FSC 错误码布局",
                   "构造 FSID 子模块错误",
                   "severity/module/sub/errno 字段可正确解析"),
 };
 
-const size_t FSC_ERROR_CASE_COUNT = sizeof(FSC_ERROR_CASES) / sizeof(FSC_ERROR_CASES[0]);
+const size_t FSC_ERROR_CASE_COUNT =
+        sizeof(FSC_ERROR_CASES) / sizeof(FSC_ERROR_CASES[0]);

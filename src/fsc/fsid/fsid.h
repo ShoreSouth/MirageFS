@@ -75,8 +75,7 @@ void fsid_deinit(void);
  *      FS_OK       : 成功
  *      fs_error_t  : 参数非法或无空闲 slot
  */
-fs_error_t fsid_alloc(
-                fsc_fsid_t *fsid);
+fs_error_t fsid_alloc(fsc_fsid_t *fsid);
 
 /*
  * 释放一个 filesystem id。
@@ -91,8 +90,7 @@ fs_error_t fsid_alloc(
  *      FS_OK       : 成功
  *      fs_error_t  : FSID 非法、重复释放或 stale
  */
-fs_error_t fsid_free(
-                fsc_fsid_t fsid);
+fs_error_t fsid_free(fsc_fsid_t fsid);
 
 /*
  * ============================================================
@@ -109,8 +107,7 @@ fs_error_t fsid_free(
  * 参数：
  *      [IN] fsid   : 待检查 filesystem id
  */
-bool fsid_is_valid(
-                fsc_fsid_t fsid);
+bool fsid_is_valid(fsc_fsid_t fsid);
 
 /*
  * 计算 FSID hash 值。
@@ -118,5 +115,4 @@ bool fsid_is_valid(
  * 参数：
  *      [IN] fsid   : filesystem id
  */
-uint64_t fsid_hash(
-                fsc_fsid_t fsid);
+uint64_t fsid_hash(fsc_fsid_t fsid);

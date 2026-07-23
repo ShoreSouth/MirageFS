@@ -33,9 +33,7 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     test_runtime_cleanup_root();
 
     memset(&cfg, 0, sizeof(cfg));
-    (void)snprintf(namespace_name,
-                   sizeof(namespace_name),
-                   "rt_%ld",
+    (void)snprintf(namespace_name, sizeof(namespace_name), "rt_%ld",
                    (long)getpid());
     cfg.default_namespace = namespace_name;
     cfg.auto_create = true;
@@ -77,17 +75,13 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     err = runtime_mkdir("/dir", NULL, FS_FLAG_DIRECTORY, &out);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(fuid_is_dir(&out.fuid));
-    err = runtime_create("/dir/file.txt",
-                         &create_attr,
-                         FS_FLAG_EXCLUSIVE | FS_FLAG_REGULAR,
-                         &out);
+    err = runtime_create("/dir/file.txt", &create_attr,
+                         FS_FLAG_EXCLUSIVE | FS_FLAG_REGULAR, &out);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(fuid_is_file(&out.fuid));
 
     file = NULL;
-    err = runtime_open("/dir/file.txt",
-                       FS_FLAG_READ | FS_FLAG_WRITE,
-                       &file);
+    err = runtime_open("/dir/file.txt", FS_FLAG_READ | FS_FLAG_WRITE, &file);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(file != NULL);
     err = runtime_write(file, "hello", 5U, &actual);
@@ -135,8 +129,7 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     /*
      * 符号链接同时覆盖 readlink 和 namei_walk 的 final NOFOLLOW 分支。
      */
-    err = runtime_symlink("file.txt", "/dir/link.txt", FS_FLAG_EXCLUSIVE,
-                          &out);
+    err = runtime_symlink("file.txt", "/dir/link.txt", FS_FLAG_EXCLUSIVE, &out);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     memset(link_buf, 0, sizeof(link_buf));
     err = runtime_readlink("/dir/link.txt", FS_FLAG_NONE, link_buf,
@@ -147,8 +140,8 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(fuid_is_symlink(&looked_up));
 
-    err = runtime_readdir("/dir", FS_FLAG_DIRECTORY, entries, 8U,
-                          &entry_nr, &eof);
+    err = runtime_readdir("/dir", FS_FLAG_DIRECTORY, entries, 8U, &entry_nr,
+                          &eof);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(entry_nr >= 2U);
     err = runtime_readdirplus("/dir", FS_FLAG_DIRECTORY, plus_entries, 8U,
@@ -156,16 +149,15 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(entry_nr >= 2U);
 
-    err = runtime_setxattr("/dir/file.txt", "user.rt", "v", 1U,
-                           FS_FLAG_NONE);
+    err = runtime_setxattr("/dir/file.txt", "user.rt", "v", 1U, FS_FLAG_NONE);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     memset(xattr_buf, 0, sizeof(xattr_buf));
     err = runtime_getxattr("/dir/file.txt", "user.rt", xattr_buf,
                            sizeof(xattr_buf), &actual);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_EQ_INT(1U, actual);
-    err = runtime_listxattr("/dir/file.txt", xattr_list,
-                            sizeof(xattr_list), &actual);
+    err = runtime_listxattr("/dir/file.txt", xattr_list, sizeof(xattr_list),
+                            &actual);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(actual > 0U);
     err = runtime_removexattr("/dir/file.txt", "user.rt");
@@ -183,11 +175,10 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     err = runtime_close(file);
     TEST_ASSERT_EQ_INT(FS_OK, err);
 
-    err = runtime_link("/dir/file.txt", "/dir/hard.txt",
-                       FS_FLAG_EXCLUSIVE, &out);
+    err = runtime_link("/dir/file.txt", "/dir/hard.txt", FS_FLAG_EXCLUSIVE,
+                       &out);
     TEST_ASSERT_EQ_INT(FS_OK, err);
-    err = runtime_rename("/dir/hard.txt", "/dir/renamed.txt",
-                         FS_FLAG_NONE);
+    err = runtime_rename("/dir/hard.txt", "/dir/renamed.txt", FS_FLAG_NONE);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     err = runtime_mknod("/dir/fifo", FS_TYPE_FIFO, NULL, NULL,
                         FS_FLAG_EXCLUSIVE, &out);
@@ -229,19 +220,16 @@ static int test_runtime_namespace_file_flow_round_trip(void)
 }
 
 
-
 const test_case_t RUNTIME_FLOW_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_FLOW,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_FLOW,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_FLOW, 0x1),
+                  UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_FLOW, 0x1,
                              0x001),
                   test_runtime_namespace_file_flow_round_trip,
                   "Runtime 真实会话文件系统回环",
-                  "自动创建/进入 namespace 后执行路径解析、读写、链接、目录和 xattr",
+                  "自动创建/进入 namespace 后执行路径解析、读写、链接、目录和 "
+                  "xattr",
                   "Runtime/NAMEI/FOPS 主链路保持一致，清理后 namespace 可销毁"),
 };
 
-const size_t RUNTIME_FLOW_CASE_COUNT = sizeof(RUNTIME_FLOW_CASES) / sizeof(RUNTIME_FLOW_CASES[0]);
+const size_t RUNTIME_FLOW_CASE_COUNT =
+        sizeof(RUNTIME_FLOW_CASES) / sizeof(RUNTIME_FLOW_CASES[0]);

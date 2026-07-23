@@ -39,19 +39,15 @@ static int test_runtime_getters_reject_null_outputs(void)
 }
 
 
-
 const test_case_t RUNTIME_GETTER_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_GETTER,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_GETTER,
-                             0x1,
-                             0x001),
-                  test_runtime_getters_reject_null_outputs,
-                  "Runtime getter 空输出",
-                  "root/cwd getter 传入 NULL",
-                  "返回 RUNTIME 模块 EINVAL"),
+        TEST_CASE(
+                UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_GETTER, 0x1),
+                UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_GETTER, 0x1,
+                           0x001),
+                test_runtime_getters_reject_null_outputs,
+                "Runtime getter 空输出", "root/cwd getter 传入 NULL",
+                "返回 RUNTIME 模块 EINVAL"),
 };
 
-const size_t RUNTIME_GETTER_CASE_COUNT = sizeof(RUNTIME_GETTER_CASES) / sizeof(RUNTIME_GETTER_CASES[0]);
+const size_t RUNTIME_GETTER_CASE_COUNT =
+        sizeof(RUNTIME_GETTER_CASES) / sizeof(RUNTIME_GETTER_CASES[0]);

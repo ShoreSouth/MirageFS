@@ -19,20 +19,11 @@
  * ========================= */
 
 /* 拼接路径：dst = a + "/" + b */
-fs_error_t fs_path_join(
-    char *dst,
-    size_t size,
-    const char *a,
-    const char *b
-);
+fs_error_t fs_path_join(char *dst, size_t size, const char *a, const char *b);
 
 /* 安全拼接（避免重复 '/'） */
-fs_error_t fs_path_join_safe(
-    char *dst,
-    size_t size,
-    const char *a,
-    const char *b
-);
+fs_error_t fs_path_join_safe(char *dst, size_t size, const char *a,
+                             const char *b);
 
 /* =========================
  * 路径解析
@@ -45,25 +36,17 @@ fs_error_t fs_path_join_safe(
  * 示例：
  *   "/a//b/./c/../d" -> "/a/b/d"
  */
-fs_error_t fs_path_normalize(
-    char *dst,
-    size_t size,
-    const char *src
-);
+fs_error_t fs_path_normalize(char *dst, size_t size, const char *src);
 
 /* =========================
  * 路径拆分
  * ========================= */
 
 /* dirname："/a/b/c" -> "/a/b" */
-fs_error_t fs_path_dirname(
-    char *dst,
-    size_t size,
-    const char *path
-);
+fs_error_t fs_path_dirname(char *dst, size_t size, const char *path);
 
 /* basename："/a/b/c" -> "c" */
-const char* fs_path_basename(const char *path);
+const char *fs_path_basename(const char *path);
 
 /* =========================
  * 路径属性判断
@@ -94,7 +77,4 @@ bool fs_path_exists(const char *path);
  *   - 日志目录
  *   - 工具代码
  */
-fs_error_t fs_path_mkdir_recursive(
-    const char *path,
-    int mode
-);
+fs_error_t fs_path_mkdir_recursive(const char *path, int mode);

@@ -4,7 +4,8 @@ runtime_state_t g_runtime;
 
 fs_error_t runtime_require_initialized(void)
 {
-    if (!g_runtime.initialized) {
+    if (!g_runtime.initialized)
+    {
         return runtime_error(RUNTIME_SUB_INIT, EINVAL);
     }
 
@@ -16,12 +17,14 @@ fs_error_t runtime_require_session(void)
     fs_error_t err;
 
     err = runtime_require_initialized();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
     if (!g_runtime.ns_active || !fuid_is_valid(&g_runtime.root_fuid) ||
-        !fuid_is_valid(&g_runtime.cwd_fuid)) {
+        !fuid_is_valid(&g_runtime.cwd_fuid))
+    {
         return runtime_error(RUNTIME_SUB_SESSION, ENOENT);
     }
 
@@ -32,12 +35,14 @@ fs_error_t runtime_make_ctx(namei_ctx_t *ctx)
 {
     fs_error_t err;
 
-    if (ctx == NULL) {
+    if (ctx == NULL)
+    {
         return runtime_error(RUNTIME_SUB_CTX, EINVAL);
     }
 
     err = runtime_require_session();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -47,37 +52,38 @@ fs_error_t runtime_make_ctx(namei_ctx_t *ctx)
 
 fs_error_t runtime_dispatch(fops_args_t *args)
 {
-    if (args == NULL) {
+    if (args == NULL)
+    {
         return runtime_error(RUNTIME_SUB_OP, EINVAL);
     }
 
     return fops_dispatch(args);
 }
 
-fs_error_t runtime_lookup_fuid(const char *path,
-                                      fs_flags_t flags,
-                                      fuid_t *out_fuid)
+fs_error_t runtime_lookup_fuid(const char *path, fs_flags_t flags,
+                               fuid_t *out_fuid)
 {
     fs_error_t err;
     namei_ctx_t ctx;
 
     err = runtime_make_ctx(&ctx);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
     return namei_lookup(&ctx, path, flags, out_fuid);
 }
 
-fs_error_t runtime_lookup_parent_path(const char *path,
-                                             fs_flags_t flags,
-                                             namei_parent_result_t *out)
+fs_error_t runtime_lookup_parent_path(const char *path, fs_flags_t flags,
+                                      namei_parent_result_t *out)
 {
     fs_error_t err;
     namei_ctx_t ctx;
 
     err = runtime_make_ctx(&ctx);
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
@@ -90,32 +96,38 @@ fs_error_t runtime_update_cwd_path(const char *path)
     char joined[FS_MAX_PATH_LEN + 1U];
     char normalized[FS_MAX_PATH_LEN + 1U];
 
-    if ((path == NULL) || (path[0] == 0)) {
+    if ((path == NULL) || (path[0] == 0))
+    {
         return runtime_error(RUNTIME_SUB_PATH, EINVAL);
     }
 
-    if (fs_path_is_absolute(path)) {
+    if (fs_path_is_absolute(path))
+    {
         err = fs_path_normalize(normalized, sizeof(normalized), path);
-    } else {
-        err = fs_path_join_safe(joined,
-                                sizeof(joined),
-                                g_runtime.cwd_path,
+    }
+    else
+    {
+        err = fs_path_join_safe(joined, sizeof(joined), g_runtime.cwd_path,
                                 path);
-        if (fs_failed(err)) {
+        if (fs_failed(err))
+        {
             return err;
         }
         err = fs_path_normalize(normalized, sizeof(normalized), joined);
     }
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         return err;
     }
 
-    if (normalized[0] != 47) {
+    if (normalized[0] != 47)
+    {
         return runtime_error(RUNTIME_SUB_PATH, EINVAL);
     }
 
     if (snprintf(g_runtime.cwd_path, sizeof(g_runtime.cwd_path), "%s",
-                 normalized) >= (int)sizeof(g_runtime.cwd_path)) {
+                 normalized) >= (int)sizeof(g_runtime.cwd_path))
+    {
         return runtime_error(RUNTIME_SUB_PATH, ENAMETOOLONG);
     }
 
@@ -126,7 +138,8 @@ fs_error_t runtime_init(const runtime_config_t *cfg)
 {
     fs_error_t err;
 
-    if (g_runtime.initialized) {
+    if (g_runtime.initialized)
+    {
         return runtime_error(RUNTIME_SUB_INIT, EALREADY);
     }
 
@@ -142,37 +155,46 @@ fs_error_t runtime_init(const runtime_config_t *cfg)
     lsa_init();
 
     err = object_init();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         goto err_trace;
     }
 
     err = fsc_init();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         goto err_object;
     }
 
     err = fops_init();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         goto err_fsc;
     }
 
     err = namei_init();
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         goto err_fops;
     }
 
     g_runtime.initialized = true;
 
-    if ((cfg != NULL) && (cfg->default_namespace != NULL)) {
-        if (cfg->auto_create) {
+    if ((cfg != NULL) && (cfg->default_namespace != NULL))
+    {
+        if (cfg->auto_create)
+        {
             err = runtime_fs_create(cfg->default_namespace, NULL);
-            if (fs_failed(err) && !fsmgr_exists(cfg->default_namespace)) {
+            if (fs_failed(err) && !fsmgr_exists(cfg->default_namespace))
+            {
                 goto err_namei;
             }
         }
-        if (cfg->auto_use) {
+        if (cfg->auto_use)
+        {
             err = runtime_fs_use(cfg->default_namespace);
-            if (fs_failed(err)) {
+            if (fs_failed(err))
+            {
                 goto err_namei;
             }
         }
@@ -201,7 +223,8 @@ err_trace:
 
 void runtime_deinit(void)
 {
-    if (!g_runtime.initialized) {
+    if (!g_runtime.initialized)
+    {
         return;
     }
 
@@ -219,5 +242,4 @@ void runtime_deinit(void)
 bool runtime_is_initialized(void)
 {
     return g_runtime.initialized;
-
 }

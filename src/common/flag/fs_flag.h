@@ -20,7 +20,7 @@
 typedef uint32_t fs_flags_t;
 
 /* 无附加选项。用于表达“按默认语义执行”。 */
-#define FS_FLAG_NONE           0U
+#define FS_FLAG_NONE 0U
 
 /*
  * 创建/替换约束。
@@ -36,8 +36,8 @@ typedef uint32_t fs_flags_t;
  *      REPLACE 说“存在也可以”，EXCLUSIVE 说“存在就失败”，所以同一
  *      个请求里不能同时设置。
  */
-#define FS_FLAG_REPLACE        (1U << 0)
-#define FS_FLAG_EXCLUSIVE      (1U << 1)
+#define FS_FLAG_REPLACE (1U << 0)
+#define FS_FLAG_EXCLUSIVE (1U << 1)
 
 /*
  * 不跟随最后一个路径分量的符号链接。
@@ -51,7 +51,7 @@ typedef uint32_t fs_flags_t;
  * 注意：
  *      该 flag 只约束路径最后一段，中间路径分量通常仍需要解析到目录。
  */
-#define FS_FLAG_NOFOLLOW       (1U << 2)
+#define FS_FLAG_NOFOLLOW (1U << 2)
 
 /*
  * 写入/打开时的 I/O 行为提示。
@@ -63,8 +63,8 @@ typedef uint32_t fs_flags_t;
  *      请求 direct I/O，尽量绕过内核页缓存。是否真正生效取决于后端
  *      文件系统和打开方式。
  */
-#define FS_FLAG_SYNC           (1U << 3)
-#define FS_FLAG_DIRECT         (1U << 4)
+#define FS_FLAG_SYNC (1U << 3)
+#define FS_FLAG_DIRECT (1U << 4)
 
 /*
  * 目标对象类型约束。
@@ -78,8 +78,8 @@ typedef uint32_t fs_flags_t;
  * 二者互斥：
  *      同一个对象不可能同时既是目录又是普通文件。
  */
-#define FS_FLAG_DIRECTORY      (1U << 5)
-#define FS_FLAG_REGULAR        (1U << 6)
+#define FS_FLAG_DIRECTORY (1U << 5)
+#define FS_FLAG_REGULAR (1U << 6)
 
 /*
  * 文件创建/打开修饰。
@@ -90,8 +90,8 @@ typedef uint32_t fs_flags_t;
  * APPEND：
  *      写入默认追加到文件末尾。
  */
-#define FS_FLAG_TRUNCATE       (1U << 7)
-#define FS_FLAG_APPEND         (1U << 8)
+#define FS_FLAG_TRUNCATE (1U << 7)
+#define FS_FLAG_APPEND (1U << 8)
 
 /*
  * 文件访问方向。
@@ -105,8 +105,8 @@ typedef uint32_t fs_flags_t;
  * READ | WRITE：
  *      打开为读写模式。
  */
-#define FS_FLAG_READ           (1U << 9)
-#define FS_FLAG_WRITE          (1U << 10)
+#define FS_FLAG_READ (1U << 9)
+#define FS_FLAG_WRITE (1U << 10)
 
 /*
  * 判断 flags 中是否包含指定 flag。
@@ -115,9 +115,7 @@ typedef uint32_t fs_flags_t;
  *      flag 参数通常传单个位，例如 FS_FLAG_READ。传组合值时，只有
  *      组合里任意一位存在就会返回 true。
  */
-static inline bool fs_flag_test(
-                    fs_flags_t flags,
-                    fs_flags_t flag)
+static inline bool fs_flag_test(fs_flags_t flags, fs_flags_t flag)
 {
     return (flags & flag) != 0U;
 }

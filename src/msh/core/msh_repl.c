@@ -10,14 +10,16 @@ void msh_print_prompt(void)
     fs_error_t err;
 
     fs_name = runtime_fs_current();
-    if (fs_name == NULL) {
+    if (fs_name == NULL)
+    {
         printf("msh> ");
         fflush(stdout);
         return;
     }
 
     err = runtime_getcwd(cwd, sizeof(cwd));
-    if (fs_failed(err)) {
+    if (fs_failed(err))
+    {
         printf("msh:%s:? > ", fs_name);
         fflush(stdout);
         return;
@@ -33,7 +35,8 @@ int msh_run_line(msh_context_t *ctx, char *line)
     int rc;
 
     rc = msh_parse_line(line, &args);
-    if (rc != 0) {
+    if (rc != 0)
+    {
         return rc;
     }
 
@@ -45,23 +48,30 @@ int msh_repl(msh_context_t *ctx)
     char line[MSH_LINE_MAX];
     int rc;
 
-    if (ctx == NULL) {
+    if (ctx == NULL)
+    {
         return 1;
     }
 
-    while (!ctx->should_exit) {
-        if (ctx->interactive) {
+    while (!ctx->should_exit)
+    {
+        if (ctx->interactive)
+        {
             msh_print_prompt();
         }
 
-        if (fgets(line, sizeof(line), stdin) == NULL) {
+        if (fgets(line, sizeof(line), stdin) == NULL)
+        {
             break;
         }
 
-        if (strchr(line, '\n') == NULL && !feof(stdin)) {
+        if (strchr(line, '\n') == NULL && !feof(stdin))
+        {
             fprintf(stderr, "msh: input line too long\n");
-            while (fgets(line, sizeof(line), stdin) != NULL) {
-                if (strchr(line, '\n') != NULL) {
+            while (fgets(line, sizeof(line), stdin) != NULL)
+            {
+                if (strchr(line, '\n') != NULL)
+                {
                     break;
                 }
             }
@@ -69,7 +79,8 @@ int msh_repl(msh_context_t *ctx)
         }
 
         rc = msh_run_line(ctx, line);
-        if (rc != 0 && !ctx->interactive) {
+        if (rc != 0 && !ctx->interactive)
+        {
             return rc;
         }
     }

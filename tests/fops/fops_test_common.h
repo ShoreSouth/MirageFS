@@ -17,7 +17,8 @@
 #include "object/object_init.h"
 #include "object/objmgr/objmgr.h"
 
-typedef enum test_fops_component {
+typedef enum test_fops_component
+{
     TEST_FOPS_COMPONENT_CORE = 0x01,
     TEST_FOPS_COMPONENT_DISPATCH = 0x02,
     TEST_FOPS_COMPONENT_VALIDATE = 0x03,
@@ -33,7 +34,8 @@ typedef enum test_fops_component {
 fuid_t test_fops_make_fuid(fuid_type_t type);
 obj_handle_t test_fops_make_handle(int32_t mount_id);
 
-typedef struct test_fops_env {
+typedef struct test_fops_env
+{
     char path[160];
     int32_t mount_id;
     fuid_t root_fuid;
@@ -41,10 +43,11 @@ typedef struct test_fops_env {
 
 int test_fops_env_setup(test_fops_env_t *env);
 void test_fops_env_teardown(test_fops_env_t *env);
-#define TEST_FOPS_EXPECT_FOPS_ERRNO(err, expected_errno) \
-    do { \
-        TEST_ASSERT_EQ_INT(fs_err_module((err)), FS_MODULE_FOPS); \
-        TEST_ASSERT_EQ_INT(fs_err_errno((err)), (expected_errno)); \
+#define TEST_FOPS_EXPECT_FOPS_ERRNO(err, expected_errno)                       \
+    do                                                                         \
+    {                                                                          \
+        TEST_ASSERT_EQ_INT(fs_err_module((err)), FS_MODULE_FOPS);              \
+        TEST_ASSERT_EQ_INT(fs_err_errno((err)), (expected_errno));             \
     } while (0)
 
 extern const test_case_t FOPS_CORE_CASES[];

@@ -18,12 +18,8 @@ static int test_runtime_sub_names_cover_valid_and_invalid_values(void)
 
 
 const test_case_t RUNTIME_SUB_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_SUB,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_RUNTIME,
-                             TEST_RUNTIME_COMPONENT_SUB,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_SUB, 0x1),
+                  UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_SUB, 0x1,
                              0x001),
                   test_runtime_sub_names_cover_valid_and_invalid_values,
                   "Runtime sub-error 名称表",
@@ -31,4 +27,5 @@ const test_case_t RUNTIME_SUB_CASES[] = {
                   "合法枚举返回名称，非法值返回 UNKNOWN 且 valid=false"),
 };
 
-const size_t RUNTIME_SUB_CASE_COUNT = sizeof(RUNTIME_SUB_CASES) / sizeof(RUNTIME_SUB_CASES[0]);
+const size_t RUNTIME_SUB_CASE_COUNT =
+        sizeof(RUNTIME_SUB_CASES) / sizeof(RUNTIME_SUB_CASES[0]);

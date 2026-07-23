@@ -46,8 +46,7 @@ typedef const char *(*fs_sub_name_fn)(uint32_t sub);
  *
  * 通常在模块 init 中调用。
  */
-void fs_sub_register(fs_module_t module,
-                     fs_sub_name_fn fn);
+void fs_sub_register(fs_module_t module, fs_sub_name_fn fn);
 
 /*
  * 获取 sub 字段的名称字符串。
@@ -60,5 +59,4 @@ void fs_sub_register(fs_module_t module,
  *      名称字符串指针（静态存储期）
  *      NULL 表示该 module 未注册
  */
-const char *fs_sub_name(fs_module_t module,
-                        uint32_t sub);
+const char *fs_sub_name(fs_module_t module, uint32_t sub);

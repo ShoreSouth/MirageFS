@@ -14,7 +14,8 @@
 #include "runtime/include/runtime.h"
 
 /* Runtime UT 按生命周期、会话和主流程拆分，组件编号参与 0xMMCCLIII 用例编号。 */
-typedef enum test_runtime_component {
+typedef enum test_runtime_component
+{
     TEST_RUNTIME_COMPONENT_LIFECYCLE = 0x01,
     TEST_RUNTIME_COMPONENT_SESSION = 0x02,
     TEST_RUNTIME_COMPONENT_GETTER = 0x03,
@@ -24,10 +25,11 @@ typedef enum test_runtime_component {
 
 void test_runtime_cleanup_root(void);
 
-#define TEST_RUNTIME_EXPECT_ERRNO(err, expected_errno) \
-    do { \
-        TEST_ASSERT_EQ_INT(FS_MODULE_RUNTIME, fs_err_module((err))); \
-        TEST_ASSERT_EQ_INT((expected_errno), fs_err_errno((err))); \
+#define TEST_RUNTIME_EXPECT_ERRNO(err, expected_errno)                         \
+    do                                                                         \
+    {                                                                          \
+        TEST_ASSERT_EQ_INT(FS_MODULE_RUNTIME, fs_err_module((err)));           \
+        TEST_ASSERT_EQ_INT((expected_errno), fs_err_errno((err)));             \
     } while (0)
 
 extern const test_case_t RUNTIME_SUB_CASES[];

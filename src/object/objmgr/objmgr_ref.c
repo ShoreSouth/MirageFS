@@ -12,8 +12,7 @@
  * ============================================================
  */
 
-fs_error_t objmgr_get(
-                const fuid_t *fuid)
+fs_error_t objmgr_get(const fuid_t *fuid)
 {
     fs_error_t err;
 
@@ -21,51 +20,39 @@ fs_error_t objmgr_get(
 
     obj_runtime_t *rt;
 
-    FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%u",
-            (unsigned long long)fuid->objectid,
-            (unsigned int)fuid->gen);
+    FS_LOG_DUMP_INFO("enter: objectid=%llu gen=%u",
+                     (unsigned long long)fuid->objectid,
+                     (unsigned int)fuid->gen);
 
-    objkey_from_fuid(
-                &key,
-                fuid);
+    objkey_from_fuid(&key, fuid);
 
-    fs_mutex_lock(
-            &g_objmgr.lock);
+    fs_mutex_lock(&g_objmgr.lock);
 
-    rt = objmgr_lookup_locked(
-                    &key);
+    rt = objmgr_lookup_locked(&key);
 
-    if (rt == NULL) {
+    if (rt == NULL)
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
 
-        fs_mutex_unlock(
-                &g_objmgr.lock);
-
-        err = obj_error(
-                    OBJ_SUB_GET,
-                    ENOENT);
+        err = obj_error(OBJ_SUB_GET, ENOENT);
 
         FS_LOG_DUMP_ERROR(
                 "lookup object failed: object not found, err=%s (0x%x)",
-                fs_error_str(err),
-                err);
+                fs_error_str(err), err);
 
         return err;
     }
 
-    err = objmgr_ref_get_locked(
-                    rt);
+    err = objmgr_ref_get_locked(rt);
 
-    fs_mutex_unlock(
-            &g_objmgr.lock);
+    fs_mutex_unlock(&g_objmgr.lock);
 
-    if (err != FS_OK) {
-
+    if (err != FS_OK)
+    {
         return err;
     }
 
-    FS_LOG_DUMP_INFO(
-            "exit: ok");
+    FS_LOG_DUMP_INFO("exit: ok");
 
     return FS_OK;
 }
@@ -76,8 +63,7 @@ fs_error_t objmgr_get(
  * ============================================================
  */
 
-fs_error_t objmgr_put(
-                const fuid_t *fuid)
+fs_error_t objmgr_put(const fuid_t *fuid)
 {
     fs_error_t err;
 
@@ -85,51 +71,39 @@ fs_error_t objmgr_put(
 
     obj_runtime_t *rt;
 
-    FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%u",
-            (unsigned long long)fuid->objectid,
-            (unsigned int)fuid->gen);
+    FS_LOG_DUMP_INFO("enter: objectid=%llu gen=%u",
+                     (unsigned long long)fuid->objectid,
+                     (unsigned int)fuid->gen);
 
-    objkey_from_fuid(
-                &key,
-                fuid);
+    objkey_from_fuid(&key, fuid);
 
-    fs_mutex_lock(
-            &g_objmgr.lock);
+    fs_mutex_lock(&g_objmgr.lock);
 
-    rt = objmgr_lookup_locked(
-                    &key);
+    rt = objmgr_lookup_locked(&key);
 
-    if (rt == NULL) {
+    if (rt == NULL)
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
 
-        fs_mutex_unlock(
-                &g_objmgr.lock);
-
-        err = obj_error(
-                    OBJ_SUB_PUT,
-                    ENOENT);
+        err = obj_error(OBJ_SUB_PUT, ENOENT);
 
         FS_LOG_DUMP_ERROR(
                 "lookup object failed: object not found, err=%s (0x%x)",
-                fs_error_str(err),
-                err);
+                fs_error_str(err), err);
 
         return err;
     }
 
-    err = objmgr_ref_put_locked(
-                    rt);
+    err = objmgr_ref_put_locked(rt);
 
-    fs_mutex_unlock(
-            &g_objmgr.lock);
+    fs_mutex_unlock(&g_objmgr.lock);
 
-    if (err != FS_OK) {
-
+    if (err != FS_OK)
+    {
         return err;
     }
 
-    FS_LOG_DUMP_INFO(
-            "exit: ok");
+    FS_LOG_DUMP_INFO("exit: ok");
 
     return FS_OK;
 }
@@ -140,8 +114,7 @@ fs_error_t objmgr_put(
  * ============================================================
  */
 
-int32_t objmgr_refcnt(
-                const fuid_t *fuid)
+int32_t objmgr_refcnt(const fuid_t *fuid)
 {
     obj_key_t key;
 
@@ -149,41 +122,30 @@ int32_t objmgr_refcnt(
 
     int32_t refcnt;
 
-    FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%u",
-            (unsigned long long)fuid->objectid,
-            (unsigned int)fuid->gen);
+    FS_LOG_DUMP_INFO("enter: objectid=%llu gen=%u",
+                     (unsigned long long)fuid->objectid,
+                     (unsigned int)fuid->gen);
 
-    objkey_from_fuid(
-                &key,
-                fuid);
+    objkey_from_fuid(&key, fuid);
 
-    fs_mutex_lock(
-            &g_objmgr.lock);
+    fs_mutex_lock(&g_objmgr.lock);
 
-    rt = objmgr_lookup_locked(
-                    &key);
+    rt = objmgr_lookup_locked(&key);
 
-    if (rt == NULL) {
+    if (rt == NULL)
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
 
-        fs_mutex_unlock(
-                &g_objmgr.lock);
-
-        FS_LOG_DUMP_INFO(
-                "exit: not found");
+        FS_LOG_DUMP_INFO("exit: not found");
 
         return 0;
     }
 
-    refcnt = fs_atomic32_load(
-                    &rt->refcnt);
+    refcnt = fs_atomic32_load(&rt->refcnt);
 
-    fs_mutex_unlock(
-            &g_objmgr.lock);
+    fs_mutex_unlock(&g_objmgr.lock);
 
-    FS_LOG_DUMP_INFO(
-            "exit: refcnt=%d",
-            refcnt);
+    FS_LOG_DUMP_INFO("exit: refcnt=%d", refcnt);
 
     return refcnt;
 }
@@ -194,8 +156,7 @@ int32_t objmgr_refcnt(
  * ============================================================
  */
 
-obj_meta_t *objmgr_acquire(
-                const fuid_t *fuid)
+obj_meta_t *objmgr_acquire(const fuid_t *fuid)
 {
     obj_key_t key;
 
@@ -203,53 +164,39 @@ obj_meta_t *objmgr_acquire(
 
     fs_error_t err;
 
-    FS_LOG_DUMP_INFO(
-            "enter: objectid=%llu gen=%u",
-            (unsigned long long)fuid->objectid,
-            (unsigned int)fuid->gen);
+    FS_LOG_DUMP_INFO("enter: objectid=%llu gen=%u",
+                     (unsigned long long)fuid->objectid,
+                     (unsigned int)fuid->gen);
 
-    objkey_from_fuid(
-                &key,
-                fuid);
+    objkey_from_fuid(&key, fuid);
 
-    fs_mutex_lock(
-            &g_objmgr.lock);
+    fs_mutex_lock(&g_objmgr.lock);
 
-    rt = objmgr_lookup_locked(
-                    &key);
+    rt = objmgr_lookup_locked(&key);
 
-    if (rt == NULL) {
+    if (rt == NULL)
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
 
-        fs_mutex_unlock(
-                &g_objmgr.lock);
-
-        FS_LOG_DUMP_INFO(
-                "exit: object not found");
+        FS_LOG_DUMP_INFO("exit: object not found");
 
         return NULL;
     }
 
-    err = objmgr_ref_get_locked(
-                    rt);
+    err = objmgr_ref_get_locked(rt);
 
-    if (err != FS_OK) {
+    if (err != FS_OK)
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
 
-        fs_mutex_unlock(
-                &g_objmgr.lock);
-
-        FS_LOG_DUMP_INFO(
-                "exit: acquire failed");
+        FS_LOG_DUMP_INFO("exit: acquire failed");
 
         return NULL;
     }
 
-    fs_mutex_unlock(
-            &g_objmgr.lock);
+    fs_mutex_unlock(&g_objmgr.lock);
 
-    FS_LOG_DUMP_INFO(
-            "exit: rt=%p, meta=%p",
-            (void *)rt,
-            (void *)&rt->meta);
+    FS_LOG_DUMP_INFO("exit: rt=%p, meta=%p", (void *)rt, (void *)&rt->meta);
 
     return &rt->meta;
 }
@@ -261,92 +208,70 @@ obj_meta_t *objmgr_acquire(
  */
 
 
-obj_meta_t *objmgr_acquire_by_handle(
-                const obj_handle_t *handle)
+obj_meta_t *objmgr_acquire_by_handle(const obj_handle_t *handle)
 {
     obj_runtime_t *rt;
     fs_error_t err;
 
     FS_LOG_DUMP_INFO("enter: handle=%p", (const void *)handle);
 
-    if (handle == NULL) {
+    if (handle == NULL)
+    {
         FS_LOG_DUMP_INFO("exit: handle is NULL");
         return NULL;
     }
 
-    fs_mutex_lock(
-            &g_objmgr.lock);
+    fs_mutex_lock(&g_objmgr.lock);
 
-    rt = objmgr_lookup_handle_locked(
-                    handle);
+    rt = objmgr_lookup_handle_locked(handle);
 
-    if (rt == NULL) {
+    if (rt == NULL)
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
 
-        fs_mutex_unlock(
-                &g_objmgr.lock);
-
-        FS_LOG_DUMP_INFO(
-                "exit: object not found");
+        FS_LOG_DUMP_INFO("exit: object not found");
 
         return NULL;
     }
 
-    err = objmgr_ref_get_locked(
-                    rt);
+    err = objmgr_ref_get_locked(rt);
 
-    if (err != FS_OK) {
+    if (err != FS_OK)
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
 
-        fs_mutex_unlock(
-                &g_objmgr.lock);
-
-        FS_LOG_DUMP_INFO(
-                "exit: acquire failed");
+        FS_LOG_DUMP_INFO("exit: acquire failed");
 
         return NULL;
     }
 
-    fs_mutex_unlock(
-            &g_objmgr.lock);
+    fs_mutex_unlock(&g_objmgr.lock);
 
-    FS_LOG_DUMP_INFO(
-            "exit: rt=%p, meta=%p",
-            (void *)rt,
-            (void *)&rt->meta);
+    FS_LOG_DUMP_INFO("exit: rt=%p, meta=%p", (void *)rt, (void *)&rt->meta);
 
     return &rt->meta;
 }
 
-void objmgr_release(
-                obj_meta_t *meta)
+void objmgr_release(obj_meta_t *meta)
 {
     obj_runtime_t *rt;
 
-    if (meta == NULL) {
-
-        FS_LOG_DUMP_INFO(
-                "release ignored: meta is NULL");
+    if (meta == NULL)
+    {
+        FS_LOG_DUMP_INFO("release ignored: meta is NULL");
 
         return;
     }
 
-    FS_LOG_DUMP_INFO(
-            "enter: meta=%p",
-            (void *)meta);
+    FS_LOG_DUMP_INFO("enter: meta=%p", (void *)meta);
 
-    rt = FS_CONTAINER_OF(
-                meta,
-                obj_runtime_t,
-                meta);
+    rt = FS_CONTAINER_OF(meta, obj_runtime_t, meta);
 
-    fs_mutex_lock(
-            &g_objmgr.lock);
+    fs_mutex_lock(&g_objmgr.lock);
 
-    (void)objmgr_ref_put_locked(
-                    rt);
+    (void)objmgr_ref_put_locked(rt);
 
-    fs_mutex_unlock(
-            &g_objmgr.lock);
+    fs_mutex_unlock(&g_objmgr.lock);
 
-    FS_LOG_DUMP_INFO(
-            "exit");
+    FS_LOG_DUMP_INFO("exit");
 }

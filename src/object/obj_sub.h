@@ -14,7 +14,8 @@
  * ============================================================
  */
 
-typedef enum obj_sub {
+typedef enum obj_sub
+{
 
 #define OBJ_SUB_ENUM(name, str) OBJ_SUB_##name,
 
@@ -22,7 +23,7 @@ typedef enum obj_sub {
 
 #undef OBJ_SUB_ENUM
 
-    OBJ_SUB_MAX
+            OBJ_SUB_MAX
 
 } obj_sub_t;
 

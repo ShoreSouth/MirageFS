@@ -35,22 +35,26 @@ int msh_cmd_meta(msh_context_t *ctx, const msh_argv_t *args)
 {
     const char *cmd;
 
-    if ((ctx == NULL) || (args == NULL) || (args->argc == 0)) {
+    if ((ctx == NULL) || (args == NULL) || (args->argc == 0))
+    {
         return 1;
     }
 
     cmd = args->argv[0];
-    if (strcmp(cmd, "help") == 0) {
+    if (strcmp(cmd, "help") == 0)
+    {
         msh_print_help();
         return 0;
     }
 
-    if (strcmp(cmd, "version") == 0) {
+    if (strcmp(cmd, "version") == 0)
+    {
         printf("MirageFS msh 0.1\n");
         return 0;
     }
 
-    if ((strcmp(cmd, "exit") == 0) || (strcmp(cmd, "quit") == 0)) {
+    if ((strcmp(cmd, "exit") == 0) || (strcmp(cmd, "quit") == 0))
+    {
         ctx->should_exit = true;
         return 0;
     }

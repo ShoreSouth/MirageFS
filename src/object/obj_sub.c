@@ -2,10 +2,9 @@
 
 static const char *g_obj_sub_names[] = {
 
-#define OBJ_SUB_NAME(name, str) \
-    [OBJ_SUB_##name] = str,
+#define OBJ_SUB_NAME(name, str) [OBJ_SUB_##name] = str,
 
-    OBJ_SUB_TABLE(OBJ_SUB_NAME)
+        OBJ_SUB_TABLE(OBJ_SUB_NAME)
 
 #undef OBJ_SUB_NAME
 
@@ -13,7 +12,8 @@ static const char *g_obj_sub_names[] = {
 
 const char *obj_sub_name(obj_sub_t sub)
 {
-    if (!obj_sub_valid(sub)) {
+    if (!obj_sub_valid(sub))
+    {
         return "UNKNOWN";
     }
 

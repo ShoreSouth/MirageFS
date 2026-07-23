@@ -5,7 +5,7 @@
 
 #include "fs_config.h"
 
- #include <stdio.h>
+#include <stdio.h>
 
 #include "common/fs_common.h"
 
@@ -44,21 +44,19 @@ void fs_config_init(void)
 
 void fs_config_dump(void)
 {
-
     FS_LOG_DUMP_INFO("\n");
     FS_LOG_DUMP_INFO("========== MirageFS Config ==========\n");
 
     FS_LOG_DUMP_INFO("mempool_size : %lu MB\n",
-           g_fs_config.mempool_size / FS_MB);
+                     g_fs_config.mempool_size / FS_MB);
 
-    FS_LOG_DUMP_INFO("worker_nr    : %u\n",
-           g_fs_config.worker_nr);
+    FS_LOG_DUMP_INFO("worker_nr    : %u\n", g_fs_config.worker_nr);
 
     FS_LOG_DUMP_INFO("trace_enable : %s\n",
-           g_fs_config.trace_enable ? "true" : "false");
+                     g_fs_config.trace_enable ? "true" : "false");
 
     FS_LOG_DUMP_INFO("debug_enable : %s\n",
-           g_fs_config.debug_enable ? "true" : "false");
+                     g_fs_config.debug_enable ? "true" : "false");
 
     FS_LOG_DUMP_INFO("=====================================\n");
     FS_LOG_DUMP_INFO("\n");

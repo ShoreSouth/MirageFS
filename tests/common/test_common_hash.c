@@ -1,6 +1,7 @@
 #include "common_test_common.h"
 
-typedef struct test_common_hash_node {
+typedef struct test_common_hash_node
+{
     int key;
     fs_list_head_t node;
 } test_common_hash_node_t;
@@ -15,11 +16,10 @@ static uint64_t test_common_hash_node_hash(const fs_list_head_t *node)
 
 static uint64_t test_common_hash_key_hash(const void *key)
 {
-    return (uint64_t)*(const int *)key;
+    return (uint64_t) * (const int *)key;
 }
 
-static bool test_common_hash_match(const fs_list_head_t *node,
-                                   const void *key)
+static bool test_common_hash_match(const fs_list_head_t *node, const void *key)
 {
     const test_common_hash_node_t *entry;
 
@@ -44,47 +44,29 @@ static int test_hash_table_rejects_invalid_inputs_and_round_trips_nodes(void)
     fs_list_init(&a.node);
     fs_list_init(&b.node);
 
-    err = fs_hash_init(NULL,
-                       4U,
-                       test_common_hash_node_hash,
-                       test_common_hash_key_hash,
+    err = fs_hash_init(NULL, 4U, test_common_hash_node_hash,
+                       test_common_hash_key_hash, test_common_hash_match);
+    TEST_ASSERT_EQ_INT(FS_COMMON_SUB_HASH, fs_err_sub(err));
+    TEST_ASSERT_EQ_INT(FS_ERRNO_EINVAL, fs_err_errno(err));
+    err = fs_hash_init(&hash, 0U, test_common_hash_node_hash,
+                       test_common_hash_key_hash, test_common_hash_match);
+    TEST_ASSERT_EQ_INT(FS_COMMON_SUB_HASH, fs_err_sub(err));
+    TEST_ASSERT_EQ_INT(FS_ERRNO_EINVAL, fs_err_errno(err));
+    err = fs_hash_init(&hash, 4U, NULL, test_common_hash_key_hash,
                        test_common_hash_match);
     TEST_ASSERT_EQ_INT(FS_COMMON_SUB_HASH, fs_err_sub(err));
     TEST_ASSERT_EQ_INT(FS_ERRNO_EINVAL, fs_err_errno(err));
-    err = fs_hash_init(&hash,
-                       0U,
-                       test_common_hash_node_hash,
-                       test_common_hash_key_hash,
+    err = fs_hash_init(&hash, 4U, test_common_hash_node_hash, NULL,
                        test_common_hash_match);
     TEST_ASSERT_EQ_INT(FS_COMMON_SUB_HASH, fs_err_sub(err));
     TEST_ASSERT_EQ_INT(FS_ERRNO_EINVAL, fs_err_errno(err));
-    err = fs_hash_init(&hash,
-                       4U,
-                       NULL,
-                       test_common_hash_key_hash,
-                       test_common_hash_match);
-    TEST_ASSERT_EQ_INT(FS_COMMON_SUB_HASH, fs_err_sub(err));
-    TEST_ASSERT_EQ_INT(FS_ERRNO_EINVAL, fs_err_errno(err));
-    err = fs_hash_init(&hash,
-                       4U,
-                       test_common_hash_node_hash,
-                       NULL,
-                       test_common_hash_match);
-    TEST_ASSERT_EQ_INT(FS_COMMON_SUB_HASH, fs_err_sub(err));
-    TEST_ASSERT_EQ_INT(FS_ERRNO_EINVAL, fs_err_errno(err));
-    err = fs_hash_init(&hash,
-                       4U,
-                       test_common_hash_node_hash,
-                       test_common_hash_key_hash,
-                       NULL);
+    err = fs_hash_init(&hash, 4U, test_common_hash_node_hash,
+                       test_common_hash_key_hash, NULL);
     TEST_ASSERT_EQ_INT(FS_COMMON_SUB_HASH, fs_err_sub(err));
     TEST_ASSERT_EQ_INT(FS_ERRNO_EINVAL, fs_err_errno(err));
 
-    err = fs_hash_init(&hash,
-                       4U,
-                       test_common_hash_node_hash,
-                       test_common_hash_key_hash,
-                       test_common_hash_match);
+    err = fs_hash_init(&hash, 4U, test_common_hash_node_hash,
+                       test_common_hash_key_hash, test_common_hash_match);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_EQ_INT(0U, fs_hash_count(&hash));
     err = fs_hash_insert(NULL, &a.node);
@@ -117,17 +99,15 @@ static int test_hash_table_rejects_invalid_inputs_and_round_trips_nodes(void)
 
 
 const test_case_t COMMON_HASH_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_HASH,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_COMMON,
-                             TEST_COMMON_COMPONENT_HASH,
-                             0x1,
+        TEST_CASE(UT_LIST_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_HASH, 0x1),
+                  UT_CASE_NO(UT_MOD_COMMON, TEST_COMMON_COMPONENT_HASH, 0x1,
                              0x001),
                   test_hash_table_rejects_invalid_inputs_and_round_trips_nodes,
                   "Hash 表参数校验和节点回环",
                   "注入初始化/插入/查找/删除非法参数，再插入两个节点并查找删除",
-                  "非法输入返回 COMMON/HASH/EINVAL，节点可按 key 命中并维护 count"),
+                  "非法输入返回 COMMON/HASH/EINVAL，节点可按 key 命中并维护 "
+                  "count"),
 };
 
-const size_t COMMON_HASH_CASE_COUNT = sizeof(COMMON_HASH_CASES) / sizeof(COMMON_HASH_CASES[0]);
+const size_t COMMON_HASH_CASE_COUNT =
+        sizeof(COMMON_HASH_CASES) / sizeof(COMMON_HASH_CASES[0]);

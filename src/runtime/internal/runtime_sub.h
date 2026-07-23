@@ -9,7 +9,8 @@
  * sub 字段用于标识 Runtime 内部失败发生在哪个职责区域，便于
  * fs_error_str() 打印 RUNTIME::SESSION、RUNTIME::OP 等可读错误。
  */
-typedef enum runtime_sub {
+typedef enum runtime_sub
+{
 
     RUNTIME_SUB_NONE = 0,
     RUNTIME_SUB_INIT,      /* 运行时初始化/反初始化 */

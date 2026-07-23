@@ -9,14 +9,13 @@
  * mutex
  * ============================================================ */
 
-fs_error_t fs_mutex_init(fs_mutex_t *lock,
-              const char *name,
-              uint32_t flags)
+fs_error_t fs_mutex_init(fs_mutex_t *lock, const char *name, uint32_t flags)
 {
     int rc;
     pthread_mutexattr_t attr;
 
-    if (lock == NULL) {
+    if (lock == NULL)
+    {
         return fs_common_error(FS_COMMON_SUB_LOCK, FS_ERRNO_EINVAL);
     }
 
@@ -24,15 +23,14 @@ fs_error_t fs_mutex_init(fs_mutex_t *lock,
 
     pthread_mutexattr_init(&attr);
 
-    if (flags & FS_LOCK_F_RECURSIVE) {
-
-        pthread_mutexattr_settype(&attr,
-                                  PTHREAD_MUTEX_RECURSIVE);
+    if (flags & FS_LOCK_F_RECURSIVE)
+    {
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
     }
 
     rc = pthread_mutex_init(&lock->mutex, &attr);
-    if (rc != 0) {
-
+    if (rc != 0)
+    {
         pthread_mutexattr_destroy(&attr);
 
         return fs_common_error(FS_COMMON_SUB_LOCK, rc);
@@ -42,14 +40,15 @@ fs_error_t fs_mutex_init(fs_mutex_t *lock,
 
     lock->magic = FS_MUTEX_MAGIC;
     lock->flags = flags;
-    lock->name  = name;
+    lock->name = name;
 
     return FS_OK;
 }
 
 void fs_mutex_destroy(fs_mutex_t *lock)
 {
-    if (lock == NULL) {
+    if (lock == NULL)
+    {
         return;
     }
 
@@ -79,8 +78,8 @@ bool fs_mutex_trylock(fs_mutex_t *lock)
 
     ret = pthread_mutex_trylock(&lock->mutex);
 
-    if (ret == 0) {
-
+    if (ret == 0)
+    {
         lock->owner = pthread_self();
 
         return true;
@@ -103,12 +102,14 @@ bool fs_mutex_is_locked(fs_mutex_t *lock)
 {
     bool locked;
 
-    if (lock == NULL) {
+    if (lock == NULL)
+    {
         return false;
     }
 
     locked = !fs_mutex_trylock(lock);
-    if (!locked) {
+    if (!locked)
+    {
         fs_mutex_unlock(lock);
     }
 
@@ -119,26 +120,26 @@ bool fs_mutex_is_locked(fs_mutex_t *lock)
  * rwlock
  * ============================================================ */
 
-fs_error_t fs_rwlock_init(fs_rwlock_t *lock,
-               const char *name,
-               uint32_t flags)
+fs_error_t fs_rwlock_init(fs_rwlock_t *lock, const char *name, uint32_t flags)
 {
     int rc;
 
-    if (lock == NULL) {
+    if (lock == NULL)
+    {
         return fs_common_error(FS_COMMON_SUB_LOCK, FS_ERRNO_EINVAL);
     }
 
     memset(lock, 0, sizeof(*lock));
 
     rc = pthread_rwlock_init(&lock->rwlock, NULL);
-    if (rc != 0) {
+    if (rc != 0)
+    {
         return fs_common_error(FS_COMMON_SUB_LOCK, rc);
     }
 
     lock->magic = FS_RWLOCK_MAGIC;
     lock->flags = flags;
-    lock->name  = name;
+    lock->name = name;
 
     return FS_OK;
 }

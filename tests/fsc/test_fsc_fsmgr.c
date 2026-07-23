@@ -147,7 +147,10 @@ static int test_fsmgr_deinit_reclaims_registered_namespace(void)
 
 static int test_fsmgr_create_rolls_back_when_nspool_exhausted(void)
 {
-    enum { TEST_NSPOOL_ALLOC_CAP = 1024 };
+    enum
+    {
+        TEST_NSPOOL_ALLOC_CAP = 1024
+    };
     fs_error_t err;
     fuid_t root_fuid;
     fsc_namespace_t *held[TEST_NSPOOL_ALLOC_CAP];
@@ -169,9 +172,11 @@ static int test_fsmgr_create_rolls_back_when_nspool_exhausted(void)
     TEST_ASSERT_EQ_INT(FS_OK, err);
 
     held_nr = 0U;
-    while (held_nr < TEST_NSPOOL_ALLOC_CAP) {
+    while (held_nr < TEST_NSPOOL_ALLOC_CAP)
+    {
         extra = nspool_alloc();
-        if (extra == NULL) {
+        if (extra == NULL)
+        {
             break;
         }
         held[held_nr] = extra;
@@ -187,7 +192,8 @@ static int test_fsmgr_create_rolls_back_when_nspool_exhausted(void)
     TEST_ASSERT_EQ_INT(0, fsmgr_count());
     TEST_ASSERT_FALSE(fsmgr_exists("pool_full"));
 
-    for (i = 0; i < held_nr; i++) {
+    for (i = 0; i < held_nr; i++)
+    {
         nspool_free(held[i]);
     }
 
@@ -202,39 +208,25 @@ static int test_fsmgr_create_rolls_back_when_nspool_exhausted(void)
 
 
 const test_case_t FSC_FSMGR_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSMGR,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSMGR,
-                             0x1,
-                             0x001),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1, 0x001),
                   test_fsmgr_create_lookup_destroy_real_namespace,
                   "FSMgr 真实 namespace 回环",
-                  "在真实 sysroot 下 create/lookup/getter/destroy，并注入重复和 busy",
+                  "在真实 sysroot 下 "
+                  "create/lookup/getter/destroy，并注入重复和 busy",
                   "命名空间生命周期完整，重复创建 EEXIST，busy 删除 EBUSY"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSMGR,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSMGR,
-                             0x1,
-                             0x002),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1, 0x002),
                   test_fsmgr_deinit_reclaims_registered_namespace,
                   "FSMgr deinit 回收注册 namespace",
                   "创建 namespace 后不显式 destroy，直接 deinit manager",
                   "manager 释放表内 namespace 并把计数归零"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSMGR,
-                             0x1),
-                  UT_CASE_NO(UT_MOD_FSC,
-                             TEST_FSC_COMPONENT_FSMGR,
-                             0x1,
-                             0x003),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1, 0x003),
                   test_fsmgr_create_rolls_back_when_nspool_exhausted,
-                  "FSMgr create 回滚",
-                  "提前耗尽 NSPool 后创建 namespace",
+                  "FSMgr create 回滚", "提前耗尽 NSPool 后创建 namespace",
                   "创建失败返回 ENOMEM，目录、FSID 和对象 key 被回滚"),
 };
 
-const size_t FSC_FSMGR_CASE_COUNT = sizeof(FSC_FSMGR_CASES) / sizeof(FSC_FSMGR_CASES[0]);
+const size_t FSC_FSMGR_CASE_COUNT =
+        sizeof(FSC_FSMGR_CASES) / sizeof(FSC_FSMGR_CASES[0]);

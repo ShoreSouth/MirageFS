@@ -163,14 +163,14 @@ static int test_objmgr_internal_state_ref_and_handle_edges(void)
     memset(&rt, 0, sizeof(rt));
     memset(&rt_dup, 0, sizeof(rt_dup));
     /* 先直接验证状态机允许/拒绝矩阵，再验证改变状态的错误码。 */
-    TEST_ASSERT_TRUE(objmgr_state_can_transit(OBJ_STATE_INIT,
-                                              OBJ_STATE_ACTIVE));
-    TEST_ASSERT_TRUE(objmgr_state_can_transit(OBJ_STATE_ACTIVE,
-                                              OBJ_STATE_DELETING));
-    TEST_ASSERT_FALSE(objmgr_state_can_transit(OBJ_STATE_INVALID,
-                                               OBJ_STATE_ACTIVE));
-    TEST_ASSERT_FALSE(objmgr_state_can_transit(OBJ_STATE_DELETING,
-                                               OBJ_STATE_ACTIVE));
+    TEST_ASSERT_TRUE(
+            objmgr_state_can_transit(OBJ_STATE_INIT, OBJ_STATE_ACTIVE));
+    TEST_ASSERT_TRUE(
+            objmgr_state_can_transit(OBJ_STATE_ACTIVE, OBJ_STATE_DELETING));
+    TEST_ASSERT_FALSE(
+            objmgr_state_can_transit(OBJ_STATE_INVALID, OBJ_STATE_ACTIVE));
+    TEST_ASSERT_FALSE(
+            objmgr_state_can_transit(OBJ_STATE_DELETING, OBJ_STATE_ACTIVE));
     err = objmgr_change_state(NULL, OBJ_STATE_ACTIVE);
     TEST_ASSERT_OBJECT_ERRNO(err, EINVAL);
     err = objmgr_change_state(&rt, OBJ_STATE_DELETING);
@@ -218,61 +218,45 @@ static int test_objmgr_internal_state_ref_and_handle_edges(void)
 }
 
 const test_case_t OBJECT_OBJMGR_CASES[] = {
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1,
-                         0x001),
-              test_objmgr_key_allocator_round_trip,
-              "ObjMgr key 分配回收",
-              "初始化对象模块后申请 key，注入非法/stale key 释放，再释放并重新申请",
-              "非法和重复释放被拒绝，复用槽位时 objectid 保持且 generation 递增"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1,
-                         0x002),
-              test_objmgr_create_lookup_delete_with_refs,
-              "ObjMgr 引用中的删除流程",
-              "创建对象后按 FUID/handle acquire，保留一个引用时执行 delete",
-              "DELETING 阶段禁止新引用，最后 release 后完成回收"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1,
-                         0x003),
-              test_objmgr_rejects_duplicate_key_and_handle,
-              "ObjMgr 重复 key/handle",
-              "已存在一个对象后，分别用重复 FUID 和重复 backend handle 再次创建",
-              "两种重复创建都失败，原对象仍唯一且对象计数不被污染"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x1,
-                         0x004),
-              test_objmgr_public_error_paths,
-              "ObjMgr 公开错误路径",
-              "对缺失对象执行 get/put/delete/state/refcnt，并注入非法 FUID/handle/create/put",
-              "缺失对象返回 ENOENT/INVALID/0，非法 create 被拒绝，未 get 的 put 返回 EINVAL"),
-    TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x2),
-              UT_CASE_NO(UT_MOD_OBJECT,
-                         TEST_OBJECT_COMPONENT_OBJMGR,
-                         0x2,
-                         0x001),
-              test_objmgr_internal_state_ref_and_handle_edges,
-              "ObjMgr 内部状态和 handle 边界",
-              "直接覆盖状态迁移、引用计数和 handle 索引重复插入",
-              "非法迁移/重复 handle 返回指定错误，索引删除后不可查"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1,
+                             0x001),
+                  test_objmgr_key_allocator_round_trip, "ObjMgr key 分配回收",
+                  "初始化对象模块后申请 key，注入非法/stale key "
+                  "释放，再释放并重新申请",
+                  "非法和重复释放被拒绝，复用槽位时 objectid 保持且 generation "
+                  "递增"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1,
+                             0x002),
+                  test_objmgr_create_lookup_delete_with_refs,
+                  "ObjMgr 引用中的删除流程",
+                  "创建对象后按 FUID/handle acquire，保留一个引用时执行 delete",
+                  "DELETING 阶段禁止新引用，最后 release 后完成回收"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1,
+                             0x003),
+                  test_objmgr_rejects_duplicate_key_and_handle,
+                  "ObjMgr 重复 key/handle",
+                  "已存在一个对象后，分别用重复 FUID 和重复 backend handle "
+                  "再次创建",
+                  "两种重复创建都失败，原对象仍唯一且对象计数不被污染"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x1,
+                             0x004),
+                  test_objmgr_public_error_paths, "ObjMgr 公开错误路径",
+                  "对缺失对象执行 get/put/delete/state/refcnt，并注入非法 "
+                  "FUID/handle/create/put",
+                  "缺失对象返回 ENOENT/INVALID/0，非法 create 被拒绝，未 get "
+                  "的 put 返回 EINVAL"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x2),
+                  UT_CASE_NO(UT_MOD_OBJECT, TEST_OBJECT_COMPONENT_OBJMGR, 0x2,
+                             0x001),
+                  test_objmgr_internal_state_ref_and_handle_edges,
+                  "ObjMgr 内部状态和 handle 边界",
+                  "直接覆盖状态迁移、引用计数和 handle 索引重复插入",
+                  "非法迁移/重复 handle 返回指定错误，索引删除后不可查"),
 };
 
-const size_t OBJECT_OBJMGR_CASE_COUNT = sizeof(OBJECT_OBJMGR_CASES) / sizeof(OBJECT_OBJMGR_CASES[0]);
+const size_t OBJECT_OBJMGR_CASE_COUNT =
+        sizeof(OBJECT_OBJMGR_CASES) / sizeof(OBJECT_OBJMGR_CASES[0]);

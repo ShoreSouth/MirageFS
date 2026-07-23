@@ -7,8 +7,8 @@
  * ============================================================
  */
 
-struct lsa_dir_iter {
-
+struct lsa_dir_iter
+{
     int dirfd; /* directory fd */
 
     bool eof; /* end-of-directory reached */
