@@ -19,6 +19,7 @@
 #include "object/objmgr/objmgr_internal.h"
 #include "object/objpool/objpool.h"
 
+/* Object UT 按 src/object 子组件拆分，组件编号参与 0xMMCCLIII 用例编号。 */
 typedef enum test_object_component {
     TEST_OBJECT_COMPONENT_FUID = 0x01,
     TEST_OBJECT_COMPONENT_OBJKEY = 0x02,
@@ -29,6 +30,7 @@ typedef enum test_object_component {
     TEST_OBJECT_COMPONENT_OBJMGR = 0x07,
 } test_object_component_t;
 
+/* 共享构造器只提供稳定的身份/handle 数据，避免每个组件重复铺测试样板。 */
 obj_handle_t test_object_make_handle_with_seed(uint8_t seed);
 obj_handle_t test_object_make_handle(void);
 fuid_t       test_object_make_fuid(ObjectId_t objectid);

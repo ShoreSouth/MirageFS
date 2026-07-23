@@ -15,6 +15,7 @@ static int test_objmeta_handle_lsa_round_trip(void)
     lsa_handle.data[2] = 0x33;
     lsa_handle.data[3] = 0x44;
 
+    /* backend handle 是 ObjMeta 的持久定位信息，往返转换不能丢字段。 */
     err = objmeta_handle_from_lsa(&obj_handle, &lsa_handle, 88);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_EQ_INT(88, obj_handle.mount_id);
@@ -41,6 +42,7 @@ static int test_objmeta_init_equal_and_reset(void)
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(objmeta_is_valid(&meta));
 
+    /* 相等性包含 backend handle；同 FUID 但 handle data 变化也不是同一元数据。 */
     copy = meta;
     TEST_ASSERT_TRUE(objmeta_equal(&meta, &copy));
     copy.handle.data[0] ^= 0xffU;
@@ -60,6 +62,7 @@ static int test_objmeta_rejects_invalid_inputs(void)
     memset(&lsa_handle, 0, sizeof(lsa_handle));
     lsa_handle.handle_bytes = OBJMETA_MAX_HANDLE_SIZE + 1U;
 
+    /* 公共转换入口先校验输出参数，再校验来自 LSA 的 handle 长度。 */
     err = objmeta_handle_from_lsa(NULL, &lsa_handle, 1);
     TEST_ASSERT_EQ_INT(FS_MODULE_OBJECT, fs_err_module(err));
     TEST_ASSERT_EQ_INT(EINVAL, fs_err_errno(err));
@@ -167,8 +170,8 @@ const test_case_t OBJECT_OBJMETA_CASES[] = {
                          0x001),
               test_objmeta_handle_lsa_round_trip,
               "ObjMeta handle 转换",
-              "LSA handle 与 Object handle 往返转换",
-              "mount/type/len/data 字段保持一致"),
+              "构造带 mount/type/len/data 的 LSA handle，并与 Object handle 往返转换",
+              "mount/type/len/data 全部保持一致，没有截断或字段错位"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJMETA,
                          0x1),
@@ -178,8 +181,8 @@ const test_case_t OBJECT_OBJMETA_CASES[] = {
                          0x002),
               test_objmeta_init_equal_and_reset,
               "ObjMeta 初始化与比较",
-              "初始化后复制、篡改 handle、再 deinit",
-              "有效性、相等性和清空状态正确"),
+              "用合法 FUID/handle 初始化，复制后篡改 handle data，再执行 deinit",
+              "初始化后有效，handle 差异会破坏相等性，deinit 后转为无效状态"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJMETA,
                          0x1),
@@ -189,8 +192,8 @@ const test_case_t OBJECT_OBJMETA_CASES[] = {
                          0x003),
               test_objmeta_rejects_invalid_inputs,
               "ObjMeta 参数校验",
-              "注入 NULL 输出和超长 LSA handle",
-              "返回 OBJECT 模块的 EINVAL/EOVERFLOW"),
+              "转换 LSA handle 时注入 NULL 输出参数和超过上限的 handle 长度",
+              "返回 OBJECT 模块 EINVAL/EOVERFLOW，错误归属不被包装丢失"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJMETA,
                          0x2),

@@ -928,6 +928,47 @@ _Static_assert(sizeof(foo_t) == FOO_SIZE, "foo_t size invalid");
 
 ---
 
+## 格式化与开发工具
+
+MirageFS 使用仓库根目录 `.clang-format` 固化 C/H 代码排版。该配置基于 LLVM 风格调整为项目本地风格：
+
+* 4 空格缩进，不使用 tab。
+* 80 列行宽。
+* 左花括号另起一行。
+* 指针星号靠近变量名，例如 `char *path`。
+* 不自动排序 include，保留项目 include 分组语义。
+* 不自动重排注释，避免中文注释被工具改写。
+
+日常检查：
+
+```sh
+python3 tools/check/format.py
+python3 tools/check/miragefs_lint.py --all --plain
+tools/test/list-ut.py --check
+```
+
+一键静态检查入口：
+
+```sh
+tools/check/check-all.sh
+```
+
+需要原地格式化时使用：
+
+```sh
+python3 tools/check/format.py --fix <path>
+```
+
+大规模格式化必须作为独立提交，不和功能修改、行为修改混在一个 diff 中。
+
+新增格式化、静态检查、调试、生成类工具时，必须同步更新：
+
+* `tools/README.md`
+* `docs/guides/dev-tools.md`
+* 如工具改变编码规范、检查门禁或日常工作流，同步更新本 skill。
+
+---
+
 
 ## UT 规则
 

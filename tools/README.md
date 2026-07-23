@@ -17,6 +17,29 @@ python3 tools/check/miragefs_lint.py src/fops docs/modules/fops tools/check
 CI 或日志收集场景可使用 `--plain` 关闭 banner、进度条和表格。
 `--detail-limit N` 可控制问题明细表最多显示多少条记录。
 
+`tools/check/format.py` 是 `clang-format` 包装器，默认检查 `src` 和 `tests` 下的 C/H 文件：
+
+```sh
+python3 tools/check/format.py
+python3 tools/check/format.py --fix src/object tests/object
+```
+
+`tools/check/check-all.sh` 是本地一键静态检查入口，当前会执行：
+
+```text
+python3 tools/check/miragefs_lint.py --all --plain
+python3 tools/check/format.py
+tools/test/list-ut.py --check
+```
+
+运行：
+
+```sh
+tools/check/check-all.sh
+```
+
+它只做静态检查和 UT 编号检查，不替代 `make test`。
+
 
 ## UT 工具
 

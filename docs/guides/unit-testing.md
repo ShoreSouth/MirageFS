@@ -176,25 +176,24 @@ tools/test/run-ut.sh coverage-check 90
 
 ## 新增 case 的位置
 
-每个模块对应一个测试文件：
+测试入口按模块保留在 `tests/<module>/test_<module>.c`，入口只负责 suite 清单和 `main()`。具体 case 应按组件拆到独立文件：
 
 ```text
-tests/config/test_config.c
-tests/common/test_common.c
-tests/lsa/test_lsa.c
-tests/object/test_object.c
-tests/fsc/test_fsc.c
-tests/fops/test_fops.c
-tests/namei/test_namei.c
-tests/runtime/test_runtime.c
-tests/msh/test_msh.c
+tests/object/test_object.c              入口清单
+tests/object/test_object_fuid.c         fuid 组件 case
+tests/object/test_object_objmeta.c      objmeta 组件 case
+tests/object/object_test_common.[ch]    共享构造器和组件 enum
 ```
+
+`common`、`lsa`、`fsc`、`fops`、`namei`、`runtime`、`msh` 也遵循同样模式。`config` 当前只有一个 core 组件，仍保留单文件；如果后续 case 变多，也应按组件拆分。
 
 新增模块时，应同步新增：
 
 ```text
-tests/<module>/test_<module>.c
-tests/Makefile 中的测试目标
+tests/<module>/test_<module>.c              suite 清单入口
+tests/<module>/<module>_test_common.[ch]    共享 helper
+tests/<module>/test_<module>_<component>.c  组件 case
+tests/Makefile 中的测试目标或 wildcard 源文件列表
 docs/testing/ut-framework.md 中的测试点说明
 ```
 

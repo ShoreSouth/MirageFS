@@ -26,7 +26,7 @@ git rev-parse --show-toplevel
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y build-essential make gcc binutils
+sudo apt-get install -y build-essential make gcc binutils clang-format
 ```
 
 UT 和覆盖率还需要：
@@ -149,6 +149,14 @@ python3 tools/check/miragefs_lint.py --all
 ```sh
 python3 tools/check/miragefs_lint.py --all --strict
 ```
+
+需要执行本地一键静态检查：
+
+```sh
+tools/check/check-all.sh
+```
+
+开发工具说明见 [开发工具](dev-tools.md)。
 
 ## 编译选项
 

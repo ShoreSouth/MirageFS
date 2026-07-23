@@ -5,6 +5,7 @@ static int test_objpool_standalone_lifecycle_edges(void)
     fs_error_t err;
     obj_runtime_t *rt;
 
+    /* ObjPool 是 ObjMgr 的底层资源池，独立测试覆盖未初始化和重复释放边界。 */
     objpool_deinit();
     TEST_ASSERT_TRUE(objpool_alloc() == NULL);
     objpool_free(NULL);

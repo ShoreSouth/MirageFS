@@ -5,6 +5,7 @@ static int test_objruntime_state_reads_stored_state(void)
     obj_runtime_t rt;
 
     memset(&rt, 0, sizeof(rt));
+    /* ObjRuntime getter 不驱动状态迁移，只反映当前 runtime 保存的状态。 */
     rt.state = OBJ_STATE_ACTIVE;
     TEST_ASSERT_EQ_INT(OBJ_STATE_ACTIVE, objruntime_state(&rt));
     rt.state = OBJ_STATE_DELETING;
@@ -17,6 +18,7 @@ static int test_objruntime_dump_and_null_state(void)
     obj_runtime_t rt;
 
     memset(&rt, 0, sizeof(rt));
+    /* 边界状态也必须按原值返回，便于上层区分未初始化和删除中对象。 */
     rt.state = OBJ_STATE_INIT;
     TEST_ASSERT_EQ_INT(OBJ_STATE_INIT, objruntime_state(&rt));
     rt.state = OBJ_STATE_INVALID;

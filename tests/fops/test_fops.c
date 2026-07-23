@@ -11,6 +11,10 @@ int main(void)
 {
     int failed;
 
+    /*
+     * 入口只保留 fops 组件清单和执行顺序；具体 case 放在对应
+     * 功能测试文件中，方便按 dispatch/validate/ops 等职责阅读。
+     */
     failed = 0;
     failed += run_fops_suite("fops/core",
                              FOPS_CORE_CASES,

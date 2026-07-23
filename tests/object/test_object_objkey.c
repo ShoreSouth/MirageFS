@@ -6,6 +6,7 @@ static int test_objkey_from_fuid_round_trip(void)
     obj_key_t key;
     obj_key_t expected = objkey_make(100, 5);
 
+    /* ObjKey 是对象表索引键，只从 FUID 的 objectid/gen 投影身份。 */
     objkey_from_fuid(&key, &fuid);
 
     TEST_ASSERT_TRUE(objkey_is_valid(&key));
@@ -25,8 +26,8 @@ const test_case_t OBJECT_OBJKEY_CASES[] = {
                          0x001),
               test_objkey_from_fuid_round_trip,
               "ObjKey 转换",
-              "从 FUID 提取 objectid/gen",
-              "ObjKey 可比较、可 hash，NULL 比较安全失败"),
+              "从目录 FUID 提取 objectid/gen，构造预期 ObjKey 对比",
+              "ObjKey 有效、可比较、hash 非零，NULL 比较安全失败"),
 };
 
 const size_t OBJECT_OBJKEY_CASE_COUNT = sizeof(OBJECT_OBJKEY_CASES) / sizeof(OBJECT_OBJKEY_CASES[0]);

@@ -11,6 +11,10 @@ int main(void)
 {
     int failed;
 
+    /*
+     * 入口只保留组件清单和执行顺序；具体 case 放在对应 src/object
+     * 子组件同名测试文件中，方便按模块职责阅读和维护。
+     */
     failed = 0;
     failed += run_object_suite("object/fuid",
                                OBJECT_FUID_CASES,

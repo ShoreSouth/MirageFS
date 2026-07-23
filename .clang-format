@@ -1,0 +1,40 @@
+---
+Language: Cpp
+Standard: c++17
+BasedOnStyle: LLVM
+
+ColumnLimit: 80
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 8
+
+BreakBeforeBraces: Allman
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+PointerAlignment: Right
+DerivePointerAlignment: false
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignTrailingComments: true
+
+IndentCaseLabels: false
+SortIncludes: false
+ReflowComments: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+
+ForEachMacros:
+  - fs_list_for_each
+  - fs_list_for_each_safe
+  - fs_list_for_each_entry
+  - fs_list_for_each_entry_safe
+...

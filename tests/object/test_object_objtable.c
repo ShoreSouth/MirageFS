@@ -17,6 +17,7 @@ static int test_objtable_insert_lookup_remove_round_trip(void)
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_EQ_INT(0, objtable_count(&table));
 
+    /* 表内只索引 runtime 指针；插入后 lookup 返回的应是调用方提供的对象。 */
     err = objtable_insert(&table, &rt);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_EQ_INT(1, objtable_count(&table));
@@ -49,6 +50,7 @@ static int test_objtable_rejects_invalid_inputs(void)
     err = objtable_init(&table, 8);
     TEST_ASSERT_EQ_INT(FS_OK, err);
 
+    /* 公共 API 对 NULL runtime 与缺失 key 分别返回 EINVAL/ENOENT。 */
     err = objtable_insert(&table, NULL);
     TEST_ASSERT_EQ_INT(FS_MODULE_OBJECT, fs_err_module(err));
     TEST_ASSERT_EQ_INT(EINVAL, fs_err_errno(err));
@@ -79,6 +81,7 @@ static int test_objtable_destroy_and_edge_paths(void)
     memset(&rt1, 0, sizeof(rt1));
     memset(&rt2, 0, sizeof(rt2));
     memset(&invalid_rt, 0, sizeof(invalid_rt));
+    /* 无效 key/runtime 不应进入表；NULL 查询保持防御性失败。 */
     TEST_ASSERT_FALSE(objkey_is_valid(NULL));
     TEST_ASSERT_FALSE(objkey_is_valid(&invalid_rt.meta.key));
     TEST_ASSERT_FALSE(objtable_exists(NULL, &missing));
@@ -116,8 +119,8 @@ const test_case_t OBJECT_OBJTABLE_CASES[] = {
                          0x001),
               test_objtable_insert_lookup_remove_round_trip,
               "ObjTable 插入查找删除",
-              "插入有效 runtime 并重复插入",
-              "查找命中、重复插入 EEXIST、删除后不存在"),
+              "插入有效 runtime，按 ObjKey 查询，再重复插入并删除",
+              "lookup 返回原 runtime 指针，重复插入 EEXIST，删除后计数归零且 key 不存在"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJTABLE,
                          0x1),
@@ -127,8 +130,8 @@ const test_case_t OBJECT_OBJTABLE_CASES[] = {
                          0x002),
               test_objtable_rejects_invalid_inputs,
               "ObjTable 参数校验",
-              "NULL table/runtime 和删除缺失 key",
-              "返回 OBJECT 模块 EINVAL/ENOENT"),
+              "初始化传入 NULL table，插入 NULL runtime，并删除缺失 key",
+              "返回 OBJECT 模块 EINVAL/ENOENT，NULL 查询和计数安全失败"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJTABLE,
                          0x2),

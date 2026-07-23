@@ -15,6 +15,7 @@ static int test_objmgr_key_allocator_round_trip(void)
     err = objmgr_alloc_key(&key);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_TRUE(objkey_is_valid(&key));
+    /* stale key 模拟旧 generation 或非法 objectid，释放时必须被 allocator 拒绝。 */
     stale = key;
     stale.objectid = 0;
     err = objmgr_free_key(&stale);
@@ -26,6 +27,7 @@ static int test_objmgr_key_allocator_round_trip(void)
     err = objmgr_free_key(&stale);
     TEST_ASSERT_OBJECT_ERRNO(err, EINVAL);
 
+    /* 复用同一 objectid 时 generation 必须递增，避免旧引用误命中新对象。 */
     err = objmgr_alloc_key(&reused);
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_EQ_INT(key.objectid, reused.objectid);
@@ -95,6 +97,7 @@ static int test_objmgr_rejects_duplicate_key_and_handle(void)
 
     err = object_init();
     TEST_ASSERT_EQ_INT(FS_OK, err);
+    /* 重复 FUID 或重复 backend handle 都会破坏对象身份唯一性。 */
     meta = objmgr_create(&fuid1, &handle1);
     TEST_ASSERT_TRUE(meta != NULL);
     TEST_ASSERT_TRUE(objmgr_create(&fuid1, &handle2) == NULL);
@@ -119,6 +122,7 @@ static int test_objmgr_public_error_paths(void)
     err = object_init();
     TEST_ASSERT_EQ_INT(FS_OK, err);
 
+    /* 缺失对象的读写引用和删除都应归一到 ENOENT/INVALID/0。 */
     err = objmgr_delete(&missing);
     TEST_ASSERT_OBJECT_ERRNO(err, ENOENT);
     err = objmgr_get(&missing);
@@ -132,6 +136,7 @@ static int test_objmgr_public_error_paths(void)
     bad_handle.len = 0;
     TEST_ASSERT_TRUE(objmgr_create(&active, &bad_handle) == NULL);
     TEST_ASSERT_TRUE(objmgr_create(&active, &handle) != NULL);
+    /* put 不能把零引用对象减成负引用；先 get 后 put 才是合法配对。 */
     err = objmgr_put(&active);
     TEST_ASSERT_OBJECT_ERRNO(err, EINVAL);
     err = objmgr_get(&active);
@@ -222,8 +227,8 @@ const test_case_t OBJECT_OBJMGR_CASES[] = {
                          0x001),
               test_objmgr_key_allocator_round_trip,
               "ObjMgr key 分配回收",
-              "申请 key、释放、重复释放 stale key、再次申请",
-              "重复释放被拒绝，再次申请复用槽位并提升 generation"),
+              "初始化对象模块后申请 key，注入非法/stale key 释放，再释放并重新申请",
+              "非法和重复释放被拒绝，复用槽位时 objectid 保持且 generation 递增"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJMGR,
                          0x1),
@@ -233,7 +238,7 @@ const test_case_t OBJECT_OBJMGR_CASES[] = {
                          0x002),
               test_objmgr_create_lookup_delete_with_refs,
               "ObjMgr 引用中的删除流程",
-              "创建对象后按 FUID/handle acquire，再带引用 delete",
+              "创建对象后按 FUID/handle acquire，保留一个引用时执行 delete",
               "DELETING 阶段禁止新引用，最后 release 后完成回收"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJMGR,
@@ -244,8 +249,8 @@ const test_case_t OBJECT_OBJMGR_CASES[] = {
                          0x003),
               test_objmgr_rejects_duplicate_key_and_handle,
               "ObjMgr 重复 key/handle",
-              "分别注入重复 FUID 和重复 backend handle",
-              "重复创建失败且对象计数不被污染"),
+              "已存在一个对象后，分别用重复 FUID 和重复 backend handle 再次创建",
+              "两种重复创建都失败，原对象仍唯一且对象计数不被污染"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJMGR,
                          0x1),
@@ -255,8 +260,8 @@ const test_case_t OBJECT_OBJMGR_CASES[] = {
                          0x004),
               test_objmgr_public_error_paths,
               "ObjMgr 公开错误路径",
-              "对缺失对象 get/put/delete/state/refcnt，并注入非法 create 输入",
-              "缺失对象返回 ENOENT/INVALID，非法输入被拒绝"),
+              "对缺失对象执行 get/put/delete/state/refcnt，并注入非法 FUID/handle/create/put",
+              "缺失对象返回 ENOENT/INVALID/0，非法 create 被拒绝，未 get 的 put 返回 EINVAL"),
     TEST_CASE(UT_LIST_NO(UT_MOD_OBJECT,
                          TEST_OBJECT_COMPONENT_OBJMGR,
                          0x2),

@@ -16,8 +16,9 @@
 2. [模块地图](module-map.md)
 3. [读代码路线](code-reading.md)
 4. [UT 测试使用](unit-testing.md)
-5. [GDB 调试](gdb-debugging.md)
-6. [常见问题](troubleshooting.md)
+5. [开发工具](dev-tools.md)
+6. [GDB 调试](gdb-debugging.md)
+7. [常见问题](troubleshooting.md)
 
 ## 文档边界
 
@@ -32,4 +33,5 @@
 - 新增模块时，同步更新 [模块地图](module-map.md) 和 [读代码路线](code-reading.md)。
 - 新增构建目标、脚本或输出目录时，同步更新 [编译构建与运行](build-run.md)。
 - 调整 UT 命令、覆盖率策略或 case 规范时，同步更新 [UT 测试使用](unit-testing.md)。
+- 新增格式化、静态检查、调试、生成类工具时，同步更新 [开发工具](dev-tools.md) 和 `tools/README.md`。
 - 调试流程中沉淀出稳定经验时，同步更新 [GDB 调试](gdb-debugging.md) 或 [常见问题](troubleshooting.md)。
