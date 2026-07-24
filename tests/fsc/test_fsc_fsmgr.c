@@ -206,6 +206,127 @@ static int test_fsmgr_create_rolls_back_when_nspool_exhausted(void)
     return 0;
 }
 
+static int test_fsmgr_list_and_rename_namespace(void)
+{
+    fs_error_t err;
+    fuid_t root_fuid;
+    fsc_namespace_t *ns;
+    char names[4][FSC_NAMESPACE_NAME_MAX];
+    uint32_t actual;
+    const char *path = "../output/tests/fsc/sysroot";
+
+    test_fsc_prepare_temp_dir();
+    err = object_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsc_sysroot_init(path);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsid_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = nspool_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsmgr_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    err = fsmgr_create("tree", &root_fuid);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsmgr_create("other", &root_fuid);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    memset(names, 0, sizeof(names));
+    actual = 0U;
+    err = fsmgr_list(names, 4U, &actual);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_EQ_INT(2U, actual);
+
+    err = fsmgr_rename("tree", "renamed");
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_FALSE(fsmgr_exists("tree"));
+    TEST_ASSERT_TRUE(fsmgr_exists("renamed"));
+    TEST_ASSERT_EQ_INT(access("../output/tests/fsc/sysroot/tree", F_OK), -1);
+    TEST_ASSERT_EQ_INT(access("../output/tests/fsc/sysroot/renamed", F_OK), 0);
+
+    err = fsmgr_rename("renamed", "other");
+    TEST_ASSERT_EQ_INT(FS_MODULE_FSC, fs_err_module(err));
+    TEST_ASSERT_EQ_INT(EEXIST, fs_err_errno(err));
+    err = fsmgr_rename("missing", "newname");
+    TEST_ASSERT_EQ_INT(FS_MODULE_FSC, fs_err_module(err));
+    TEST_ASSERT_EQ_INT(ENOENT, fs_err_errno(err));
+
+    ns = fsmgr_lookup("renamed");
+    TEST_ASSERT_TRUE(ns != NULL);
+    TEST_ASSERT_EQ_INT(mkdir("../output/tests/fsc/sysroot/renamed/sub", 0755),
+                       0);
+    err = fsmgr_destroy(ns->fsid);
+    TEST_ASSERT_EQ_INT(FS_MODULE_LSA, fs_err_module(err));
+    TEST_ASSERT_EQ_INT(ENOTEMPTY, fs_err_errno(err));
+    TEST_ASSERT_TRUE(fsmgr_exists("renamed"));
+    TEST_ASSERT_EQ_INT(rmdir("../output/tests/fsc/sysroot/renamed/sub"), 0);
+    err = fsmgr_destroy(ns->fsid);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    ns = fsmgr_lookup("other");
+    TEST_ASSERT_TRUE(ns != NULL);
+    err = fsmgr_destroy(ns->fsid);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    fsmgr_deinit();
+    nspool_deinit();
+    fsid_deinit();
+    fsc_sysroot_deinit();
+    object_deinit();
+    test_fsc_cleanup_sysroot(path);
+    return 0;
+}
+
+static int test_fsmgr_recover_imports_existing_roots(void)
+{
+    fs_error_t err;
+    char names[4][FSC_NAMESPACE_NAME_MAX];
+    uint32_t actual;
+    const char *path = "../output/tests/fsc/sysroot";
+
+    test_fsc_prepare_temp_dir();
+    if (mkdir(path, 0755) != 0)
+    {
+        TEST_ASSERT_EQ_INT(errno, EEXIST);
+    }
+    if (mkdir("../output/tests/fsc/sysroot/persisted", 0755) != 0)
+    {
+        TEST_ASSERT_EQ_INT(errno, EEXIST);
+    }
+
+    err = object_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsc_sysroot_init(path);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsid_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = nspool_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsmgr_init();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = fsmgr_recover();
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    TEST_ASSERT_TRUE(fsmgr_exists("persisted"));
+    memset(names, 0, sizeof(names));
+    actual = 0U;
+    err = fsmgr_list(names, 4U, &actual);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_EQ_INT(1U, actual);
+
+    err = fsmgr_destroy(fsmgr_lookup("persisted")->fsid);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    fsmgr_deinit();
+    nspool_deinit();
+    fsid_deinit();
+    fsc_sysroot_deinit();
+    object_deinit();
+    test_fsc_cleanup_sysroot(path);
+    return 0;
+}
+
 
 const test_case_t FSC_FSMGR_CASES[] = {
         TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1),
@@ -226,6 +347,18 @@ const test_case_t FSC_FSMGR_CASES[] = {
                   test_fsmgr_create_rolls_back_when_nspool_exhausted,
                   "FSMgr create 回滚", "提前耗尽 NSPool 后创建 namespace",
                   "创建失败返回 ENOMEM，目录、FSID 和对象 key 被回滚"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1, 0x004),
+                  test_fsmgr_list_and_rename_namespace,
+                  "FSMgr list/rename namespace",
+                  "创建多个 namespace 后列出、重命名并验证非空 destroy 防护",
+                  "索引和后端目录同步更新，普通 destroy 仍拒绝非空目录"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1),
+                  UT_CASE_NO(UT_MOD_FSC, TEST_FSC_COMPONENT_FSMGR, 0x1, 0x005),
+                  test_fsmgr_recover_imports_existing_roots,
+                  "FSMgr recover 导入已有根目录",
+                  "sysroot 中预先存在 namespace 根目录后执行 recover",
+                  "已有根目录被注册为可见 namespace"),
 };
 
 const size_t FSC_FSMGR_CASE_COUNT =

@@ -3,6 +3,34 @@
 #include <stdio.h>
 #include <string.h>
 
+#define MSH_REPL_FS_LIST_MAX 256U
+
+static void msh_print_filesystems(void)
+{
+    char names[MSH_REPL_FS_LIST_MAX][FSC_NAMESPACE_NAME_MAX];
+    uint32_t actual;
+    fs_error_t err;
+
+    err = runtime_fs_list(names, MSH_REPL_FS_LIST_MAX, &actual);
+    if (fs_failed(err))
+    {
+        return;
+    }
+
+    printf("filesystems:");
+    if (actual == 0U)
+    {
+        printf(" none\n");
+        return;
+    }
+
+    for (uint32_t i = 0; i < actual; i++)
+    {
+        printf(" %s", names[i]);
+    }
+    printf("\n");
+}
+
 void msh_print_prompt(void)
 {
     const char *fs_name;
@@ -51,6 +79,11 @@ int msh_repl(msh_context_t *ctx)
     if (ctx == NULL)
     {
         return 1;
+    }
+
+    if (ctx->interactive)
+    {
+        msh_print_filesystems();
     }
 
     while (!ctx->should_exit)

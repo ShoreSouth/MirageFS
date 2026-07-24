@@ -116,6 +116,9 @@ fs_error_t objmgr_free_key(const obj_key_t *key);
  */
 fs_error_t objmgr_delete(const fuid_t *fuid);
 
+/* 更新对象 backend handle，并同步 handle index。 */
+fs_error_t objmgr_update_handle(const fuid_t *fuid, const obj_handle_t *handle);
+
 /*
  * ============================================================
  * 对象查找

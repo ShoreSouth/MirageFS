@@ -1,7 +1,11 @@
 #include "fsc/fsmgr/fsmgr.h"
 
+#include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "fsc/fsc_error.h"
@@ -36,7 +40,10 @@ static void fsmgr_reclaim_namespace(fsc_namespace_t *ns)
     }
 }
 
-static fs_error_t fsmgr_open_sysroot(int *fd_out)
+static fs_error_t fsmgr_get_root_dir_handle_at(int sysroot_fd, const char *name,
+                                               obj_handle_t *handle_out);
+
+static fs_error_t fsmgr_open_sysroot_flags(int flags, int *fd_out)
 {
     fs_error_t err;
     obj_handle_t root_handle;
@@ -59,8 +66,13 @@ static fs_error_t fsmgr_open_sysroot(int *fd_out)
         return err;
     }
 
-    return lsa_open_by_handle_id(root_handle.mount_id, &lsa_handle,
-                                 O_PATH | O_DIRECTORY, fd_out);
+    return lsa_open_by_handle_id(root_handle.mount_id, &lsa_handle, flags,
+                                 fd_out);
+}
+
+static fs_error_t fsmgr_open_sysroot(int *fd_out)
+{
+    return fsmgr_open_sysroot_flags(O_PATH | O_DIRECTORY, fd_out);
 }
 
 static fs_error_t fsmgr_create_root_dir(const char *name,
@@ -112,6 +124,51 @@ out:
     return err;
 }
 
+static fs_error_t fsmgr_get_root_dir_handle(const char *name,
+                                            obj_handle_t *handle_out)
+{
+    fs_error_t err;
+    int sysroot_fd;
+    const char *sysroot_path;
+
+    sysroot_fd = -1;
+    sysroot_path = fsc_sysroot_get_path();
+    if (sysroot_path == NULL)
+    {
+        return fsc_error(FSC_SUB_FSMGR, FS_ERRNO_EINVAL);
+    }
+
+    sysroot_fd = open(sysroot_path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (sysroot_fd < 0)
+    {
+        return fsc_error(FSC_SUB_FSMGR, errno);
+    }
+
+    err = fsmgr_get_root_dir_handle_at(sysroot_fd, name, handle_out);
+    (void)close(sysroot_fd);
+
+    return err;
+}
+
+static fs_error_t fsmgr_get_root_dir_handle_at(int sysroot_fd, const char *name,
+                                               obj_handle_t *handle_out)
+{
+    fs_error_t err;
+    lsa_file_handle_t lsa_handle;
+    int32_t mount_id;
+
+    memset(&lsa_handle, 0, sizeof(lsa_handle));
+    mount_id = 0;
+
+    err = lsa_name_to_handle_at(sysroot_fd, name, &lsa_handle, &mount_id, 0);
+    if (fs_failed(err))
+    {
+        return err;
+    }
+
+    return objmeta_handle_from_lsa(handle_out, &lsa_handle, mount_id);
+}
+
 static fs_error_t fsmgr_remove_root_dir(const char *name)
 {
     fs_error_t err;
@@ -133,6 +190,161 @@ out:
         (void)lsa_close(sysroot_fd);
     }
 
+    return err;
+}
+
+static fs_error_t fsmgr_rename_root_dir(const char *old_name,
+                                        const char *new_name)
+{
+    fs_error_t err;
+    int sysroot_fd;
+
+    sysroot_fd = -1;
+
+    err = fsmgr_open_sysroot(&sysroot_fd);
+    if (fs_failed(err))
+    {
+        goto out;
+    }
+
+    err = lsa_rename(sysroot_fd, old_name, sysroot_fd, new_name, FS_FLAG_NONE);
+
+out:
+    if (sysroot_fd >= 0)
+    {
+        (void)lsa_close(sysroot_fd);
+    }
+
+    return err;
+}
+
+static fs_error_t fsmgr_register_existing_root_at(const char *name,
+                                                  int sysroot_fd,
+                                                  fuid_t *root_out)
+{
+    fs_error_t err;
+    fsc_fsid_t fsid;
+    fuid_t root_fuid;
+    obj_key_t root_key;
+    obj_handle_t root_handle;
+    fsc_namespace_t *ns;
+    bool object_registered;
+
+    fsid = FSID_INVALID;
+    memset(&root_key, 0, sizeof(root_key));
+    ns = NULL;
+    object_registered = false;
+
+    if (root_out != NULL)
+    {
+        fuid_set_invalid(root_out);
+    }
+
+    if ((root_out == NULL) || !fsc_namespace_name_is_valid(name))
+    {
+        err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_EINVAL);
+        goto out;
+    }
+
+    fs_mutex_lock(&g_fsmgr.lock);
+
+    if (fstable_exists_name(&g_fsmgr.table, name))
+    {
+        err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_EEXIST);
+        goto unlock;
+    }
+
+    err = fsid_alloc(&fsid);
+    if (fs_failed(err))
+    {
+        goto unlock;
+    }
+
+    err = objmgr_alloc_key(&root_key);
+    if (fs_failed(err))
+    {
+        goto unlock;
+    }
+
+    root_fuid = fuid_make(fsid, root_key.objectid, root_key.gen, FUID_TYPE_DIR);
+
+    if (sysroot_fd >= 0)
+    {
+        err = fsmgr_get_root_dir_handle_at(sysroot_fd, name, &root_handle);
+    }
+    else
+    {
+        err = fsmgr_get_root_dir_handle(name, &root_handle);
+    }
+    if (fs_failed(err))
+    {
+        goto unlock;
+    }
+
+    ns = nspool_alloc();
+    if (ns == NULL)
+    {
+        err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_ENOMEM);
+        goto unlock;
+    }
+
+    if (objmgr_create(&root_fuid, &root_handle) == NULL)
+    {
+        err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_EIO);
+        goto unlock;
+    }
+    object_registered = true;
+
+    err = fsc_namespace_init(ns, fsid, name, &root_fuid, &root_handle);
+    if (fs_failed(err))
+    {
+        goto unlock;
+    }
+
+    err = fstable_insert(&g_fsmgr.table, ns);
+    if (fs_failed(err))
+    {
+        goto unlock;
+    }
+
+    err = fsc_namespace_change_state(ns, FSC_NAMESPACE_STATE_ACTIVE);
+    if (fs_failed(err))
+    {
+        (void)fstable_remove(&g_fsmgr.table, fsid, NULL);
+        goto unlock;
+    }
+
+    fs_atomic32_inc(&g_fsmgr.namespace_count);
+    *root_out = root_fuid;
+    ns = NULL;
+    fsid = FSID_INVALID;
+
+unlock:
+    if (fs_failed(err))
+    {
+        if (ns != NULL)
+        {
+            nspool_free(ns);
+        }
+
+        if (object_registered)
+        {
+            (void)objmgr_delete(&root_fuid);
+        }
+        else if (objkey_is_valid(&root_key))
+        {
+            (void)objmgr_free_key(&root_key);
+        }
+
+        if (fsid != FSID_INVALID)
+        {
+            (void)fsid_free(fsid);
+        }
+    }
+
+    fs_mutex_unlock(&g_fsmgr.lock);
+
+out:
     return err;
 }
 
@@ -419,6 +631,166 @@ unlock:
     return err;
 }
 
+fs_error_t fsmgr_rename(const char *old_name, const char *new_name)
+{
+    fs_error_t err;
+    fsc_namespace_t *ns;
+    char old_name_buf[FSC_NAMESPACE_NAME_MAX];
+    obj_handle_t old_handle;
+    obj_handle_t new_handle;
+
+    if (!fsc_namespace_name_is_valid(old_name) ||
+        !fsc_namespace_name_is_valid(new_name))
+    {
+        return fsc_error(FSC_SUB_FSMGR, FS_ERRNO_EINVAL);
+    }
+
+    fs_mutex_lock(&g_fsmgr.lock);
+
+    ns = fstable_lookup_name(&g_fsmgr.table, old_name);
+    if ((ns == NULL) || (fsc_namespace_state(ns) != FSC_NAMESPACE_STATE_ACTIVE))
+    {
+        err = fsc_error(FSC_SUB_LOOKUP, FS_ERRNO_ENOENT);
+        goto unlock;
+    }
+
+    if (fstable_exists_name(&g_fsmgr.table, new_name))
+    {
+        err = fsc_error(FSC_SUB_CREATE, FS_ERRNO_EEXIST);
+        goto unlock;
+    }
+
+    if (fs_atomic32_load(&ns->refcnt) != 0)
+    {
+        err = fsc_error(FSC_SUB_FSMGR, FS_ERRNO_EBUSY);
+        goto unlock;
+    }
+
+    (void)snprintf(old_name_buf, sizeof(old_name_buf), "%s", ns->name);
+    old_handle = ns->root_handle;
+
+    err = fstable_remove(&g_fsmgr.table, ns->fsid, &ns);
+    if (fs_failed(err))
+    {
+        goto unlock;
+    }
+
+    err = fsmgr_rename_root_dir(old_name, new_name);
+    if (fs_failed(err))
+    {
+        (void)fstable_insert(&g_fsmgr.table, ns);
+        goto unlock;
+    }
+
+    (void)snprintf(ns->name, sizeof(ns->name), "%s", new_name);
+    err = fsmgr_get_root_dir_handle(new_name, &new_handle);
+    if (fs_failed(err))
+    {
+        (void)fsmgr_rename_root_dir(new_name, old_name_buf);
+        (void)snprintf(ns->name, sizeof(ns->name), "%s", old_name_buf);
+        (void)fstable_insert(&g_fsmgr.table, ns);
+        goto unlock;
+    }
+
+    err = objmgr_update_handle(&ns->root_fuid, &new_handle);
+    if (fs_failed(err))
+    {
+        (void)fsmgr_rename_root_dir(new_name, old_name_buf);
+        (void)snprintf(ns->name, sizeof(ns->name), "%s", old_name_buf);
+        (void)objmgr_update_handle(&ns->root_fuid, &old_handle);
+        (void)fstable_insert(&g_fsmgr.table, ns);
+        goto unlock;
+    }
+    ns->root_handle = new_handle;
+
+    err = fstable_insert(&g_fsmgr.table, ns);
+    if (fs_failed(err))
+    {
+        (void)fsmgr_rename_root_dir(new_name, old_name_buf);
+        (void)snprintf(ns->name, sizeof(ns->name), "%s", old_name_buf);
+        ns->root_handle = old_handle;
+        (void)objmgr_update_handle(&ns->root_fuid, &old_handle);
+        (void)fstable_insert(&g_fsmgr.table, ns);
+        goto unlock;
+    }
+
+unlock:
+    fs_mutex_unlock(&g_fsmgr.lock);
+    return err;
+}
+
+fs_error_t fsmgr_recover(void)
+{
+    fs_error_t err;
+    DIR *dir;
+    struct dirent *entry;
+    struct stat st;
+    fuid_t root_fuid;
+    int sysroot_fd;
+    const char *sysroot_path;
+
+    sysroot_fd = -1;
+    dir = NULL;
+
+    sysroot_path = fsc_sysroot_get_path();
+    if (sysroot_path == NULL)
+    {
+        err = fsc_error(FSC_SUB_FSMGR, FS_ERRNO_EINVAL);
+        goto out;
+    }
+
+    dir = opendir(sysroot_path);
+    if (dir == NULL)
+    {
+        err = fsc_error(FSC_SUB_FSMGR, errno);
+        goto out;
+    }
+
+    sysroot_fd = dirfd(dir);
+    if (sysroot_fd < 0)
+    {
+        err = fsc_error(FSC_SUB_FSMGR, errno);
+        goto out;
+    }
+
+    err = FS_OK;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if ((strcmp(entry->d_name, ".") == 0) ||
+            (strcmp(entry->d_name, "..") == 0) || fsmgr_exists(entry->d_name))
+        {
+            continue;
+        }
+
+        if (fstatat(sysroot_fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) < 0)
+        {
+            err = fsc_error(FSC_SUB_FSMGR, errno);
+            break;
+        }
+
+        if (!S_ISDIR(st.st_mode))
+        {
+            continue;
+        }
+
+        err = fsmgr_register_existing_root_at(entry->d_name, sysroot_fd,
+                                              &root_fuid);
+        if (fs_failed(err))
+        {
+            err = FS_OK;
+            continue;
+        }
+    }
+
+out:
+    if (dir != NULL)
+    {
+        (void)closedir(dir);
+    }
+
+    return err;
+}
+
 /*
  * ============================================================
  * lookup
@@ -469,6 +841,53 @@ bool fsmgr_exists(const char *name)
 
     FS_LOG_DUMP_INFO("exit: %s", exists ? "true" : "false");
     return exists;
+}
+
+fs_error_t fsmgr_list(char names[][FSC_NAMESPACE_NAME_MAX], uint32_t cap,
+                      uint32_t *actual_out)
+{
+    uint32_t bucket;
+    uint32_t written;
+    fs_list_head_t *pos;
+    fsc_table_entry_t *entry;
+    fsc_namespace_t *ns;
+
+    if ((actual_out == NULL) || ((cap > 0U) && (names == NULL)))
+    {
+        return fsc_error(FSC_SUB_LOOKUP, FS_ERRNO_EINVAL);
+    }
+
+    written = 0U;
+
+    fs_mutex_lock(&g_fsmgr.lock);
+
+    for (bucket = 0U; bucket < g_fsmgr.table.fsid_index.bucket_nr; bucket++)
+    {
+        FS_LIST_FOR_EACH(pos, &g_fsmgr.table.fsid_index.buckets[bucket])
+        {
+            if (written >= cap)
+            {
+                goto unlock;
+            }
+
+            entry = FS_CONTAINER_OF(pos, fsc_table_entry_t, fsid_node);
+            ns = entry->ns;
+            if ((ns == NULL) ||
+                (fsc_namespace_state(ns) != FSC_NAMESPACE_STATE_ACTIVE))
+            {
+                continue;
+            }
+
+            (void)snprintf(names[written], FSC_NAMESPACE_NAME_MAX, "%s",
+                           ns->name);
+            written++;
+        }
+    }
+
+unlock:
+    fs_mutex_unlock(&g_fsmgr.lock);
+    *actual_out = written;
+    return FS_OK;
 }
 
 fs_error_t fsmgr_get_root_fuid(fsc_fsid_t fsid, fuid_t *root_out)

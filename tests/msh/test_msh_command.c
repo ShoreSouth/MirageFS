@@ -38,7 +38,10 @@ static int test_msh_fs_commands_manage_namespace(void)
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs missing"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs create"), 1);
-    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs use"), 1);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs enter"), 1);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs list extra"), 1);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs rename old"), 1);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs destroy"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs leave extra"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs current extra"), 1);
 
@@ -50,18 +53,43 @@ static int test_msh_fs_commands_manage_namespace(void)
                        namespace_name);
         TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 0);
         TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 1);
-        (void)snprintf(command, sizeof(command), "fs use %s", namespace_name);
+        (void)snprintf(command, sizeof(command), "fs enter %s", namespace_name);
         TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 0);
     }
 
     TEST_ASSERT_TRUE(runtime_fs_is_active());
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs current"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs list"), 0);
     msh_print_prompt();
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs leave"), 0);
     TEST_ASSERT_FALSE(runtime_fs_is_active());
 
+    {
+        char command[MSH_LINE_MAX];
+        char renamed_name[40];
+        char confirm[64];
+
+        (void)snprintf(renamed_name, sizeof(renamed_name), "%s_r",
+                       namespace_name);
+        (void)snprintf(command, sizeof(command), "fs rename %s %s",
+                       namespace_name, renamed_name);
+        TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 0);
+        (void)snprintf(command, sizeof(command), "fs enter %s", renamed_name);
+        TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 0);
+        TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "mkdir /tree"), 0);
+        TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "touch /tree/file.txt"), 0);
+        (void)snprintf(command, sizeof(command), "fs destroy %s", renamed_name);
+        TEST_ASSERT_EQ_INT(
+                test_msh_run_line_with_stdin(&ctx, command, "wrong\n"), 1);
+        TEST_ASSERT_TRUE(runtime_fs_is_active());
+        (void)snprintf(confirm, sizeof(confirm), "%s\n", renamed_name);
+        TEST_ASSERT_EQ_INT(test_msh_run_line_with_stdin(&ctx, command, confirm),
+                           0);
+    }
+    TEST_ASSERT_FALSE(runtime_fs_is_active());
+
     err = runtime_fs_destroy(namespace_name);
-    TEST_ASSERT_EQ_INT(err, FS_OK);
+    TEST_ASSERT_TRUE(fs_failed(err));
     runtime_deinit();
     test_msh_cleanup_root();
     return 0;
@@ -73,6 +101,7 @@ static int test_msh_file_commands_round_trip(void)
     runtime_config_t cfg;
     msh_context_t ctx;
     char namespace_name[32];
+    char command[MSH_LINE_MAX];
     fs_error_t err;
 
     runtime_deinit();
@@ -89,8 +118,35 @@ static int test_msh_file_commands_round_trip(void)
     /* 命令层只断言返回码，具体语义由 runtime/namei/fops 对应 UT 覆盖。 */
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "pwd"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "mkdir /dir"), 0);
-    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "touch /dir/file.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "write /dir/file.txt hello"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "append /dir/file.txt world"),
+                       0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "cat /dir/file.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "lookup /dir/file.txt"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "stat /dir/file.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "chmod 0600 /dir/file.txt"), 0);
+    (void)snprintf(command, sizeof(command), "chown %u %u /dir/file.txt",
+                   (unsigned)getuid(), (unsigned)getgid());
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, command), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "access /dir/file.txt f"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "truncate /dir/file.txt 5"), 0);
+    TEST_ASSERT_EQ_INT(
+            test_msh_run_line(&ctx, "xattr set /dir/file.txt user.msh v"), 0);
+    TEST_ASSERT_EQ_INT(
+            test_msh_run_line(&ctx, "xattr get /dir/file.txt user.msh"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "xattr list /dir/file.txt"), 0);
+    TEST_ASSERT_EQ_INT(
+            test_msh_run_line(&ctx, "xattr remove /dir/file.txt user.msh"), 0);
+    TEST_ASSERT_EQ_INT(
+            test_msh_run_line(&ctx, "ln /dir/file.txt /dir/hard.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "ln -s file.txt /dir/link.txt"),
+                       0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "readlink /dir/link.txt"), 0);
+    TEST_ASSERT_EQ_INT(
+            test_msh_run_line(&ctx, "symlink file.txt /dir/link2.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "mkfifo /dir/fifo"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "statfs /dir/file.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "syncfs /dir/file.txt"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "ls /dir"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "ll /dir"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "ls"), 0);
@@ -107,6 +163,10 @@ static int test_msh_file_commands_round_trip(void)
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "pwd"), 0);
     TEST_ASSERT_EQ_INT(
             test_msh_run_line(&ctx, "mv /dir/file.txt /dir/moved.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rm /dir/hard.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rm /dir/link.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rm /dir/link2.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rm /dir/fifo"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rm /dir/moved.txt"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "cd /"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "rmdir /dir"), 0);
@@ -139,6 +199,7 @@ static int test_msh_command_error_paths(void)
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "stat"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "ls a b"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "ll a b"), 1);
+    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs enter missing"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs use missing"), 1);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "fs leave"), 0);
     runtime_deinit();
@@ -204,7 +265,7 @@ const test_case_t MSH_COMMAND_CASES[] = {
                 UT_CASE_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1, 0x002),
                 test_msh_fs_commands_manage_namespace,
                 "MSH fs 命令 namespace 生命周期",
-                "通过 fs create/use/current/leave 管理真实 namespace",
+                "通过 fs create/enter/current/leave 管理真实 namespace",
                 "namespace 可创建、进入、查询、退出并销毁"),
         TEST_CASE(
                 UT_LIST_NO(UT_MOD_MSH, TEST_MSH_COMPONENT_COMMAND, 0x1),

@@ -2,11 +2,11 @@
 
 static int test_msh_arg_or_default_handles_missing_arg(void)
 {
-    char line[] = "fs use";
+    char line[] = "fs enter";
     msh_argv_t args;
 
     TEST_ASSERT_EQ_INT(msh_parse_line(line, &args), 0);
-    TEST_ASSERT_STR_EQ(msh_arg_or_default(&args, 1, "default"), "use");
+    TEST_ASSERT_STR_EQ(msh_arg_or_default(&args, 1, "default"), "enter");
     TEST_ASSERT_STR_EQ(msh_arg_or_default(&args, 2, "default"), "default");
     TEST_ASSERT_STR_EQ(msh_arg_or_default(NULL, 0, "default"), "default");
     return 0;

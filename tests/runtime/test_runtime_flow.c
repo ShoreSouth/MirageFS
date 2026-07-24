@@ -219,6 +219,69 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     return 0;
 }
 
+static int test_runtime_namespace_management_round_trip(void)
+{
+    fops_create_attr_t create_attr;
+    fops_object_result_t out;
+    char names[4][FSC_NAMESPACE_NAME_MAX];
+    uint32_t actual;
+    fs_error_t err;
+
+    runtime_deinit();
+    test_runtime_cleanup_root();
+
+    err = runtime_init(NULL);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    err = runtime_fs_create("alpha", NULL);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = runtime_fs_create("beta", NULL);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    memset(names, 0, sizeof(names));
+    actual = 0U;
+    err = runtime_fs_list(names, 4U, &actual);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_EQ_INT(2U, actual);
+
+    err = runtime_fs_rename("alpha", "renamed");
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = runtime_fs_enter("renamed");
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_STR_EQ(runtime_fs_current(), "renamed");
+
+    memset(&create_attr, 0, sizeof(create_attr));
+    create_attr.valid_mask = FOPS_CREATE_ATTR_MODE;
+    create_attr.mode = FS_MODE_FILE_DEFAULT;
+    err = runtime_mkdir("/dir", NULL, FS_FLAG_DIRECTORY, &out);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = runtime_mkdir("/dir/sub", NULL, FS_FLAG_DIRECTORY, &out);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = runtime_create("/dir/sub/file.txt", &create_attr, FS_FLAG_REGULAR,
+                         &out);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    err = runtime_symlink("sub/file.txt", "/dir/link.txt", FS_FLAG_NONE, &out);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+
+    err = runtime_fs_destroy("renamed");
+    TEST_ASSERT_EQ_INT(FS_MODULE_LSA, fs_err_module(err));
+    TEST_ASSERT_EQ_INT(ENOTEMPTY, fs_err_errno(err));
+
+    err = runtime_fs_destroy_tree("renamed");
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_FALSE(runtime_fs_is_active());
+    TEST_ASSERT_EQ_INT(access("./miragefs.root/renamed", F_OK), -1);
+
+    err = runtime_fs_destroy_tree("beta");
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_EQ_INT(0U, fsmgr_count());
+    TEST_ASSERT_EQ_INT(0U, objmgr_count());
+
+    runtime_deinit();
+    test_runtime_cleanup_root();
+    return 0;
+}
+
 
 const test_case_t RUNTIME_FLOW_CASES[] = {
         TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_FLOW, 0x1),
@@ -229,6 +292,13 @@ const test_case_t RUNTIME_FLOW_CASES[] = {
                   "自动创建/进入 namespace 后执行路径解析、读写、链接、目录和 "
                   "xattr",
                   "Runtime/NAMEI/FOPS 主链路保持一致，清理后 namespace 可销毁"),
+        TEST_CASE(UT_LIST_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_FLOW, 0x1),
+                  UT_CASE_NO(UT_MOD_RUNTIME, TEST_RUNTIME_COMPONENT_FLOW, 0x1,
+                             0x002),
+                  test_runtime_namespace_management_round_trip,
+                  "Runtime namespace 管理回环",
+                  "创建、列出、重命名、进入并递归删除非空 namespace",
+                  "删除文件系统走上层递归，普通 destroy 保持 ENOTEMPTY 防护"),
 };
 
 const size_t RUNTIME_FLOW_CASE_COUNT =

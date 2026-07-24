@@ -34,6 +34,12 @@ fs_error_t runtime_fs_destroy(const char *name)
 {
     fs_error_t err;
     fsc_namespace_t *ns;
+    bool destroying_current;
+    bool had_session;
+    fuid_t saved_root;
+    fuid_t saved_cwd;
+    char saved_name[FSC_NAMESPACE_NAME_MAX];
+    char saved_cwd_path[FS_MAX_PATH_LEN + 1U];
 
     err = runtime_require_initialized();
     if (fs_failed(err))
@@ -47,16 +53,230 @@ fs_error_t runtime_fs_destroy(const char *name)
         return runtime_error(RUNTIME_SUB_NAMESPACE, ENOENT);
     }
 
-    if (g_runtime.ns_active && fuid_equal(&g_runtime.root_fuid, &ns->root_fuid))
+    had_session = g_runtime.ns_active;
+    destroying_current =
+            had_session && (strcmp(g_runtime.namespace_name, name) == 0);
+    saved_root = g_runtime.root_fuid;
+    saved_cwd = g_runtime.cwd_fuid;
+    (void)snprintf(saved_name, sizeof(saved_name), "%s",
+                   g_runtime.namespace_name);
+    (void)snprintf(saved_cwd_path, sizeof(saved_cwd_path), "%s",
+                   g_runtime.cwd_path);
+
+    err = fsmgr_destroy(ns->fsid);
+    if (fs_failed(err))
     {
-        err = runtime_fs_leave();
+        if (had_session)
+        {
+            g_runtime.initialized = true;
+            g_runtime.ns_active = true;
+            g_runtime.root_fuid = saved_root;
+            g_runtime.cwd_fuid = saved_cwd;
+            (void)snprintf(g_runtime.namespace_name,
+                           sizeof(g_runtime.namespace_name), "%s", saved_name);
+            (void)snprintf(g_runtime.cwd_path, sizeof(g_runtime.cwd_path), "%s",
+                           saved_cwd_path);
+        }
+        return err;
+    }
+
+    if (destroying_current)
+    {
+        return runtime_fs_leave();
+    }
+
+    return FS_OK;
+}
+
+static bool runtime_fs_tree_skip_name(const char *name)
+{
+    return (name == NULL) || (strcmp(name, ".") == 0) ||
+           (strcmp(name, "..") == 0);
+}
+
+static fs_error_t runtime_fs_join_child_path(char *out, size_t out_size,
+                                             const char *parent,
+                                             const char *name)
+{
+    if ((out == NULL) || (parent == NULL) || (name == NULL))
+    {
+        return runtime_error(RUNTIME_SUB_PATH, EINVAL);
+    }
+
+    if (strcmp(parent, "/") == 0)
+    {
+        if (snprintf(out, out_size, "/%s", name) >= (int)out_size)
+        {
+            return runtime_error(RUNTIME_SUB_PATH, ENAMETOOLONG);
+        }
+    }
+    else if (snprintf(out, out_size, "%s/%s", parent, name) >= (int)out_size)
+    {
+        return runtime_error(RUNTIME_SUB_PATH, ENAMETOOLONG);
+    }
+
+    return FS_OK;
+}
+
+static fs_error_t runtime_fs_remove_children(const char *path)
+{
+    fops_dirent_plus_t entries[64];
+    uint32_t entry_nr;
+    bool eof;
+    fs_error_t err;
+    char child_path[FS_MAX_PATH_LEN + 1U];
+
+    eof = false;
+    while (!eof)
+    {
+        err = runtime_readdirplus(path, FS_FLAG_DIRECTORY, entries, 64U,
+                                  &entry_nr, &eof);
+        if (fs_failed(err))
+        {
+            return err;
+        }
+
+        if (entry_nr == 0U)
+        {
+            break;
+        }
+
+        for (uint32_t index = 0U; index < entry_nr; index++)
+        {
+            if (runtime_fs_tree_skip_name(entries[index].entry.name))
+            {
+                continue;
+            }
+
+            err = runtime_fs_join_child_path(child_path, sizeof(child_path),
+                                             path, entries[index].entry.name);
+            if (fs_failed(err))
+            {
+                return err;
+            }
+
+            if (entries[index].attr.type == FS_TYPE_DIR)
+            {
+                err = runtime_fs_remove_children(child_path);
+                if (fs_failed(err))
+                {
+                    return err;
+                }
+
+                err = runtime_rmdir(child_path, FS_FLAG_DIRECTORY);
+            }
+            else
+            {
+                err = runtime_unlink(child_path, FS_FLAG_NOFOLLOW);
+            }
+
+            if (fs_failed(err))
+            {
+                return err;
+            }
+        }
+    }
+
+    return FS_OK;
+}
+
+fs_error_t runtime_fs_destroy_tree(const char *name)
+{
+    fs_error_t err;
+    bool had_session;
+    bool destroying_current;
+    char previous_name[FSC_NAMESPACE_NAME_MAX];
+
+    err = runtime_require_initialized();
+    if (fs_failed(err))
+    {
+        return err;
+    }
+
+    if (!fsc_namespace_name_is_valid(name))
+    {
+        return runtime_error(RUNTIME_SUB_NAMESPACE, EINVAL);
+    }
+
+    had_session = runtime_fs_is_active();
+    destroying_current =
+            had_session && (strcmp(g_runtime.namespace_name, name) == 0);
+    previous_name[0] = 0;
+    if (had_session)
+    {
+        (void)snprintf(previous_name, sizeof(previous_name), "%s",
+                       g_runtime.namespace_name);
+    }
+
+    if (!destroying_current)
+    {
+        err = runtime_fs_use(name);
         if (fs_failed(err))
         {
             return err;
         }
     }
 
-    return fsmgr_destroy(ns->fsid);
+    err = runtime_fs_remove_children("/");
+    if (fs_failed(err))
+    {
+        if (had_session && !destroying_current)
+        {
+            (void)runtime_fs_use(previous_name);
+        }
+        return err;
+    }
+
+    (void)runtime_fs_leave();
+    err = runtime_fs_destroy(name);
+    if (fs_failed(err))
+    {
+        if (had_session && !destroying_current)
+        {
+            (void)runtime_fs_use(previous_name);
+        }
+        return err;
+    }
+
+    if (had_session && !destroying_current)
+    {
+        err = runtime_fs_use(previous_name);
+    }
+
+    return err;
+}
+
+fs_error_t runtime_fs_rename(const char *old_name, const char *new_name)
+{
+    fs_error_t err;
+    bool renaming_current;
+
+    err = runtime_require_initialized();
+    if (fs_failed(err))
+    {
+        return err;
+    }
+
+    renaming_current = runtime_fs_is_active() &&
+                       (strcmp(g_runtime.namespace_name, old_name) == 0);
+
+    err = fsmgr_rename(old_name, new_name);
+    if (fs_failed(err))
+    {
+        return err;
+    }
+
+    if (renaming_current)
+    {
+        if (snprintf(g_runtime.namespace_name, sizeof(g_runtime.namespace_name),
+                     "%s", new_name) >= (int)sizeof(g_runtime.namespace_name))
+        {
+            (void)runtime_fs_leave();
+            return runtime_error(RUNTIME_SUB_NAMESPACE, ENAMETOOLONG);
+        }
+    }
+
+    return FS_OK;
 }
 
 fs_error_t runtime_fs_use(const char *name)
@@ -97,6 +317,11 @@ fs_error_t runtime_fs_use(const char *name)
     return FS_OK;
 }
 
+fs_error_t runtime_fs_enter(const char *name)
+{
+    return runtime_fs_use(name);
+}
+
 fs_error_t runtime_fs_leave(void)
 {
     fs_error_t err;
@@ -129,6 +354,20 @@ const char *runtime_fs_current(void)
     }
 
     return g_runtime.namespace_name;
+}
+
+fs_error_t runtime_fs_list(char names[][FSC_NAMESPACE_NAME_MAX], uint32_t cap,
+                           uint32_t *actual_out)
+{
+    fs_error_t err;
+
+    err = runtime_require_initialized();
+    if (fs_failed(err))
+    {
+        return err;
+    }
+
+    return fsmgr_list(names, cap, actual_out);
 }
 
 fs_error_t runtime_get_ctx(namei_ctx_t *out_ctx)

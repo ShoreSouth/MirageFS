@@ -394,6 +394,44 @@ fs_error_t objmgr_delete(const fuid_t *fuid)
     return FS_OK;
 }
 
+fs_error_t objmgr_update_handle(const fuid_t *fuid, const obj_handle_t *handle)
+{
+    fs_error_t err;
+    obj_key_t key;
+    obj_runtime_t *rt;
+    obj_handle_t old_handle;
+
+    if ((fuid == NULL) || (handle == NULL) || !fuid_is_valid(fuid) ||
+        (handle->len == 0U) || (handle->len > OBJMETA_MAX_HANDLE_SIZE))
+    {
+        return obj_error(OBJ_SUB_HANDLE, EINVAL);
+    }
+
+    objkey_from_fuid(&key, fuid);
+
+    fs_mutex_lock(&g_objmgr.lock);
+
+    rt = objmgr_lookup_locked(&key);
+    if ((rt == NULL) || (objruntime_state(rt) != OBJ_STATE_ACTIVE))
+    {
+        fs_mutex_unlock(&g_objmgr.lock);
+        return obj_error(OBJ_SUB_HANDLE, ENOENT);
+    }
+
+    old_handle = rt->meta.handle;
+    objmgr_remove_handle_locked(rt);
+    rt->meta.handle = *handle;
+    err = objmgr_insert_handle_locked(rt);
+    if (fs_failed(err))
+    {
+        rt->meta.handle = old_handle;
+        (void)objmgr_insert_handle_locked(rt);
+    }
+
+    fs_mutex_unlock(&g_objmgr.lock);
+    return err;
+}
+
 /*
  * ============================================================
  * 对象查找

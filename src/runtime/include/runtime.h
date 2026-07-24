@@ -6,6 +6,7 @@
 #include <sys/types.h>
 
 #include "common/fs_common.h"
+#include "fsc/namespace/namespace.h"
 #include "fops/include/fops_types.h"
 #include "namei/include/namei_types.h"
 #include "object/fuid/fuid.h"
@@ -88,6 +89,12 @@ fs_error_t runtime_fs_create(const char *name, fuid_t *root_out);
  */
 fs_error_t runtime_fs_destroy(const char *name);
 
+/* 递归删除 namespace 内容后销毁 namespace。 */
+fs_error_t runtime_fs_destroy_tree(const char *name);
+
+/* 重命名 namespace。 */
+fs_error_t runtime_fs_rename(const char *old_name, const char *new_name);
+
 /*
  * 进入指定 namespace，并把 cwd 设置到 namespace root。
  *
@@ -95,6 +102,9 @@ fs_error_t runtime_fs_destroy(const char *name);
  *      [IN] name : namespace 名称
  */
 fs_error_t runtime_fs_use(const char *name);
+
+/* runtime_fs_use() 的新命名入口。 */
+fs_error_t runtime_fs_enter(const char *name);
 
 /* 退出当前 namespace 会话，清空 root/cwd FUID 和显示路径。 */
 fs_error_t runtime_fs_leave(void);
@@ -104,6 +114,10 @@ bool runtime_fs_is_active(void);
 
 /* 返回当前 namespace 名称；未进入 namespace 时返回 NULL。 */
 const char *runtime_fs_current(void);
+
+/* 列出当前 runtime 中已注册的 namespace 名称。 */
+fs_error_t runtime_fs_list(char names[][FSC_NAMESPACE_NAME_MAX], uint32_t cap,
+                           uint32_t *actual_out);
 
 /*
  * ============================================================

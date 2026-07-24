@@ -93,8 +93,19 @@ fs_error_t fsc_init(void)
         goto err_nspool;
     }
 
+    err = fsmgr_recover();
+    if (fs_failed(err))
+    {
+        FS_LOG_DUMP_ERROR("fsmgr_recover failed, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        goto err_fsmgr;
+    }
+
     FS_LOG_DUMP_INFO("exit: ok");
     goto out;
+
+err_fsmgr:
+    fsmgr_deinit();
 
 err_nspool:
     nspool_deinit();

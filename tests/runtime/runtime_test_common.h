@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "common/fs_common.h"
+#include "object/objmgr/objmgr.h"
 #include "runtime/internal/runtime_internal.h"
 #include "runtime/internal/runtime_sub.h"
 #include "runtime/include/runtime.h"

@@ -1,8 +1,14 @@
 #include "msh/internal/msh_internal.h"
 
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
+#define MSH_IO_CHUNK 4096U
+#define MSH_XATTR_BUF 4096U
 
 static int msh_need_session(void)
 {
@@ -21,6 +27,135 @@ static int msh_need_argc(const msh_argv_t *args, int argc, const char *usage)
     {
         fprintf(stderr, "usage: %s\n", usage);
         return 1;
+    }
+
+    return 0;
+}
+
+static int msh_parse_u64(const char *text, uint64_t *out)
+{
+    char *end;
+    unsigned long long value;
+
+    if ((text == NULL) || (out == NULL) || (text[0] == 0))
+    {
+        return 1;
+    }
+
+    errno = 0;
+    value = strtoull(text, &end, 0);
+    if ((errno != 0) || (end == text) || (*end != 0))
+    {
+        return 1;
+    }
+
+    *out = (uint64_t)value;
+    return 0;
+}
+
+static int msh_parse_mode(const char *text, mode_t *out)
+{
+    char *end;
+    unsigned long value;
+
+    if ((text == NULL) || (out == NULL) || (text[0] == 0))
+    {
+        return 1;
+    }
+
+    errno = 0;
+    value = strtoul(text, &end, 8);
+    if ((errno != 0) || (end == text) || (*end != 0) ||
+        ((value & ~FS_PERM_MASK) != 0UL))
+    {
+        return 1;
+    }
+
+    *out = (mode_t)value;
+    return 0;
+}
+
+static int msh_parse_id(const char *text, uint32_t *out)
+{
+    uint64_t value;
+
+    if (msh_parse_u64(text, &value) != 0 || value > UINT32_MAX)
+    {
+        return 1;
+    }
+
+    *out = (uint32_t)value;
+    return 0;
+}
+
+static int msh_parse_access_mask(const char *text, int *out)
+{
+    int mask = 0;
+
+    if ((text == NULL) || (out == NULL) || (text[0] == 0))
+    {
+        return 1;
+    }
+
+    if (strcmp(text, "f") == 0)
+    {
+        *out = F_OK;
+        return 0;
+    }
+
+    for (const char *p = text; *p != 0; p++)
+    {
+        if (*p == 'r')
+        {
+            mask |= R_OK;
+        }
+        else if (*p == 'w')
+        {
+            mask |= W_OK;
+        }
+        else if (*p == 'x')
+        {
+            mask |= X_OK;
+        }
+        else
+        {
+            return 1;
+        }
+    }
+
+    *out = mask;
+    return 0;
+}
+
+static int msh_join_args(const msh_argv_t *args, int start, char *buf,
+                         size_t size)
+{
+    size_t used = 0U;
+
+    if ((args == NULL) || (buf == NULL) || (size == 0U) ||
+        (start >= args->argc))
+    {
+        return 1;
+    }
+
+    buf[0] = 0;
+    for (int i = start; i < args->argc; i++)
+    {
+        size_t arg_len = strlen(args->argv[i]);
+        size_t sep = (i == start) ? 0U : 1U;
+
+        if ((used + sep + arg_len + 1U) > size)
+        {
+            return 1;
+        }
+
+        if (sep != 0U)
+        {
+            buf[used++] = ' ';
+        }
+        memcpy(&buf[used], args->argv[i], arg_len);
+        used += arg_len;
+        buf[used] = 0;
     }
 
     return 0;
@@ -161,7 +296,7 @@ static int msh_rm(const msh_argv_t *args)
         return 1;
     }
 
-    err = runtime_unlink(args->argv[1], FS_FLAG_NONE);
+    err = runtime_unlink(args->argv[1], FS_FLAG_NOFOLLOW);
     if (fs_failed(err))
     {
         msh_print_error("rm", err);
@@ -228,6 +363,28 @@ static void msh_print_attr(const fops_attr_t *attr)
     printf("nlink: %llu\n", (unsigned long long)attr->nlink);
 }
 
+static int msh_lookup(const msh_argv_t *args)
+{
+    fops_object_result_t result;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 2, "lookup PATH") != 0 || msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    err = runtime_lookup_plus(args->argv[1], FS_FLAG_NOFOLLOW, &result);
+    if (fs_failed(err))
+    {
+        msh_print_error("lookup", err);
+        return 1;
+    }
+
+    printf("fuid: %s\n", fuid_to_str(&result.fuid));
+    msh_print_attr(&result.attr);
+    return 0;
+}
+
 static int msh_stat(const msh_argv_t *args)
 {
     fops_attr_t attr;
@@ -246,6 +403,500 @@ static int msh_stat(const msh_argv_t *args)
     }
 
     msh_print_attr(&attr);
+    return 0;
+}
+
+static int msh_mkfifo(const msh_argv_t *args)
+{
+    fops_object_result_t result;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 2, "mkfifo PATH") != 0 || msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    err = runtime_mknod(args->argv[1], FS_TYPE_FIFO, NULL, NULL,
+                        FS_FLAG_EXCLUSIVE, &result);
+    if (fs_failed(err))
+    {
+        msh_print_error("mkfifo", err);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int msh_ln(const msh_argv_t *args)
+{
+    fops_object_result_t result;
+    fs_error_t err;
+
+    if (args == NULL)
+    {
+        return 1;
+    }
+
+    if ((args->argc == 4) && (strcmp(args->argv[1], "-s") == 0))
+    {
+        if (msh_need_session() != 0)
+        {
+            return 1;
+        }
+        err = runtime_symlink(args->argv[2], args->argv[3], FS_FLAG_EXCLUSIVE,
+                              NULL);
+        if (fs_failed(err))
+        {
+            msh_print_error("ln -s", err);
+            return 1;
+        }
+        return 0;
+    }
+
+    if (msh_need_argc(args, 3, "ln [-s] OLD NEW") != 0 ||
+        msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    err = runtime_link(args->argv[1], args->argv[2], FS_FLAG_EXCLUSIVE,
+                       &result);
+    if (fs_failed(err))
+    {
+        msh_print_error("ln", err);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int msh_symlink(const msh_argv_t *args)
+{
+    fs_error_t err;
+
+    if (msh_need_argc(args, 3, "symlink TARGET LINKPATH") != 0 ||
+        msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    err = runtime_symlink(args->argv[1], args->argv[2], FS_FLAG_EXCLUSIVE,
+                          NULL);
+    if (fs_failed(err))
+    {
+        msh_print_error("symlink", err);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int msh_readlink(const msh_argv_t *args)
+{
+    char buf[FS_MAX_PATH_LEN + 1U];
+    size_t actual;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 2, "readlink PATH") != 0 || msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    memset(buf, 0, sizeof(buf));
+    err = runtime_readlink(args->argv[1], FS_FLAG_NONE, buf, sizeof(buf) - 1U,
+                           &actual);
+    if (fs_failed(err))
+    {
+        msh_print_error("readlink", err);
+        return 1;
+    }
+
+    if (actual < sizeof(buf))
+    {
+        buf[actual] = 0;
+    }
+    printf("%s\n", buf);
+    return 0;
+}
+
+static int msh_close_file(const char *op, fops_file_t *file, int rc)
+{
+    fs_error_t close_err;
+
+    if (file == NULL)
+    {
+        return rc;
+    }
+
+    close_err = runtime_close(file);
+    if (fs_failed(close_err) && rc == 0)
+    {
+        msh_print_error(op, close_err);
+        return 1;
+    }
+
+    return rc;
+}
+
+static int msh_cat(const msh_argv_t *args)
+{
+    char buf[MSH_IO_CHUNK];
+    fops_file_t *file = NULL;
+    size_t actual;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 2, "cat PATH") != 0 || msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    err = runtime_open(args->argv[1], FS_FLAG_READ | FS_FLAG_REGULAR, &file);
+    if (fs_failed(err))
+    {
+        msh_print_error("cat", err);
+        return 1;
+    }
+
+    do
+    {
+        err = runtime_read(file, buf, sizeof(buf), &actual);
+        if (fs_failed(err))
+        {
+            msh_print_error("cat", err);
+            return msh_close_file("cat", file, 1);
+        }
+        if (actual > 0U && fwrite(buf, 1U, actual, stdout) != actual)
+        {
+            return msh_close_file("cat", file, 1);
+        }
+    } while (actual > 0U);
+
+    return msh_close_file("cat", file, 0);
+}
+
+static int msh_write_common(const msh_argv_t *args, bool append)
+{
+    char text[MSH_LINE_MAX];
+    fops_create_attr_t attr;
+    fops_file_t *file = NULL;
+    fs_flags_t open_flags;
+    size_t actual;
+    fs_error_t err;
+
+    if ((args == NULL) || (args->argc < 3))
+    {
+        fprintf(stderr, "usage: %s PATH TEXT\n", append ? "append" : "write");
+        return 1;
+    }
+    if ((msh_need_session() != 0) ||
+        (msh_join_args(args, 2, text, sizeof(text)) != 0))
+    {
+        return 1;
+    }
+
+    memset(&attr, 0, sizeof(attr));
+    attr.valid_mask = FOPS_CREATE_ATTR_MODE;
+    attr.mode = FS_MODE_FILE_DEFAULT;
+    err = runtime_create(args->argv[1], &attr, FS_FLAG_REPLACE, NULL);
+    if (fs_failed(err))
+    {
+        msh_print_error(append ? "append" : "write", err);
+        return 1;
+    }
+
+    open_flags = FS_FLAG_WRITE | FS_FLAG_REGULAR;
+    open_flags |= append ? FS_FLAG_APPEND : FS_FLAG_TRUNCATE;
+    err = runtime_open(args->argv[1], open_flags, &file);
+    if (fs_failed(err))
+    {
+        msh_print_error(append ? "append" : "write", err);
+        return 1;
+    }
+
+    err = runtime_write(file, text, strlen(text), &actual);
+    if (fs_failed(err) || actual != strlen(text))
+    {
+        if (fs_failed(err))
+        {
+            msh_print_error(append ? "append" : "write", err);
+        }
+        return msh_close_file(append ? "append" : "write", file, 1);
+    }
+
+    return msh_close_file(append ? "append" : "write", file, 0);
+}
+
+static int msh_chmod(const msh_argv_t *args)
+{
+    fops_setattr_t attr;
+    mode_t mode;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 3, "chmod MODE PATH") != 0 ||
+        msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    if (msh_parse_mode(args->argv[1], &mode) != 0)
+    {
+        fprintf(stderr, "usage: chmod MODE PATH\n");
+        return 1;
+    }
+
+    memset(&attr, 0, sizeof(attr));
+    attr.valid_mask = FOPS_SETATTR_MODE;
+    attr.mode = mode;
+    err = runtime_setattr(args->argv[2], &attr, FS_FLAG_NONE);
+    if (fs_failed(err))
+    {
+        msh_print_error("chmod", err);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int msh_chown(const msh_argv_t *args)
+{
+    fops_setattr_t attr;
+    uint32_t uid;
+    uint32_t gid;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 4, "chown UID GID PATH") != 0 ||
+        msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    if ((msh_parse_id(args->argv[1], &uid) != 0) ||
+        (msh_parse_id(args->argv[2], &gid) != 0))
+    {
+        fprintf(stderr, "usage: chown UID GID PATH\n");
+        return 1;
+    }
+
+    memset(&attr, 0, sizeof(attr));
+    attr.valid_mask = FOPS_SETATTR_UID | FOPS_SETATTR_GID;
+    attr.uid = (uid_t)uid;
+    attr.gid = (gid_t)gid;
+    err = runtime_setattr(args->argv[3], &attr, FS_FLAG_NONE);
+    if (fs_failed(err))
+    {
+        msh_print_error("chown", err);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int msh_truncate(const msh_argv_t *args)
+{
+    uint64_t size;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 3, "truncate PATH SIZE") != 0 ||
+        msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    if (msh_parse_u64(args->argv[2], &size) != 0)
+    {
+        fprintf(stderr, "usage: truncate PATH SIZE\n");
+        return 1;
+    }
+
+    err = runtime_truncate(args->argv[1], size, FS_FLAG_REGULAR);
+    if (fs_failed(err))
+    {
+        msh_print_error("truncate", err);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int msh_access(const msh_argv_t *args)
+{
+    int mask;
+    fs_error_t err;
+
+    if (msh_need_argc(args, 3, "access PATH f|r|w|x|rw|rx|wx|rwx") != 0 ||
+        msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    if (msh_parse_access_mask(args->argv[2], &mask) != 0)
+    {
+        fprintf(stderr, "usage: access PATH f|r|w|x|rw|rx|wx|rwx\n");
+        return 1;
+    }
+
+    err = runtime_access(args->argv[1], mask, FS_FLAG_NONE);
+    if (fs_failed(err))
+    {
+        msh_print_error("access", err);
+        return 1;
+    }
+
+    return 0;
+}
+
+static int msh_xattr(const msh_argv_t *args)
+{
+    char buf[MSH_XATTR_BUF];
+    size_t actual;
+    fs_error_t err;
+
+    if ((args == NULL) || (args->argc < 3))
+    {
+        fprintf(stderr,
+                "usage: xattr list|get|set|remove PATH [NAME] [VALUE]\n");
+        return 1;
+    }
+    if (msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    if (strcmp(args->argv[1], "list") == 0)
+    {
+        if (msh_need_argc(args, 3, "xattr list PATH") != 0)
+        {
+            return 1;
+        }
+        memset(buf, 0, sizeof(buf));
+        err = runtime_listxattr(args->argv[2], buf, sizeof(buf), &actual);
+        if (fs_failed(err))
+        {
+            msh_print_error("xattr list", err);
+            return 1;
+        }
+        for (size_t off = 0U; off < actual;)
+        {
+            size_t len = strlen(&buf[off]);
+            printf("%s\n", &buf[off]);
+            off += len + 1U;
+        }
+        return 0;
+    }
+
+    if (strcmp(args->argv[1], "get") == 0)
+    {
+        if (msh_need_argc(args, 4, "xattr get PATH NAME") != 0)
+        {
+            return 1;
+        }
+        memset(buf, 0, sizeof(buf));
+        err = runtime_getxattr(args->argv[2], args->argv[3], buf,
+                               sizeof(buf) - 1U, &actual);
+        if (fs_failed(err))
+        {
+            msh_print_error("xattr get", err);
+            return 1;
+        }
+        if (actual < sizeof(buf))
+        {
+            buf[actual] = 0;
+        }
+        printf("%s\n", buf);
+        return 0;
+    }
+
+    if (strcmp(args->argv[1], "set") == 0)
+    {
+        if (msh_need_argc(args, 5, "xattr set PATH NAME VALUE") != 0)
+        {
+            return 1;
+        }
+        err = runtime_setxattr(args->argv[2], args->argv[3], args->argv[4],
+                               strlen(args->argv[4]), FS_FLAG_NONE);
+        if (fs_failed(err))
+        {
+            msh_print_error("xattr set", err);
+            return 1;
+        }
+        return 0;
+    }
+
+    if (strcmp(args->argv[1], "remove") == 0)
+    {
+        if (msh_need_argc(args, 4, "xattr remove PATH NAME") != 0)
+        {
+            return 1;
+        }
+        err = runtime_removexattr(args->argv[2], args->argv[3]);
+        if (fs_failed(err))
+        {
+            msh_print_error("xattr remove", err);
+            return 1;
+        }
+        return 0;
+    }
+
+    fprintf(stderr, "msh: unknown xattr command: %s\n", args->argv[1]);
+    return 1;
+}
+
+static int msh_statfs(const msh_argv_t *args)
+{
+    const char *path;
+    fops_statfs_t st;
+    fs_error_t err;
+
+    if ((args == NULL) || args->argc > 2)
+    {
+        fprintf(stderr, "usage: statfs [PATH]\n");
+        return 1;
+    }
+    if (msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    path = msh_arg_or_default(args, 1, ".");
+    err = runtime_statfs(path, &st);
+    if (fs_failed(err))
+    {
+        msh_print_error("statfs", err);
+        return 1;
+    }
+
+    printf("type: 0x%lx\n", (unsigned long)st.f_type);
+    printf("block_size: %lu\n", (unsigned long)st.f_bsize);
+    printf("blocks: %llu\n", (unsigned long long)st.f_blocks);
+    printf("free_blocks: %llu\n", (unsigned long long)st.f_bfree);
+    printf("files: %llu\n", (unsigned long long)st.f_files);
+    printf("free_files: %llu\n", (unsigned long long)st.f_ffree);
+    return 0;
+}
+
+static int msh_syncfs(const msh_argv_t *args)
+{
+    const char *path;
+    fs_error_t err;
+
+    if ((args == NULL) || args->argc > 2)
+    {
+        fprintf(stderr, "usage: syncfs [PATH]\n");
+        return 1;
+    }
+    if (msh_need_session() != 0)
+    {
+        return 1;
+    }
+
+    path = msh_arg_or_default(args, 1, ".");
+    err = runtime_syncfs(path);
+    if (fs_failed(err))
+    {
+        msh_print_error("syncfs", err);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -344,8 +995,38 @@ int msh_cmd_file(msh_context_t *ctx, const msh_argv_t *args)
         return msh_rmdir(args);
     if (strcmp(cmd, "mv") == 0)
         return msh_mv(args);
+    if (strcmp(cmd, "lookup") == 0)
+        return msh_lookup(args);
     if (strcmp(cmd, "stat") == 0)
         return msh_stat(args);
+    if (strcmp(cmd, "mkfifo") == 0)
+        return msh_mkfifo(args);
+    if (strcmp(cmd, "ln") == 0)
+        return msh_ln(args);
+    if (strcmp(cmd, "symlink") == 0)
+        return msh_symlink(args);
+    if (strcmp(cmd, "readlink") == 0)
+        return msh_readlink(args);
+    if (strcmp(cmd, "cat") == 0)
+        return msh_cat(args);
+    if (strcmp(cmd, "write") == 0)
+        return msh_write_common(args, false);
+    if (strcmp(cmd, "append") == 0)
+        return msh_write_common(args, true);
+    if (strcmp(cmd, "chmod") == 0)
+        return msh_chmod(args);
+    if (strcmp(cmd, "chown") == 0)
+        return msh_chown(args);
+    if (strcmp(cmd, "truncate") == 0)
+        return msh_truncate(args);
+    if (strcmp(cmd, "access") == 0)
+        return msh_access(args);
+    if (strcmp(cmd, "xattr") == 0)
+        return msh_xattr(args);
+    if (strcmp(cmd, "statfs") == 0)
+        return msh_statfs(args);
+    if (strcmp(cmd, "syncfs") == 0)
+        return msh_syncfs(args);
     if (strcmp(cmd, "ls") == 0)
         return msh_ls(args, false);
     if (strcmp(cmd, "ll") == 0)

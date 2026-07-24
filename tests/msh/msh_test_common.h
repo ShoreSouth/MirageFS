@@ -20,6 +20,8 @@ typedef enum test_msh_component
 
 void test_msh_cleanup_root(void);
 int test_msh_run_line(msh_context_t *ctx, const char *line);
+int test_msh_run_line_with_stdin(msh_context_t *ctx, const char *line,
+                                 const char *input);
 int test_msh_repl_with_stdin(const char *input, bool interactive);
 
 extern const test_case_t MSH_PARSE_CASES[];

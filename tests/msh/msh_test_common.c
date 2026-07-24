@@ -18,6 +18,35 @@ int test_msh_run_line(msh_context_t *ctx, const char *line)
     return msh_run_line(ctx, line_buf);
 }
 
+int test_msh_run_line_with_stdin(msh_context_t *ctx, const char *line,
+                                 const char *input)
+{
+    FILE *tmp;
+    int saved_stdin;
+    int rc;
+
+    saved_stdin = dup(STDIN_FILENO);
+    TEST_ASSERT_TRUE(saved_stdin >= 0);
+    tmp = tmpfile();
+    TEST_ASSERT_TRUE(tmp != NULL);
+    if (input != NULL)
+    {
+        TEST_ASSERT_EQ_INT(fwrite(input, 1U, strlen(input), tmp),
+                           strlen(input));
+    }
+    rewind(tmp);
+    TEST_ASSERT_EQ_INT(dup2(fileno(tmp), STDIN_FILENO), STDIN_FILENO);
+    clearerr(stdin);
+
+    rc = test_msh_run_line(ctx, line);
+
+    TEST_ASSERT_EQ_INT(dup2(saved_stdin, STDIN_FILENO), STDIN_FILENO);
+    clearerr(stdin);
+    close(saved_stdin);
+    fclose(tmp);
+    return rc;
+}
+
 int test_msh_repl_with_stdin(const char *input, bool interactive)
 {
     msh_context_t ctx;

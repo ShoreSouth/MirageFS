@@ -35,7 +35,7 @@ APP / CLI / Shell / Protocol Adapter
 
 Runtime V1 覆盖当前已实现的主要 FOPS 操作面：
 
-- namespace: create、destroy、use、leave。
+- namespace: create、destroy、destroy_tree、rename、list、enter、leave。
 - path lookup: lookup、lookup_plus、lookup_parent。
 - create/delete/name ops: create、mkdir、mknod、unlink、rmdir、rename、link、symlink、readlink。
 - directory ops: readdir、readdirplus。
@@ -50,3 +50,9 @@ Runtime V1 覆盖当前已实现的主要 FOPS 操作面：
 ## V1.0 入口策略
 
 V1.0 以控制台 Shell 为唯一正式用户入口。Shell 应只依赖 Runtime，不直接调用 FOPS 细粒度 API，不直接操作 ObjMgr，也不保存 backend fd/path。
+
+删除整个 filesystem namespace 时，入口层调用 `runtime_fs_destroy_tree(name)`。
+该接口先进入目标 namespace，使用 `readdirplus` 遍历目录树，并逐项调用
+`runtime_unlink()` / `runtime_rmdir()`，让对象生命周期继续经过 NAMEI/FOPS/Object
+主链路；清空根目录后再调用保持“空根目录删除”语义的 `runtime_fs_destroy()`。
+递归删除不下沉到 LSA。

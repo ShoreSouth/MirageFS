@@ -55,6 +55,12 @@ fs_error_t fsmgr_create(const char *name, fuid_t *root_out);
  */
 fs_error_t fsmgr_destroy(fsc_fsid_t fsid);
 
+/* 重命名 namespace，同时更新 sysroot 下的后端根目录名。 */
+fs_error_t fsmgr_rename(const char *old_name, const char *new_name);
+
+/* 从 sysroot 中恢复已有一级目录为 namespace。 */
+fs_error_t fsmgr_recover(void);
+
 /*
  * ============================================================
  * lookup
@@ -69,6 +75,10 @@ fsc_namespace_t *fsmgr_lookup_fsid(fsc_fsid_t fsid);
 
 /* 判断指定名称的 namespace 是否存在。 */
 bool fsmgr_exists(const char *name);
+
+/* 列出当前 ACTIVE namespace 名称。 */
+fs_error_t fsmgr_list(char names[][FSC_NAMESPACE_NAME_MAX], uint32_t cap,
+                      uint32_t *actual_out);
 
 /* 获取 namespace 根目录 FUID。 */
 fs_error_t fsmgr_get_root_fuid(fsc_fsid_t fsid, fuid_t *root_out);

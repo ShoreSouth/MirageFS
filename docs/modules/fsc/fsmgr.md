@@ -132,7 +132,23 @@ fsmgr_destroy(fsid)
 当前只支持删除空文件系统根目录。如果根目录下已经有对象，底层
 `lsa_rmdir()` 会返回 `ENOTEMPTY` 类错误，namespace 保持注册状态。
 
-## 6. 查询语义
+递归删除整个文件系统不是 FSMgr/LSA 语义。上层应先通过 Runtime 的路径删除
+链路逐项释放对象，使 Object/FOPS 生命周期正常闭合；根目录清空后再调用
+`fsmgr_destroy()`。
+
+## 6. 重命名与恢复语义
+
+`fsmgr_rename(old, new)` 用于重命名 namespace，并同步重命名 sysroot 下的
+后端根目录。重命名成功后，旧名称不再可 lookup，新名称沿用原 FSID 和 root
+FUID。该接口只管理 namespace/root 绑定，不移动普通业务对象。
+
+`fsmgr_recover()` 用于启动恢复：扫描 sysroot 下已有目录，并把尚未注册的目录
+导入为 ACTIVE namespace。它只发生在 FSC 初始化/恢复边界，避免运行期间业务路径
+绕过 Runtime/NAMEI/FOPS。
+
+`fsmgr_list()` 返回当前已注册 ACTIVE namespace 名称，供 Runtime/MSH 展示。
+
+## 7. 查询语义
 
 FSMgr 提供两类 lookup：
 
@@ -154,7 +170,7 @@ fs_error_t fsmgr_get_root_handle(fsc_fsid_t fsid, obj_handle_t *handle_out);
 业务层应优先使用 `fsmgr_get_root_fuid()`。`fsmgr_get_root_handle()` 只用于
 FSC/Object 内部衔接，不作为面向业务的主入口。
 
-## 7. 与 sysroot / LSA 的关系
+## 8. 与 sysroot / LSA 的关系
 
 sysroot 是项目系统根目录，位于所有 filesystem root 之上。
 
@@ -170,13 +186,16 @@ FSMgr 创建文件系统时，不接收外部 dirfd，而是：
 
 mount fd 由 LSA 内部注册表保存，FSC 只持有 mount id + handle。
 
-## 8. 当前 API
+## 9. 当前 API
 
 ```text
 fsmgr_init()
 fsmgr_deinit()
 fsmgr_create()
 fsmgr_destroy()
+fsmgr_rename()
+fsmgr_recover()
+fsmgr_list()
 fsmgr_lookup()
 fsmgr_lookup_fsid()
 fsmgr_exists()
@@ -185,7 +204,7 @@ fsmgr_get_root_handle()
 fsmgr_count()
 ```
 
-## 9. 并发模型
+## 10. 并发模型
 
 当前版本使用单把 manager 互斥锁保护 create/destroy/lookup 与 fstable。
 实现简单，能保证生命周期一致性。后续如果 namespace 数量和并发访问增加，

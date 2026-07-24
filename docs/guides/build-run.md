@@ -107,11 +107,14 @@ make clean
 output/bin/miragefs
 ```
 
-如果程序后续增加参数，优先通过帮助命令查看：
+当前主程序支持无参数进入 REPL，或通过 `-c` 执行单条 `msh` 命令：
 
 ```sh
-output/bin/miragefs --help
+output/bin/miragefs
+output/bin/miragefs -c help
 ```
+
+启动后如何创建 namespace、进入项目内容和使用当前命令，见 [程序启动与命令速查](start-and-commands.md)。
 
 当前项目仍处于学习和演进阶段，日常验证不建议只依赖手动启动主程序观察输出。新增功能后应优先补 UT，并通过 `make test` 或 `tools/test/run-ut.sh` 验证。
 

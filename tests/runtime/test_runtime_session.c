@@ -142,7 +142,7 @@ const test_case_t RUNTIME_SESSION_CASES[] = {
                            0x002),
                 test_runtime_initialized_without_session_rejects_ctx_ops,
                 "Runtime 未进入 namespace 保护",
-                "已 init 但未 fs use 时读取 ctx/root/cwd",
+                "已 init 但未进入 namespace 时读取 ctx/root/cwd",
                 "返回 RUNTIME/SESSION/ENOENT"),
 };
 
