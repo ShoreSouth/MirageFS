@@ -296,6 +296,11 @@ fs_error_t runtime_fs_use(const char *name)
         return runtime_error(RUNTIME_SUB_NAMESPACE, ENOENT);
     }
 
+    if (g_runtime.ns_active)
+    {
+        runtime_monitoring_session_end();
+    }
+
     g_runtime.root_fuid = ns->root_fuid;
     g_runtime.cwd_fuid = ns->root_fuid;
     g_runtime.ns_active = true;
@@ -314,6 +319,7 @@ fs_error_t runtime_fs_use(const char *name)
         return runtime_error(RUNTIME_SUB_PATH, ENAMETOOLONG);
     }
 
+    runtime_monitoring_session_begin(ns->fsid, name);
     return FS_OK;
 }
 
@@ -332,6 +338,7 @@ fs_error_t runtime_fs_leave(void)
         return err;
     }
 
+    runtime_monitoring_session_end();
     g_runtime.ns_active = false;
     g_runtime.namespace_name[0] = 0;
     g_runtime.cwd_path[0] = 0;

@@ -25,6 +25,14 @@ static int test_config_init_loads_default_values(void)
     TEST_ASSERT_EQ_INT(FS_DEFAULT_WORKER_NR, g_fs_config.worker_nr);
     TEST_ASSERT_TRUE(g_fs_config.trace_enable);
     TEST_ASSERT_TRUE(g_fs_config.debug_enable);
+    TEST_ASSERT_EQ_INT(FS_METRICS_CORE, g_fs_config.metrics.mode);
+    TEST_ASSERT_EQ_INT(FS_METRICS_DEFAULT_SAMPLE_INTERVAL_MS,
+                       g_fs_config.metrics.sample_interval_ms);
+    TEST_ASSERT_EQ_INT(FS_METRICS_DEFAULT_HISTORY_CAPACITY,
+                       g_fs_config.metrics.history_capacity);
+    TEST_ASSERT_TRUE(g_fs_config.metrics.report_json_enable);
+    TEST_ASSERT_TRUE(g_fs_config.metrics.report_html_enable);
+    TEST_ASSERT_TRUE(g_fs_config.metrics.report_directory[0] != '\0');
     return 0;
 }
 

@@ -8,6 +8,7 @@ fs_error_t namei_init(void)
     FS_LOG_DUMP_INFO("enter");
 
     fs_sub_register(FS_MODULE_NAMEI, (fs_sub_name_fn)namei_sub_name);
+    namei_metrics_init();
 
     FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;

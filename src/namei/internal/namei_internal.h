@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "common/fs_common.h"
+#include "common/metrics/fs_metrics.h"
 #include "fops/include/fops_types.h"
 #include "namei/include/namei_types.h"
 
@@ -19,6 +20,7 @@ fs_error_t namei_ctx_check(const namei_ctx_t *ctx);
 
 fs_error_t namei_walk(const namei_ctx_t *ctx, const char *path,
                       fs_flags_t flags, namei_walk_result_t *out);
+void namei_metrics_init(void);
 
 bool namei_path_is_absolute(const char *path);
 bool namei_path_has_trailing_slash(const char *path);

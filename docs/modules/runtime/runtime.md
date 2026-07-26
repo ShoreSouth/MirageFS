@@ -12,6 +12,8 @@ Runtime 负责：
 - 构造 namei_ctx_t。
 - 为 CLI、未来 Web UI 和未来协议适配层提供稳定 facade。
 - 将路径版请求转换为 NAMEI 调用或 fops_dispatch 调用。
+- 管理进程 Run 和 filesystem session 的性能统计生命周期。
+- 周期保存短期内存快照，并在正常退出时生成 JSON/HTML 报告。
 
 Runtime 不负责：
 
@@ -20,6 +22,20 @@ Runtime 不负责：
 - 绕过 fops_dispatch 进入 FOPS OP。
 - 实现 CLI 文本命令解析。
 - 实现 FUSE/9P/NFS/RPC 协议。
+- 实现底层 counter、histogram 等通用统计原语。
+- 负责配置加载和默认值；这些属于 Config。
+
+## Monitoring
+
+`runtime/monitoring` 消费 `FsConfig_t.metrics`，负责：
+
+- 启动和停止 Metrics 生命周期及内存历史采样器；
+- 在 namespace enter/leave 时划分 filesystem session；
+- 把累计快照转换成 Run/session 统计；
+- 生成 `miragefs.metrics.v1` JSON 和单文件 HTML 报告。
+
+JSON 是规范数据源。HTML 不重新计算指标，只展示同一最终快照。详细口径和使用
+方式见 `docs/guides/performance-monitoring.md`。
 
 ## 依赖方向
 

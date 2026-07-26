@@ -21,11 +21,11 @@ static int test_os_helpers_return_cached_names_and_times(void)
     TEST_ASSERT_TRUE(fs_get_time_s() > 0U);
     TEST_ASSERT_TRUE(fs_get_time_ms() > 0U);
     TEST_ASSERT_TRUE(fs_get_time_us() > 0U);
-    TEST_ASSERT_TRUE(fs_get_time_ns() < 1000000000ULL);
+    TEST_ASSERT_TRUE(fs_get_time_ns() > 1000000000ULL);
     TEST_ASSERT_TRUE(fs_get_monotonic_s() > 0U);
     TEST_ASSERT_TRUE(fs_get_monotonic_ms() > 0U);
     TEST_ASSERT_TRUE(fs_get_monotonic_us() > 0U);
-    TEST_ASSERT_TRUE(fs_get_monotonic_ns() < 1000000000ULL);
+    TEST_ASSERT_TRUE(fs_get_monotonic_ns() > 1000000000ULL);
     TEST_ASSERT_TRUE(time_text != NULL);
     TEST_ASSERT_TRUE(time_text[0] != '\0');
     return 0;

@@ -209,10 +209,25 @@ static fops_dispatch_fn g_fops_ops[FS_OP_MAX] = {
         [FS_OP_SYNCFS] = fops_dispatch_syncfs,
 };
 
+static uint64_t fops_dispatch_actual_bytes(const fops_args_t *args)
+{
+    if ((args->op == FS_OP_READ) && (args->u.read.actual != NULL))
+    {
+        return *args->u.read.actual;
+    }
+    if ((args->op == FS_OP_WRITE) && (args->u.write.actual != NULL))
+    {
+        return *args->u.write.actual;
+    }
+
+    return 0U;
+}
+
 fs_error_t fops_dispatch(fops_args_t *args)
 {
     fs_error_t err;
     fops_dispatch_fn fn;
+    fs_metrics_token_t token;
 
     err = fops_validate_args(args);
     if (fs_failed(err))
@@ -230,5 +245,9 @@ fs_error_t fops_dispatch(fops_args_t *args)
         return err;
     }
 
-    return fn(args);
+    token = fs_metrics_begin(g_fops_metric_ids[args->op]);
+    err = fn(args);
+    fs_metrics_end(token, fs_succeeded(err),
+                   fs_succeeded(err) ? fops_dispatch_actual_bytes(args) : 0U);
+    return err;
 }

@@ -7,5 +7,6 @@ SRC += core/runtime.c
 SRC += core/runtime_session.c
 SRC += core/runtime_namei.c
 SRC += core/runtime_ops.c
+SRC += monitoring/runtime_monitoring.c
 
 include ../../build/build.mk

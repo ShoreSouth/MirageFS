@@ -22,6 +22,7 @@ typedef enum test_common_component
     TEST_COMMON_COMPONENT_MEMPOOL = 0x08,
     TEST_COMMON_COMPONENT_HASH = 0x09,
     TEST_COMMON_COMPONENT_TYPE = 0x0a,
+    TEST_COMMON_COMPONENT_METRICS = 0x0b,
 } test_common_component_t;
 
 extern const test_case_t COMMON_ERROR_CASES[];
@@ -44,3 +45,5 @@ extern const test_case_t COMMON_MEMPOOL_CASES[];
 extern const size_t COMMON_MEMPOOL_CASE_COUNT;
 extern const test_case_t COMMON_HASH_CASES[];
 extern const size_t COMMON_HASH_CASE_COUNT;
+extern const test_case_t COMMON_METRICS_CASES[];
+extern const size_t COMMON_METRICS_CASE_COUNT;

@@ -7,6 +7,15 @@
 #include "fops/include/fops.h"
 #include "namei/internal/namei_error.h"
 
+static fs_metric_id_t g_namei_walk_metric_id = FS_METRIC_ID_INVALID;
+
+void namei_metrics_init(void)
+{
+    g_namei_walk_metric_id = FS_METRIC_ID_INVALID;
+    (void)fs_metrics_register("namei", "WALK", true,
+                              &g_namei_walk_metric_id);
+}
+
 static const char *namei_skip_slashes(const char *path)
 {
     while ((path != NULL) && (*path == '/'))
@@ -158,8 +167,8 @@ static fs_error_t namei_make_remainder(char *dst, size_t size,
     return FS_OK;
 }
 
-fs_error_t namei_walk(const namei_ctx_t *ctx, const char *path,
-                      fs_flags_t flags, namei_walk_result_t *out)
+static fs_error_t namei_walk_impl(const namei_ctx_t *ctx, const char *path,
+                                  fs_flags_t flags, namei_walk_result_t *out)
 {
     fs_error_t err;
     fuid_t current;
@@ -294,4 +303,16 @@ fs_error_t namei_walk(const namei_ctx_t *ctx, const char *path,
             return FS_OK;
         }
     }
+}
+
+fs_error_t namei_walk(const namei_ctx_t *ctx, const char *path,
+                      fs_flags_t flags, namei_walk_result_t *out)
+{
+    fs_metrics_token_t token;
+    fs_error_t err;
+
+    token = fs_metrics_begin(g_namei_walk_metric_id);
+    err = namei_walk_impl(ctx, path, flags, out);
+    fs_metrics_end(token, fs_succeeded(err), 0U);
+    return err;
 }

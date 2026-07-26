@@ -6,6 +6,9 @@
 
 #include "lsa/include/lsa_api.h"
 #include "lsa/internal/lsa_common.h"
+#include "common/metrics/fs_metrics.h"
+
+extern fs_metric_id_t g_lsa_metric_ids[FS_OP_MAX];
 
 /*
  * ============================================================

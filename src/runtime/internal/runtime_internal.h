@@ -15,6 +15,7 @@
 #include "object/object_init.h"
 #include "runtime/include/runtime.h"
 #include "runtime/internal/runtime_error.h"
+#include "runtime/internal/runtime_monitoring.h"
 
 /*
  * Runtime 全局会话状态。

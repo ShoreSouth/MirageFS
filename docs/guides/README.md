@@ -21,6 +21,7 @@
 7. [AGENTS.md 与 SKILL.md](agent-instructions-and-skills.md)
 8. [GDB 调试](gdb-debugging.md)
 9. [常见问题](troubleshooting.md)
+10. [性能统计与运行报告](performance-monitoring.md)
 
 ## 文档边界
 
@@ -35,6 +36,8 @@
 - 新增模块时，同步更新 [模块地图](module-map.md) 和 [读代码路线](code-reading.md)。
 - 新增构建目标、脚本或输出目录时，同步更新 [编译构建与运行](build-run.md)。
 - 新增主程序参数、`msh` 命令或命令输出时，同步更新 [程序启动与命令速查](start-and-commands.md)。
+- 调整 Metrics 模式、采样或退出报告时，同步更新
+  [性能统计与运行报告](performance-monitoring.md)。
 - 调整 UT 命令、覆盖率策略或 case 规范时，同步更新 [UT 测试使用](unit-testing.md)。
 - 新增格式化、静态检查、调试、生成类工具时，同步更新 [开发工具](dev-tools.md) 和 `tools/README.md`。
 - 调整 Agent 常驻约束、skill 路由或职责边界时，同步更新

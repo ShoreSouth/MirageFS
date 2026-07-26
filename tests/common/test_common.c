@@ -35,5 +35,7 @@ int main(void)
                                COMMON_MEMPOOL_CASE_COUNT);
     failed += run_common_suite("common/hash", COMMON_HASH_CASES,
                                COMMON_HASH_CASE_COUNT);
+    failed += run_common_suite("common/metrics", COMMON_METRICS_CASES,
+                               COMMON_METRICS_CASE_COUNT);
     return failed == 0 ? 0 : 1;
 }

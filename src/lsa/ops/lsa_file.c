@@ -14,17 +14,21 @@
 lsa_ret_t lsa_close(int fd)
 {
     lsa_ret_t err;
+    fs_metrics_token_t token;
 
     FS_LOG_DUMP_INFO("enter: fd=%d", fd);
 
+    token = fs_metrics_begin(g_lsa_metric_ids[FS_OP_CLOSE]);
     if (close(fd) < 0)
     {
         err = lsa_error(FS_OP_CLOSE, errno);
+        fs_metrics_end(token, false, 0U);
         FS_LOG_DUMP_ERROR("close failed: fd=%d, err=%s (0x%x)", fd,
                           fs_error_str(err), err);
         return err;
     }
 
+    fs_metrics_end(token, true, 0U);
     FS_LOG_DUMP_INFO("exit: ok");
     return FS_OK;
 }
@@ -38,6 +42,7 @@ lsa_ret_t lsa_read(int fd, void *buf, size_t size, size_t *actual)
 {
     ssize_t ret;
     lsa_ret_t err;
+    fs_metrics_token_t token;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
@@ -50,16 +55,19 @@ lsa_ret_t lsa_read(int fd, void *buf, size_t size, size_t *actual)
         return err;
     }
 
+    token = fs_metrics_begin(g_lsa_metric_ids[FS_OP_READ]);
     ret = read(fd, buf, size);
 
     if (ret < 0)
     {
         err = lsa_error(FS_OP_READ, errno);
+        fs_metrics_end(token, false, 0U);
         FS_LOG_DUMP_ERROR("read failed: fd=%d, size=%zu, err=%s (0x%x)", fd,
                           size, fs_error_str(err), err);
         return err;
     }
 
+    fs_metrics_end(token, true, (uint64_t)ret);
     if (actual != NULL)
     {
         *actual = (size_t)ret;
@@ -75,6 +83,7 @@ lsa_ret_t lsa_read_full(int fd, void *buf, size_t size, size_t *actual)
     size_t done;
     ssize_t ret;
     lsa_ret_t err;
+    fs_metrics_token_t token;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
@@ -89,6 +98,7 @@ lsa_ret_t lsa_read_full(int fd, void *buf, size_t size, size_t *actual)
 
     cursor = buf;
     done = 0;
+    token = fs_metrics_begin(g_lsa_metric_ids[FS_OP_READ]);
 
     while (done < size)
     {
@@ -102,6 +112,7 @@ lsa_ret_t lsa_read_full(int fd, void *buf, size_t size, size_t *actual)
             }
 
             err = lsa_error(FS_OP_READ, errno);
+            fs_metrics_end(token, false, done);
             FS_LOG_DUMP_ERROR("read_full failed: fd=%d, done=%zu, "
                               "size=%zu, err=%s (0x%x)",
                               fd, done, size, fs_error_str(err), err);
@@ -116,6 +127,7 @@ lsa_ret_t lsa_read_full(int fd, void *buf, size_t size, size_t *actual)
         done += (size_t)ret;
     }
 
+    fs_metrics_end(token, true, done);
     if (actual != NULL)
     {
         *actual = done;
@@ -134,6 +146,7 @@ lsa_ret_t lsa_write(int fd, const void *buf, size_t size, size_t *actual)
 {
     ssize_t ret;
     lsa_ret_t err;
+    fs_metrics_token_t token;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
@@ -146,16 +159,19 @@ lsa_ret_t lsa_write(int fd, const void *buf, size_t size, size_t *actual)
         return err;
     }
 
+    token = fs_metrics_begin(g_lsa_metric_ids[FS_OP_WRITE]);
     ret = write(fd, buf, size);
 
     if (ret < 0)
     {
         err = lsa_error(FS_OP_WRITE, errno);
+        fs_metrics_end(token, false, 0U);
         FS_LOG_DUMP_ERROR("write failed: fd=%d, size=%zu, err=%s (0x%x)", fd,
                           size, fs_error_str(err), err);
         return err;
     }
 
+    fs_metrics_end(token, true, (uint64_t)ret);
     if (actual != NULL)
     {
         *actual = (size_t)ret;
@@ -171,6 +187,7 @@ lsa_ret_t lsa_write_full(int fd, const void *buf, size_t size, size_t *actual)
     size_t done;
     ssize_t ret;
     lsa_ret_t err;
+    fs_metrics_token_t token;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu", fd, size);
 
@@ -185,6 +202,7 @@ lsa_ret_t lsa_write_full(int fd, const void *buf, size_t size, size_t *actual)
 
     cursor = buf;
     done = 0;
+    token = fs_metrics_begin(g_lsa_metric_ids[FS_OP_WRITE]);
 
     while (done < size)
     {
@@ -198,6 +216,7 @@ lsa_ret_t lsa_write_full(int fd, const void *buf, size_t size, size_t *actual)
             }
 
             err = lsa_error(FS_OP_WRITE, errno);
+            fs_metrics_end(token, false, done);
             FS_LOG_DUMP_ERROR("write_full failed: fd=%d, done=%zu, "
                               "size=%zu, err=%s (0x%x)",
                               fd, done, size, fs_error_str(err), err);
@@ -207,6 +226,7 @@ lsa_ret_t lsa_write_full(int fd, const void *buf, size_t size, size_t *actual)
         if (ret == 0)
         {
             err = lsa_error(FS_OP_WRITE, EIO);
+            fs_metrics_end(token, false, done);
             FS_LOG_DUMP_ERROR("write_full stopped without progress: "
                               "fd=%d, done=%zu, size=%zu, err=%s (0x%x)",
                               fd, done, size, fs_error_str(err), err);
@@ -216,6 +236,7 @@ lsa_ret_t lsa_write_full(int fd, const void *buf, size_t size, size_t *actual)
         done += (size_t)ret;
     }
 
+    fs_metrics_end(token, true, done);
     if (actual != NULL)
     {
         *actual = done;
@@ -235,6 +256,7 @@ lsa_ret_t lsa_pread(int fd, void *buf, size_t size, off_t offset,
 {
     ssize_t ret;
     lsa_ret_t err;
+    fs_metrics_token_t token;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu, offset=%ld", fd, size,
                      (long)offset);
@@ -248,17 +270,20 @@ lsa_ret_t lsa_pread(int fd, void *buf, size_t size, off_t offset,
         return err;
     }
 
+    token = fs_metrics_begin(g_lsa_metric_ids[FS_OP_READ]);
     ret = pread(fd, buf, size, offset);
 
     if (ret < 0)
     {
         err = lsa_error(FS_OP_READ, errno);
+        fs_metrics_end(token, false, 0U);
         FS_LOG_DUMP_ERROR("pread failed: fd=%d, size=%zu, offset=%ld, "
                           "err=%s (0x%x)",
                           fd, size, (long)offset, fs_error_str(err), err);
         return err;
     }
 
+    fs_metrics_end(token, true, (uint64_t)ret);
     if (actual != NULL)
     {
         *actual = (size_t)ret;
@@ -278,6 +303,7 @@ lsa_ret_t lsa_pwrite(int fd, const void *buf, size_t size, off_t offset,
 {
     ssize_t ret;
     lsa_ret_t err;
+    fs_metrics_token_t token;
 
     FS_LOG_DUMP_INFO("enter: fd=%d, size=%zu, offset=%ld", fd, size,
                      (long)offset);
@@ -291,17 +317,20 @@ lsa_ret_t lsa_pwrite(int fd, const void *buf, size_t size, off_t offset,
         return err;
     }
 
+    token = fs_metrics_begin(g_lsa_metric_ids[FS_OP_WRITE]);
     ret = pwrite(fd, buf, size, offset);
 
     if (ret < 0)
     {
         err = lsa_error(FS_OP_WRITE, errno);
+        fs_metrics_end(token, false, 0U);
         FS_LOG_DUMP_ERROR("pwrite failed: fd=%d, size=%zu, offset=%ld, "
                           "err=%s (0x%x)",
                           fd, size, (long)offset, fs_error_str(err), err);
         return err;
     }
 
+    fs_metrics_end(token, true, (uint64_t)ret);
     if (actual != NULL)
     {
         *actual = (size_t)ret;

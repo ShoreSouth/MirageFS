@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 
 #include "common/fs_common.h"
+#include "common/metrics/fs_metrics.h"
 #include "fops/include/fops_types.h"
 #include "lsa/include/lsa_api.h"
 #include "object/objmeta/objmeta.h"
@@ -23,6 +24,7 @@ struct fops_file
 };
 
 extern fops_context_t g_fops_ctx;
+extern fs_metric_id_t g_fops_metric_ids[FS_OP_MAX];
 
 typedef struct fops_op_spec
 {

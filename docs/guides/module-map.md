@@ -50,6 +50,7 @@ src/
 - 容器：hash、list
 - 并发：lock、atomic
 - 内存：mempool
+- 性能：metrics counter、latency histogram、snapshot
 - 调试：trace、assert
 
 边界约束：
@@ -170,6 +171,7 @@ fops_dispatch()
 - 管理 session
 - 保存 root/cwd 等运行状态
 - 对外提供操作封装
+- 管理 Run/filesystem session 性能聚合、内存历史和退出报告
 
 它适合成为 app、shell 或未来服务入口调用的第一层。
 

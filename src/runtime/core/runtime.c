@@ -148,6 +148,7 @@ fs_error_t runtime_init(const runtime_config_t *cfg)
     fuid_set_invalid(&g_runtime.cwd_fuid);
 
     fs_config_init();
+    fs_metrics_init(g_fs_config.metrics.mode);
     FS_TRACE_BEGIN(&g_runtime.trace_ctx);
     fs_log_init(NULL, FS_LOG_INFO);
     fs_sub_register(FS_MODULE_RUNTIME, (fs_sub_name_fn)runtime_sub_name);
@@ -178,6 +179,8 @@ fs_error_t runtime_init(const runtime_config_t *cfg)
         goto err_fops;
     }
 
+    fs_metrics_freeze();
+    runtime_monitoring_init(&g_fs_config.metrics);
     g_runtime.initialized = true;
 
     if ((cfg != NULL) && (cfg->default_namespace != NULL))
@@ -204,6 +207,7 @@ fs_error_t runtime_init(const runtime_config_t *cfg)
 
 err_namei:
     g_runtime.initialized = false;
+    runtime_monitoring_deinit();
     namei_deinit();
 
 err_fops:
@@ -217,6 +221,7 @@ err_object:
 
 err_trace:
     FS_TRACE_END();
+    fs_metrics_deinit();
     memset(&g_runtime, 0, sizeof(g_runtime));
     return err;
 }
@@ -235,6 +240,8 @@ void runtime_deinit(void)
     fsc_deinit();
     object_deinit();
     FS_TRACE_END();
+    runtime_monitoring_deinit();
+    fs_metrics_deinit();
 
     memset(&g_runtime, 0, sizeof(g_runtime));
 }

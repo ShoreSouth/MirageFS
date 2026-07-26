@@ -13,6 +13,7 @@ SRC += error/fs_sub.c
 SRC += hash/fs_hash.c
 SRC += lock/fs_lock.c
 SRC += mempool/fs_mempool.c
+SRC += metrics/fs_metrics.c
 SRC += module/fs_module.c
 SRC += op/fs_op.c
 SRC += os/fs_os.c
