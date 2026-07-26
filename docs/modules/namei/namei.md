@@ -55,7 +55,8 @@ typedef struct namei_ctx {
 - `namei_readlink()`：按路径读取符号链接内容。
 - `namei_readdir()` / `namei_readdirplus()`：按路径读取目录。
 - `namei_unlink()` / `namei_rmdir()` / `namei_rename()`：按路径封装命名类变更操作。
-- `namei_getattr()` / `namei_open()`：按路径封装对象级操作。
+- `namei_getattr()` / `namei_stat()` / `namei_open()`：按路径封装对象级
+  操作；`namei_stat()` 同时返回 FUID 和最新属性快照。
 
 ## 符号链接语义
 
@@ -73,5 +74,4 @@ NAMEI 遍历每个 component 时，先使用 `FS_FLAG_NOFOLLOW` lookup，确认�
 - [parent.md](parent.md)：父目录解析。
 - [flags.md](flags.md)：flag 处理。
 - [errors.md](errors.md)：NAMEI 错误模块和 sub-error。
-
 

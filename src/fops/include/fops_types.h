@@ -31,12 +31,20 @@ typedef struct fops_attr
     uid_t uid;      /* owner uid */
     gid_t gid;      /* owner gid */
 
-    uint64_t size;  /* 字节大小 */
-    uint64_t nlink; /* 硬链接计数 */
+    uint64_t size;       /* 字节大小 */
+    uint64_t blocks;     /* 已分配的 512 字节块数 */
+    uint64_t nlink;      /* 硬链接计数 */
+    uint32_t block_size; /* 首选 IO 块大小 */
 
-    uint64_t atime_sec; /* 访问时间，秒 */
-    uint64_t mtime_sec; /* 修改时间，秒 */
-    uint64_t ctime_sec; /* 状态变更时间，秒 */
+    uint64_t atime_sec;  /* 访问时间，秒 */
+    uint64_t mtime_sec;  /* 修改时间，秒 */
+    uint64_t ctime_sec;  /* 状态变更时间，秒 */
+    uint64_t btime_sec;  /* 创建时间，秒；btime_valid 时有效 */
+    uint32_t atime_nsec; /* 访问时间，纳秒 */
+    uint32_t mtime_nsec; /* 修改时间，纳秒 */
+    uint32_t ctime_nsec; /* 状态变更时间，纳秒 */
+    uint32_t btime_nsec; /* 创建时间，纳秒；btime_valid 时有效 */
+    bool btime_valid;    /* 后端是否返回 birth time */
 
 } fops_attr_t;
 

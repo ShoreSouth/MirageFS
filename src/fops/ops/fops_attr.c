@@ -15,6 +15,7 @@ fs_error_t fops_getattr(const fuid_t *fuid, fs_flags_t flags,
     obj_meta_t *meta;
     int fd;
     struct stat st;
+    struct statx stx;
 
     FS_LOG_DUMP_INFO("enter: fuid=%p flags=0x%x out_attr=%p",
                      (const void *)fuid, flags, (void *)out_attr);
@@ -48,13 +49,27 @@ fs_error_t fops_getattr(const fuid_t *fuid, fs_flags_t flags,
         goto out;
     }
 
-    err = lsa_fstat(fd, &st);
-    if (fs_failed(err))
+    memset(&stx, 0, sizeof(stx));
+    err = lsa_fstatx(fd, &stx);
+    if (fs_succeeded(err))
+    {
+        fops_attr_from_statx(out_attr, &stx);
+    }
+    else if ((fs_err_errno(err) == (fs_errno_t)ENOSYS) ||
+             (fs_err_errno(err) == FS_ERRNO_EINVAL))
+    {
+        err = lsa_fstat(fd, &st);
+        if (fs_failed(err))
+        {
+            goto out;
+        }
+        fops_attr_from_stat(out_attr, &st);
+    }
+    else
     {
         goto out;
     }
 
-    fops_attr_from_stat(out_attr, &st);
     err = fops_check_type_flags(out_attr->type, flags, FS_OP_GETATTR);
 
 out:

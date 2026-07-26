@@ -163,7 +163,7 @@ miragefs.root/
 | `touch PATH` | 创建或复用普通文件 | 使用默认文件权限 |
 | `mkfifo PATH` | 创建 FIFO | 对应 `mknod` 的 FIFO 形态 |
 | `lookup PATH` | 查看对象 FUID 和属性 | 不跟随最后一段 symlink |
-| `stat PATH` | 查看对象属性 | 输出类型、权限、uid/gid、大小、链接数 |
+| `stat PATH` | 查看对象属性 | 使用类 Linux 布局输出大小、块信息、FSID/FUID、权限、属主和时间；后端不支持 birth time 时显示 `-` |
 | `rm PATH` | 删除非目录对象 | 不跟随最后一段 symlink；删除目录应使用 `rmdir` |
 | `mv OLD_PATH NEW_PATH` | 重命名或移动对象 | 当前使用 replace 语义 |
 | `ln OLD NEW` | 创建硬链接 | 新名字必须不存在 |

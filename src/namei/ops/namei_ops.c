@@ -536,6 +536,29 @@ fs_error_t namei_getattr(const namei_ctx_t *ctx, const char *path,
     return namei_dispatch_getattr(&fuid, namei_type_flags(flags), out_attr);
 }
 
+fs_error_t namei_stat(const namei_ctx_t *ctx, const char *path,
+                      fs_flags_t flags, fops_object_result_t *out)
+{
+    fs_error_t err;
+
+    if (out == NULL)
+    {
+        return namei_error(NAMEI_SUB_LOOKUP, EINVAL);
+    }
+
+    memset(out, 0, sizeof(*out));
+    fuid_set_invalid(&out->fuid);
+
+    err = namei_lookup(ctx, path, flags, &out->fuid);
+    if (fs_failed(err))
+    {
+        return err;
+    }
+
+    return namei_dispatch_getattr(&out->fuid, namei_type_flags(flags),
+                                  &out->attr);
+}
+
 fs_error_t namei_open(const namei_ctx_t *ctx, const char *path,
                       fs_flags_t flags, fops_file_t **out_file)
 {

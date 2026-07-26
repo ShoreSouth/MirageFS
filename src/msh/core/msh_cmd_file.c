@@ -1,10 +1,13 @@
 #include "msh/internal/msh_internal.h"
 
 #include <errno.h>
+#include <grp.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #define MSH_IO_CHUNK 4096U
@@ -189,13 +192,16 @@ static void msh_mode_string(mode_t mode, char out[11])
     out[0] = msh_type_char(fs_type_from_mode(mode));
     out[1] = (mode & S_IRUSR) ? 'r' : '-';
     out[2] = (mode & S_IWUSR) ? 'w' : '-';
-    out[3] = (mode & S_IXUSR) ? 'x' : '-';
+    out[3] = (mode & S_ISUID) ? ((mode & S_IXUSR) ? 's' : 'S')
+                              : ((mode & S_IXUSR) ? 'x' : '-');
     out[4] = (mode & S_IRGRP) ? 'r' : '-';
     out[5] = (mode & S_IWGRP) ? 'w' : '-';
-    out[6] = (mode & S_IXGRP) ? 'x' : '-';
+    out[6] = (mode & S_ISGID) ? ((mode & S_IXGRP) ? 's' : 'S')
+                              : ((mode & S_IXGRP) ? 'x' : '-');
     out[7] = (mode & S_IROTH) ? 'r' : '-';
     out[8] = (mode & S_IWOTH) ? 'w' : '-';
-    out[9] = (mode & S_IXOTH) ? 'x' : '-';
+    out[9] = (mode & S_ISVTX) ? ((mode & S_IXOTH) ? 't' : 'T')
+                              : ((mode & S_IXOTH) ? 'x' : '-');
     out[10] = 0;
 }
 
@@ -363,6 +369,135 @@ static void msh_print_attr(const fops_attr_t *attr)
     printf("nlink: %llu\n", (unsigned long long)attr->nlink);
 }
 
+static const char *msh_file_type_description(const fops_attr_t *attr)
+{
+    if (attr == NULL)
+    {
+        return "unknown";
+    }
+
+    switch (attr->type)
+    {
+    case FS_TYPE_REG:
+        return (attr->size == 0U) ? "regular empty file" : "regular file";
+    case FS_TYPE_DIR:
+        return "directory";
+    case FS_TYPE_LNK:
+        return "symbolic link";
+    case FS_TYPE_FIFO:
+        return "fifo";
+    case FS_TYPE_SOCK:
+        return "socket";
+    case FS_TYPE_BLK:
+        return "block special file";
+    case FS_TYPE_CHR:
+        return "character special file";
+    default:
+        return "unknown";
+    }
+}
+
+static const char *msh_user_name(uid_t uid, char *buf, size_t size)
+{
+    struct passwd entry;
+    struct passwd *result;
+
+    if ((buf == NULL) || (size == 0U))
+    {
+        return "?";
+    }
+
+    result = NULL;
+    if ((getpwuid_r(uid, &entry, buf, size, &result) == 0) && (result != NULL))
+    {
+        return result->pw_name;
+    }
+
+    (void)snprintf(buf, size, "%u", (unsigned)uid);
+    return buf;
+}
+
+static const char *msh_group_name(gid_t gid, char *buf, size_t size)
+{
+    struct group entry;
+    struct group *result;
+
+    if ((buf == NULL) || (size == 0U))
+    {
+        return "?";
+    }
+
+    result = NULL;
+    if ((getgrgid_r(gid, &entry, buf, size, &result) == 0) && (result != NULL))
+    {
+        return result->gr_name;
+    }
+
+    (void)snprintf(buf, size, "%u", (unsigned)gid);
+    return buf;
+}
+
+static void msh_print_time(const char *label, uint64_t seconds,
+                           uint32_t nanoseconds)
+{
+    char time_buf[64];
+    char zone_buf[16];
+    struct tm local_time;
+    time_t value;
+
+    value = (time_t)seconds;
+    if ((label == NULL) || (localtime_r(&value, &local_time) == NULL) ||
+        (strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S",
+                  &local_time) == 0U) ||
+        (strftime(zone_buf, sizeof(zone_buf), "%z", &local_time) == 0U))
+    {
+        printf("%s: -\n", (label != NULL) ? label : "Time");
+        return;
+    }
+
+    printf("%s: %s.%09u %s\n", label, time_buf, nanoseconds, zone_buf);
+}
+
+static void msh_print_stat(const char *path, const fops_object_result_t *result)
+{
+    char mode[11];
+    char user_buf[4096];
+    char group_buf[4096];
+    const fops_attr_t *attr;
+
+    if ((path == NULL) || (result == NULL))
+    {
+        return;
+    }
+
+    attr = &result->attr;
+    msh_mode_string(attr->mode, mode);
+
+    printf("  File: %s\n", path);
+    printf("  Size: %-15llu Blocks: %-10llu IO Block: %-6u %s\n",
+           (unsigned long long)attr->size, (unsigned long long)attr->blocks,
+           attr->block_size, msh_file_type_description(attr));
+    printf("  FSID: %-14llu FUID: %-42s Links: %llu\n",
+           (unsigned long long)result->fuid.fsid, fuid_to_str(&result->fuid),
+           (unsigned long long)attr->nlink);
+    printf("Access: (%04o/%s)  Uid: (%5u/%8s)   Gid: (%5u/%8s)\n",
+           (unsigned)(attr->mode & FS_PERM_MASK), mode, (unsigned)attr->uid,
+           msh_user_name(attr->uid, user_buf, sizeof(user_buf)),
+           (unsigned)attr->gid,
+           msh_group_name(attr->gid, group_buf, sizeof(group_buf)));
+    msh_print_time("Access", attr->atime_sec, attr->atime_nsec);
+    msh_print_time("Modify", attr->mtime_sec, attr->mtime_nsec);
+    msh_print_time("Change", attr->ctime_sec, attr->ctime_nsec);
+    if (attr->btime_valid)
+    {
+        msh_print_time(" Birth", attr->btime_sec, attr->btime_nsec);
+    }
+    else
+    {
+        printf(" Birth: -\n");
+    }
+}
+
 static int msh_lookup(const msh_argv_t *args)
 {
     fops_object_result_t result;
@@ -387,7 +522,7 @@ static int msh_lookup(const msh_argv_t *args)
 
 static int msh_stat(const msh_argv_t *args)
 {
-    fops_attr_t attr;
+    fops_object_result_t result;
     fs_error_t err;
 
     if (msh_need_argc(args, 2, "stat PATH") != 0 || msh_need_session() != 0)
@@ -395,14 +530,14 @@ static int msh_stat(const msh_argv_t *args)
         return 1;
     }
 
-    err = runtime_getattr(args->argv[1], FS_FLAG_NONE, &attr);
+    err = runtime_stat(args->argv[1], FS_FLAG_NONE, &result);
     if (fs_failed(err))
     {
         msh_print_error("stat", err);
         return 1;
     }
 
-    msh_print_attr(&attr);
+    msh_print_stat(args->argv[1], &result);
     return 0;
 }
 

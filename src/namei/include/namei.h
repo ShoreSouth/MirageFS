@@ -59,5 +59,9 @@ fs_error_t namei_rename(const namei_ctx_t *ctx, const char *old_path,
 fs_error_t namei_getattr(const namei_ctx_t *ctx, const char *path,
                          fs_flags_t flags, fops_attr_t *out_attr);
 
+/* 解析对象身份并读取最新属性快照。 */
+fs_error_t namei_stat(const namei_ctx_t *ctx, const char *path,
+                      fs_flags_t flags, fops_object_result_t *out);
+
 fs_error_t namei_open(const namei_ctx_t *ctx, const char *path,
                       fs_flags_t flags, fops_file_t **out_file);

@@ -415,14 +415,20 @@ access
 ```text
 lsa_fstat()
 
+lsa_fstatx()
+
 lsa_fstatat()
 
 lsa_fchmod()
 
 lsa_fchown()
 
-lsa_access()
+lsa_faccess()
 ```
+
+`lsa_fstatx()` 使用空路径和 `AT_EMPTY_PATH` 读取已打开对象，调用方通过
+`stx_mask` 判断 `STATX_BTIME` 等可选字段是否有效。LSA 只封装 Linux
+syscall 和错误映射，不解释上层文件属性语义。
 
 ---
 

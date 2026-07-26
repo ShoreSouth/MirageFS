@@ -1,0 +1,44 @@
+
+# 标题格式：
+# <type>(<scope>): <简洁中文说明>
+#
+# 示例：
+# feat(msh): 补齐 stat 的 Linux 风格属性展示
+# fix(namei): 修复根目录下父路径解析
+# refactor(object): 拆分对象元数据与运行时状态
+#
+# type 可选：
+# feat      新功能
+# fix       缺陷修复
+# refactor  不改变外部行为的重构
+# test      测试新增或调整
+# docs      文档修改
+# build     构建、依赖、工具链
+# chore     其他维护
+#
+# scope 优先使用 MirageFS 模块名：
+# common config object fsc fops namei runtime msh lsa app
+#
+# 正文按需填写，小改动可以只写标题：
+#
+# 背景：
+# - 为什么需要这次修改
+#
+# 改动：
+# - 关键行为或设计变化
+# - 涉及的模块边界
+#
+# 验证：
+# - 执行的测试或检查
+#
+# 影响：
+# - 兼容性、公共 API、结构体或文档影响
+#
+# 关联：
+# - Issue / ADR / PR，例如 Refs: #123
+#
+# 注意：
+# - 标题使用祈使或结果描述，不写“修改一些代码”
+# - 标题尽量不超过 72 个字符
+# - 一次提交只表达一个完整意图
+# - 所有以 # 开头的提示行不会进入最终 commit message

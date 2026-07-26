@@ -394,10 +394,46 @@ void fops_attr_from_stat(fops_attr_t *attr, const struct stat *st)
     attr->uid = st->st_uid;
     attr->gid = st->st_gid;
     attr->size = (uint64_t)st->st_size;
+    attr->blocks = (uint64_t)st->st_blocks;
     attr->nlink = (uint64_t)st->st_nlink;
+    attr->block_size = (uint32_t)st->st_blksize;
     attr->atime_sec = (uint64_t)st->st_atim.tv_sec;
     attr->mtime_sec = (uint64_t)st->st_mtim.tv_sec;
     attr->ctime_sec = (uint64_t)st->st_ctim.tv_sec;
+    attr->atime_nsec = (uint32_t)st->st_atim.tv_nsec;
+    attr->mtime_nsec = (uint32_t)st->st_mtim.tv_nsec;
+    attr->ctime_nsec = (uint32_t)st->st_ctim.tv_nsec;
+}
+
+void fops_attr_from_statx(fops_attr_t *attr, const struct statx *stx)
+{
+    if ((attr == NULL) || (stx == NULL))
+    {
+        return;
+    }
+
+    memset(attr, 0, sizeof(*attr));
+    attr->type = fops_type_from_mode(stx->stx_mode);
+    attr->mode = stx->stx_mode;
+    attr->uid = stx->stx_uid;
+    attr->gid = stx->stx_gid;
+    attr->size = stx->stx_size;
+    attr->blocks = stx->stx_blocks;
+    attr->nlink = stx->stx_nlink;
+    attr->block_size = stx->stx_blksize;
+    attr->atime_sec = (uint64_t)stx->stx_atime.tv_sec;
+    attr->mtime_sec = (uint64_t)stx->stx_mtime.tv_sec;
+    attr->ctime_sec = (uint64_t)stx->stx_ctime.tv_sec;
+    attr->atime_nsec = stx->stx_atime.tv_nsec;
+    attr->mtime_nsec = stx->stx_mtime.tv_nsec;
+    attr->ctime_nsec = stx->stx_ctime.tv_nsec;
+
+    if ((stx->stx_mask & STATX_BTIME) != 0U)
+    {
+        attr->btime_sec = (uint64_t)stx->stx_btime.tv_sec;
+        attr->btime_nsec = stx->stx_btime.tv_nsec;
+        attr->btime_valid = true;
+    }
 }
 
 fuid_t fops_make_child_fuid(const fuid_t *parent_fuid, ObjectId_t objectid,

@@ -5,6 +5,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <linux/stat.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 #include <sys/types.h>
@@ -234,6 +235,12 @@ extern "C"
  */
 
     lsa_ret_t lsa_fstat(int fd, struct stat *st);
+
+    /*
+     * 读取 Linux 扩展属性。调用方通过 stx_mask 判断可选字段是否有效，
+     * 特别是 STATX_BTIME。
+     */
+    lsa_ret_t lsa_fstatx(int fd, struct statx *stx);
 
     lsa_ret_t lsa_fstatat(int dirfd, const char *path, fs_flags_t flags,
                           struct stat *st);

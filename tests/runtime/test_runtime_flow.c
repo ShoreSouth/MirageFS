@@ -115,6 +115,10 @@ static int test_runtime_namespace_file_flow_round_trip(void)
     TEST_ASSERT_EQ_INT(FS_OK, err);
     TEST_ASSERT_EQ_INT(FS_TYPE_REG, attr.type);
     TEST_ASSERT_EQ_INT(5U, attr.size);
+    err = runtime_stat("/dir/file.txt", FS_FLAG_REGULAR, &plus);
+    TEST_ASSERT_EQ_INT(FS_OK, err);
+    TEST_ASSERT_TRUE(fuid_equal(&looked_up, &plus.fuid));
+    TEST_ASSERT_EQ_INT(FS_TYPE_REG, plus.attr.type);
 
     memset(&setattr, 0, sizeof(setattr));
     setattr.valid_mask = FOPS_SETATTR_SIZE;

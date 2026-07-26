@@ -39,13 +39,16 @@ Runtime V1 覆盖当前已实现的主要 FOPS 操作面：
 - path lookup: lookup、lookup_plus、lookup_parent。
 - create/delete/name ops: create、mkdir、mknod、unlink、rmdir、rename、link、symlink、readlink。
 - directory ops: readdir、readdirplus。
-- attr/access: getattr、setattr、access、truncate。
+- attr/access: getattr、stat、setattr、access、truncate。
 - file handle ops: open、close、read、write。
 - xattr: getxattr、setxattr、listxattr、removexattr。
 - fs ops: statfs、syncfs。
 - adapter-only handle ops: gethandle、openhandle。
 
 其中 NAMEI 已有路径版封装的操作优先调用 NAMEI；NAMEI 尚未封装的路径操作由 Runtime 使用 namei_lookup 或 namei_lookup_parent 组织 fops_args_t，再通过 fops_dispatch 进入 FOPS。
+
+`runtime_stat()` 返回同一次路径解析对应的 FUID 和最新属性快照，供 MSH
+同时展示 MirageFS 对象身份与文件属性。
 
 ## V1.0 入口策略
 

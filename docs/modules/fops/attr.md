@@ -15,6 +15,17 @@ attr 类操作负责对象属性读取、修改、权限检查和截断。
 
 - `out_attr`：当前属性。
 
+稳定属性快照包括：
+
+- 类型、mode、uid、gid、size 和硬链接数。
+- 已分配块数和首选 IO 块大小。
+- atime、mtime、ctime 的秒与纳秒部分。
+- 后端支持时的 birth time；调用方必须先检查 `btime_valid`。
+
+Linux 后端优先通过 LSA `statx` 获取扩展属性。内核不支持 `statx`
+时允许降级为 `fstat`，此时 birth time 无效。FOPS 不向上暴露
+Linux `struct stat` 或 `struct statx`。
+
 推荐 flag：
 
 - `FS_FLAG_DIRECTORY`：要求目标是目录。

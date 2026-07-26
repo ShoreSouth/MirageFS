@@ -192,6 +192,21 @@ fs_error_t runtime_getattr(const char *path, fs_flags_t flags,
     return namei_getattr(&ctx, path, flags, out_attr);
 }
 
+fs_error_t runtime_stat(const char *path, fs_flags_t flags,
+                        fops_object_result_t *out)
+{
+    fs_error_t err;
+    namei_ctx_t ctx;
+
+    err = runtime_make_ctx(&ctx);
+    if (fs_failed(err))
+    {
+        return err;
+    }
+
+    return namei_stat(&ctx, path, flags, out);
+}
+
 fs_error_t runtime_open(const char *path, fs_flags_t flags,
                         fops_file_t **out_file)
 {

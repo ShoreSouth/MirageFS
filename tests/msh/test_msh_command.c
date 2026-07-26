@@ -102,6 +102,7 @@ static int test_msh_file_commands_round_trip(void)
     msh_context_t ctx;
     char namespace_name[32];
     char command[MSH_LINE_MAX];
+    char stat_output[4096];
     fs_error_t err;
 
     runtime_deinit();
@@ -123,7 +124,20 @@ static int test_msh_file_commands_round_trip(void)
                        0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "cat /dir/file.txt"), 0);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "lookup /dir/file.txt"), 0);
-    TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "stat /dir/file.txt"), 0);
+    TEST_ASSERT_EQ_INT(test_msh_run_line_capture(&ctx, "stat /dir/file.txt",
+                                                 stat_output,
+                                                 sizeof(stat_output)),
+                       0);
+    TEST_ASSERT_TRUE(strstr(stat_output, "  File: /dir/file.txt\n") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, "Blocks:") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, "IO Block:") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, "  FSID:") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, " FUID:") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, " Links:") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, "\nAccess: (") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, "\nModify: ") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, "\nChange: ") != NULL);
+    TEST_ASSERT_TRUE(strstr(stat_output, "\n Birth: ") != NULL);
     TEST_ASSERT_EQ_INT(test_msh_run_line(&ctx, "chmod 0600 /dir/file.txt"), 0);
     (void)snprintf(command, sizeof(command), "chown %u %u /dir/file.txt",
                    (unsigned)getuid(), (unsigned)getgid());

@@ -264,6 +264,10 @@ fs_error_t runtime_readdirplus(const char *path, fs_flags_t flags,
 fs_error_t runtime_getattr(const char *path, fs_flags_t flags,
                            fops_attr_t *out_attr);
 
+/* 读取对象 FUID 和最新属性快照。 */
+fs_error_t runtime_stat(const char *path, fs_flags_t flags,
+                        fops_object_result_t *out);
+
 /* 修改对象属性。 */
 fs_error_t runtime_setattr(const char *path, const fops_setattr_t *attr,
                            fs_flags_t flags);

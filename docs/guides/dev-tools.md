@@ -48,6 +48,53 @@ python3 tools/check/format.py --fix
 
 建议把大规模格式化作为独立提交，不和功能改动混在同一个 diff 中。
 
+## Git commit 模板
+
+仓库根目录的 `.gitmessage` 提供 MirageFS 提交信息提示。首次使用时在仓库
+根目录执行：
+
+```sh
+git config --local commit.template "$(git rev-parse --show-toplevel)/.gitmessage"
+git config --local core.editor vim
+```
+
+之后执行：
+
+```sh
+git commit
+```
+
+Git 会在 Vim 中打开模板。填写完成后使用 `:wq` 保存并提交，使用 `:cq`
+退出并取消提交。`git commit -m "..."` 会绕过模板和交互编辑器。
+
+小提交只需要一行标题：
+
+```text
+fix(namei): 修复根目录下父路径解析
+```
+
+较大的提交按需增加背景、改动、验证和影响：
+
+```text
+feat(msh): 增强 stat 的 Linux 风格属性展示
+
+背景：
+- 原 stat 缺少块信息、纳秒时间和 birth time。
+
+改动：
+- LSA 增加 statx 封装。
+- 使用 FSID/FUID 替代后端 Device/Inode。
+
+验证：
+- check-all.sh 和全量测试通过。
+
+影响：
+- 扩展 FOPS 属性快照和 Runtime stat 入口。
+```
+
+推荐的标题格式是 `<type>(<scope>): <简洁中文说明>`。可用 type 和 scope
+列表以 `.gitmessage` 中的最新说明为准。
+
 ## MirageFS lint
 
 `tools/check/miragefs_lint.py` 是项目自定义轻量静态检查工具，用于检查编码、空白、行宽、命名、裸错误返回、大栈数组等项目规则。

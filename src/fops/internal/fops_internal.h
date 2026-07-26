@@ -95,6 +95,7 @@ void fops_close_object(obj_meta_t *meta, int fd);
 fs_type_t fops_type_from_mode(mode_t mode);
 fuid_type_t fops_fuid_type_from_fs_type(fs_type_t type);
 void fops_attr_from_stat(fops_attr_t *attr, const struct stat *st);
+void fops_attr_from_statx(fops_attr_t *attr, const struct statx *stx);
 
 fuid_t fops_make_child_fuid(const fuid_t *parent_fuid, ObjectId_t objectid,
                             GenId_t gen, fs_type_t type);

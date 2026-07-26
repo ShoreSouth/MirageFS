@@ -6,6 +6,7 @@ static int test_lsa_attr_and_fs_ops(void)
     int dirfd = -1;
     int fd = -1;
     struct stat st;
+    struct statx stx;
     struct statfs fsst;
     fs_error_t err;
 
@@ -15,6 +16,10 @@ static int test_lsa_attr_and_fs_ops(void)
 
     TEST_ASSERT_EQ_INT(lsa_fstat(fd, &st), FS_OK);
     TEST_ASSERT_TRUE(S_ISREG(st.st_mode));
+    memset(&stx, 0, sizeof(stx));
+    TEST_ASSERT_EQ_INT(lsa_fstatx(fd, &stx), FS_OK);
+    TEST_ASSERT_TRUE((stx.stx_mask & STATX_TYPE) != 0U);
+    TEST_ASSERT_TRUE(S_ISREG(stx.stx_mode));
     TEST_ASSERT_EQ_INT(lsa_fchmod(fd, 0600), FS_OK);
     TEST_ASSERT_EQ_INT(lsa_fchown(fd, (uid_t)-1, (gid_t)-1), FS_OK);
     TEST_ASSERT_EQ_INT(lsa_faccess(fd, R_OK | W_OK), FS_OK);

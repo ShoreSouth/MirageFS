@@ -33,6 +33,8 @@ static int test_lsa_invalid_argument_matrix(void)
     TEST_ASSERT_EQ_INT(
             test_lsa_assert_errno(lsa_fstat(-1, NULL), FS_ERRNO_EINVAL), 0);
     TEST_ASSERT_EQ_INT(
+            test_lsa_assert_errno(lsa_fstatx(-1, NULL), FS_ERRNO_EINVAL), 0);
+    TEST_ASSERT_EQ_INT(
             test_lsa_assert_errno(lsa_fstatat(AT_FDCWD, NULL, 0, &st),
                                   FS_ERRNO_EINVAL),
             0);
@@ -79,6 +81,7 @@ static int test_lsa_syscall_failure_matrix(void)
     size_t actual = 0;
     off_t offset = 0;
     struct stat st;
+    struct statx stx;
     struct statfs fsst;
     lsa_dirent_t entry;
     lsa_dir_iter_t *iter = NULL;
@@ -113,6 +116,8 @@ static int test_lsa_syscall_failure_matrix(void)
             test_lsa_assert_errno(lsa_ftruncate(-1, 1), FS_ERRNO_EBADF), 0);
     TEST_ASSERT_EQ_INT(
             test_lsa_assert_errno(lsa_fstat(-1, &st), FS_ERRNO_EBADF), 0);
+    TEST_ASSERT_EQ_INT(
+            test_lsa_assert_errno(lsa_fstatx(-1, &stx), FS_ERRNO_EBADF), 0);
     TEST_ASSERT_EQ_INT(
             test_lsa_assert_errno(lsa_fchmod(-1, 0600), FS_ERRNO_EBADF), 0);
     TEST_ASSERT_EQ_INT(

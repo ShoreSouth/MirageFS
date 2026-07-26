@@ -1,5 +1,7 @@
 #include "lsa/include/lsa_api.h"
 
+#include <fcntl.h>
+#include <linux/stat.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -36,6 +38,37 @@ lsa_ret_t lsa_fstat(int fd, struct stat *st)
     }
 
     FS_LOG_DUMP_INFO("exit: ok");
+    return FS_OK;
+}
+
+/* ============================================================
+ * statx
+ * ============================================================ */
+
+lsa_ret_t lsa_fstatx(int fd, struct statx *stx)
+{
+    lsa_ret_t err;
+
+    FS_LOG_DUMP_INFO("enter: fd=%d, stx=%p", fd, (void *)stx);
+
+    if (stx == NULL)
+    {
+        err = lsa_error(FS_OP_GETATTR, EINVAL);
+        FS_LOG_DUMP_ERROR("statx failed: stx is NULL, err=%s (0x%x)",
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    if (statx(fd, "", AT_EMPTY_PATH | AT_STATX_SYNC_AS_STAT,
+              STATX_BASIC_STATS | STATX_BTIME, stx) < 0)
+    {
+        err = lsa_error(FS_OP_GETATTR, errno);
+        FS_LOG_DUMP_ERROR("statx failed: fd=%d, err=%s (0x%x)", fd,
+                          fs_error_str(err), err);
+        return err;
+    }
+
+    FS_LOG_DUMP_INFO("exit: ok, mask=0x%x", stx->stx_mask);
     return FS_OK;
 }
 

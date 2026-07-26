@@ -18,6 +18,36 @@ int test_msh_run_line(msh_context_t *ctx, const char *line)
     return msh_run_line(ctx, line_buf);
 }
 
+int test_msh_run_line_capture(msh_context_t *ctx, const char *line, char *buf,
+                              size_t size)
+{
+    FILE *capture;
+    int saved_stdout;
+    int rc;
+    size_t actual;
+
+    TEST_ASSERT_TRUE(buf != NULL);
+    TEST_ASSERT_TRUE(size > 0U);
+
+    saved_stdout = dup(STDOUT_FILENO);
+    TEST_ASSERT_TRUE(saved_stdout >= 0);
+    capture = tmpfile();
+    TEST_ASSERT_TRUE(capture != NULL);
+    TEST_ASSERT_EQ_INT(fflush(stdout), 0);
+    TEST_ASSERT_EQ_INT(dup2(fileno(capture), STDOUT_FILENO), STDOUT_FILENO);
+
+    rc = test_msh_run_line(ctx, line);
+
+    TEST_ASSERT_EQ_INT(fflush(stdout), 0);
+    TEST_ASSERT_EQ_INT(dup2(saved_stdout, STDOUT_FILENO), STDOUT_FILENO);
+    close(saved_stdout);
+    rewind(capture);
+    actual = fread(buf, 1U, size - 1U, capture);
+    buf[actual] = '\0';
+    fclose(capture);
+    return rc;
+}
+
 int test_msh_run_line_with_stdin(msh_context_t *ctx, const char *line,
                                  const char *input)
 {
