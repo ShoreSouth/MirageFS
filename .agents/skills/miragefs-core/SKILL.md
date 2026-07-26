@@ -5,6 +5,20 @@ description: MirageFS 核心架构、编码规范、模块边界、评审重点�
 
 # MirageFS 核心规则
 
+## 与 AGENTS.md 和项目文档的边界
+
+本 skill 是按任务加载的 MirageFS 专业工作流。它回答“设计、修改或评审
+MirageFS 时应如何工作”，包括架构边界、编码规范、测试与文档同步要求。
+
+它不承担以下职责：
+
+* 不替代根 `AGENTS.md` 中始终生效的仓库工作约定。
+* 不作为面向人的完整教程；概念解释和学习路径放在 `docs/guides/`。
+* 不承载与 MirageFS 无关的通用任务工作流；这些能力由其他 skill 提供。
+
+如果三者内容重叠，应保留单一事实来源：始终生效的短规则放
+`AGENTS.md`，任务执行方法放本 skill，面向人的解释放 `docs/guides/`。
+
 ## 目标
 
 MirageFS 是一个使用 C17 编写的 Linux 用户态文件系统模拟器。
@@ -25,13 +39,10 @@ MirageFS 是一个使用 C17 编写的 Linux 用户态文件系统模拟器。
 
 ## WSL 执行规则
 
-本项目在 WSL2 Ubuntu 环境中开发，仓库路径固定为：
-
-```text
-/home/shore/work/github/MirageFS
-```
-
-执行命令时应直接在 WSL bash 环境中运行，工作目录必须是上述路径。不要通过 Windows UNC 路径访问仓库，例如 `\\wsl.localhost\...` 或 `\\wsl$\...`。
+本项目主要在 WSL2 Ubuntu 环境中开发。执行命令时应直接在 WSL bash
+环境中运行，并通过 `git rev-parse --show-toplevel` 获取当前仓库根目录，
+不要在可提交的规则中绑定某台机器的绝对路径。不要通过 Windows UNC 路径
+访问仓库，例如 `\\wsl.localhost\...` 或 `\\wsl$\...`。
 
 开始关键任务前可检查：
 

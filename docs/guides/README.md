@@ -18,8 +18,9 @@
 4. [读代码路线](code-reading.md)
 5. [UT 测试使用](unit-testing.md)
 6. [开发工具](dev-tools.md)
-7. [GDB 调试](gdb-debugging.md)
-8. [常见问题](troubleshooting.md)
+7. [AGENTS.md 与 SKILL.md](agent-instructions-and-skills.md)
+8. [GDB 调试](gdb-debugging.md)
+9. [常见问题](troubleshooting.md)
 
 ## 文档边界
 
@@ -36,4 +37,6 @@
 - 新增主程序参数、`msh` 命令或命令输出时，同步更新 [程序启动与命令速查](start-and-commands.md)。
 - 调整 UT 命令、覆盖率策略或 case 规范时，同步更新 [UT 测试使用](unit-testing.md)。
 - 新增格式化、静态检查、调试、生成类工具时，同步更新 [开发工具](dev-tools.md) 和 `tools/README.md`。
+- 调整 Agent 常驻约束、skill 路由或职责边界时，同步更新
+  [AGENTS.md 与 SKILL.md](agent-instructions-and-skills.md)。
 - 调试流程中沉淀出稳定经验时，同步更新 [GDB 调试](gdb-debugging.md) 或 [常见问题](troubleshooting.md)。
